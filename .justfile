@@ -1,5 +1,6 @@
 alias r := run
 alias b := build
+alias t := test
 alias d := debug
 
 @run args="":
@@ -9,6 +10,7 @@ alias d := debug
     go build cmd/app/main.go
 
 @test:
+    go test ./...
 
 @debug:
     dlv debug cmd/app/main.go
