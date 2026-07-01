@@ -41,14 +41,20 @@ func TestParseValidSingleTorrent(t *testing.T) {
 		t.Errorf("expected: [%v] | got: [%v]", pieces, len(meta.Pieces()))
 	}
 
-	switch info := meta.Info.(type) {
-	case metadata.SingleFile:
-		length := 791674880
-		if info.Length() != length {
-			t.Errorf("expected: [%v] | got: [%v]", length, info.Length())
-		}
-	case metadata.MultiFile:
-		t.Fatalf("expected: [%v] | got: [%v]", "single file torrent", "multi file torrent")
+	files := meta.Files()
+	if len(files) != 1 {
+		t.Fatalf("expected: [%v files] | got: [%v files]", 1, len(files))
+	}
+
+	length := 791674880
+	path := name
+
+	if files[0].Length != length {
+		t.Errorf("expected: [%v] | got: [%v]", length, files[0].Length)
+	}
+
+	if files[0].Path != path {
+		t.Errorf("expected: [%v] | got: [%v]", path, files[0].Path)
 	}
 
 	infohash := [20]byte{
@@ -99,28 +105,28 @@ func TestParseValidMultiTorrent(t *testing.T) {
 		t.Errorf("expected: [%v] | got: [%v]", pieces, len(meta.Pieces()))
 	}
 
-	switch info := meta.Info.(type) {
-	case metadata.SingleFile:
-		t.Fatalf("expected: [%v] | got: [%v]", "multi file torrent", "single file torrent")
-	case metadata.MultiFile:
-		path1 := "Fedora-Budgie-Live-44-1.7.x86_64.iso"
-		path2 := "Fedora-Spins-44-1.7-x86_64-CHECKSUM"
-		length1 := 3084500992
-		length2 := 2922
+	files := meta.Files()
+	if len(files) != 2 {
+		t.Fatalf("expected: [%v files] | got: [%v files]", 2, len(files))
+	}
 
-		if info.Files()[0].Path != path1 {
-			t.Fatalf("expected: [%v] | got: [%v]", path1, info.Files()[0].Path)
-		}
-		if info.Files()[1].Path != path2 {
-			t.Fatalf("expected: [%v] | got: [%v]", path2, info.Files()[1].Path)
-		}
-		if info.Files()[0].Length != uint(length1) {
-			t.Fatalf("expected: [%v] | got: [%v]", length1, info.Files()[0].Length)
-		}
+	path1 := "Fedora-Budgie-Live-44-1.7.x86_64.iso"
+	path2 := "Fedora-Spins-44-1.7-x86_64-CHECKSUM"
+	length1 := 3084500992
+	length2 := 2922
 
-		if info.Files()[1].Length != uint(length2) {
-			t.Fatalf("expected: [%v] | got: [%v]", length2, info.Files()[1].Length)
-		}
+	if files[0].Path != path1 {
+		t.Fatalf("expected: [%v] | got: [%v]", path1, files[0].Path)
+	}
+	if files[1].Path != path2 {
+		t.Fatalf("expected: [%v] | got: [%v]", path2, files[1].Path)
+	}
+	if files[0].Length != length1 {
+		t.Fatalf("expected: [%v] | got: [%v]", length1, files[0].Length)
+	}
+
+	if files[1].Length != length2 {
+		t.Fatalf("expected: [%v] | got: [%v]", length2, files[1].Length)
 	}
 
 	infohash := [20]byte{

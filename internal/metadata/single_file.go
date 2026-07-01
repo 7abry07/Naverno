@@ -42,6 +42,6 @@ func (s SingleFile) Private() (bool, bool) {
 	}
 }
 
-func (s SingleFile) Length() int {
-	return s.length
+func (s SingleFile) Files() []File {
+	return []File{{s.length, s.name}}
 }

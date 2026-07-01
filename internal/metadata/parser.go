@@ -218,5 +218,5 @@ func parseFile(file bencode.BDict) (File, bool) {
 		}
 	}
 
-	return File{Path: path.String(), Length: uint(length)}, true
+	return File{Path: path.String(), Length: int(length)}, true
 }

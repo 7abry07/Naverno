@@ -2,11 +2,6 @@ package metadata
 
 // --------------- Structs -------------------
 
-type File struct {
-	Length uint
-	Path   string
-}
-
 type MultiFile struct {
 	name string
 

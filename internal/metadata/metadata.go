@@ -21,6 +21,11 @@ type Metadata struct {
 	encoding      *string
 }
 
+type File struct {
+	Length int
+	Path   string
+}
+
 // -------------- Interfaces ------------------
 
 type Info interface {
@@ -31,6 +36,8 @@ type Info interface {
 	Piece(int) ([20]byte, bool)
 
 	Private() (bool, bool)
+
+	Files() []File
 }
 
 // --------------- Methods --------------------
