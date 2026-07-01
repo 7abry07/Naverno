@@ -105,7 +105,7 @@ func parseInfo(info bencode.BDict) (Info, error) {
 	}
 
 	length, ok := info.FindInt("length")
-	filesDict, ok1 := info.FindDict("files")
+	filesList, ok1 := info.FindList("files")
 
 	if ok && ok1 {
 		return nil, BothLengthFilesPresentErr
@@ -132,7 +132,7 @@ func parseInfo(info bencode.BDict) (Info, error) {
 		multi.pieceLength = (int)(piece_length)
 		multi.pieces = ([]byte)(pieces)
 
-		files, ok := parseFiles(filesDict)
+		files, ok := parseFiles(filesList)
 		if !ok {
 			return nil, InvalidFilesErr
 		}
@@ -180,7 +180,7 @@ func parseAnnounceList(announce_list bencode.BList) ([][]*url.URL, bool) {
 
 	return result, true
 }
-func parseFiles(files bencode.BDict) ([]File, bool) {
+func parseFiles(files bencode.BList) ([]File, bool) {
 	result := []File{}
 
 	for _, node := range files {
