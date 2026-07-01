@@ -7,7 +7,7 @@ type SingleFile struct {
 
 	pieceLength int
 	pieces      []byte
-	private     *bool
+	private     *int
 
 	length int
 }
@@ -38,7 +38,7 @@ func (s SingleFile) Private() (bool, bool) {
 	if s.private == nil {
 		return false, false
 	} else {
-		return *s.private, true
+		return *s.private == 1, true
 	}
 }
 

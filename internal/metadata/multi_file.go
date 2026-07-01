@@ -3,8 +3,8 @@ package metadata
 // --------------- Structs -------------------
 
 type File struct {
-	length int
-	path   []string
+	Length uint
+	Path   string
 }
 
 type MultiFile struct {
@@ -12,7 +12,7 @@ type MultiFile struct {
 
 	pieceLength int
 	pieces      []byte
-	private     *bool
+	private     *int
 
 	files []File
 }
@@ -43,7 +43,7 @@ func (m MultiFile) Private() (bool, bool) {
 	if m.private == nil {
 		return false, false
 	} else {
-		return *m.private, true
+		return *m.private == 1, true
 	}
 }
 

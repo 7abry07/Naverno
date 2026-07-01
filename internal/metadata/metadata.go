@@ -10,8 +10,10 @@ import (
 type Metadata struct {
 	Info
 
-	announce      url.URL
-	announce_list *[][]url.URL
+	infohash [20]byte
+
+	announce      *url.URL
+	announce_list *[][]*url.URL
 
 	creation_date *int
 	comment       *string
@@ -33,13 +35,17 @@ type Info interface {
 
 // --------------- Methods --------------------
 
-func (m Metadata) Announce() url.URL {
+func (m Metadata) Announce() *url.URL {
 	return m.announce
 }
 
-func (m Metadata) AnnounceList() ([][]url.URL, bool) {
+func (m Metadata) Infohash() [20]byte {
+	return m.infohash
+}
+
+func (m Metadata) AnnounceList() ([][]*url.URL, bool) {
 	if m.announce_list == nil {
-		return [][]url.URL{}, false
+		return [][]*url.URL{}, false
 	} else {
 		return *m.announce_list, true
 	}

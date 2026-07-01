@@ -9,8 +9,8 @@ alias d := debug
 @build:
     go build cmd/app/main.go
 
-@test:
-    go test ./...
+@test flags="":
+    go test {{ flags }} ./...
 
 @debug:
     dlv debug cmd/app/main.go
