@@ -50,6 +50,18 @@ func TestParseValidSingleTorrent(t *testing.T) {
 	case metadata.MultiFile:
 		t.Fatalf("expected: [%v] | got: [%v]", "single file torrent", "multi file torrent")
 	}
+
+	infohash := [20]byte{
+		0x58, 0x84, 0x68, 0x60,
+		0xf0, 0xa7, 0x66, 0xf8,
+		0xa4, 0x2b, 0x0b, 0xb2,
+		0x14, 0xd8, 0xc7, 0x13,
+		0xfd, 0xf1, 0xb1, 0x67,
+	}
+
+	if meta.Infohash() != infohash {
+		t.Errorf("expected: [%v] | got: [%v]", meta.Infohash(), infohash)
+	}
 }
 
 func TestParseValidMultiTorrent(t *testing.T) {
@@ -109,5 +121,17 @@ func TestParseValidMultiTorrent(t *testing.T) {
 		if info.Files()[1].Length != uint(length2) {
 			t.Fatalf("expected: [%v] | got: [%v]", length2, info.Files()[1].Length)
 		}
+	}
+
+	infohash := [20]byte{
+		0x78, 0xbe, 0x65, 0x13,
+		0xb4, 0x49, 0xf8, 0x18,
+		0x82, 0xc8, 0x52, 0x07,
+		0x5c, 0xf0, 0x11, 0x61,
+		0xf3, 0xb7, 0xb2, 0xa3,
+	}
+
+	if meta.Infohash() != infohash {
+		t.Errorf("expected: [%v] | got: [%v]", meta.Infohash(), infohash)
 	}
 }
