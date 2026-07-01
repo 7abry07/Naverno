@@ -111,21 +111,21 @@ func parseV6CompactPeers(peers string) ([]peer, bool) {
 
 // --------------- Methods -------------------
 
-func (t httpTracker) Announce(r AnnounceRequest) (announceResponse, error) {
+func (t httpTracker) Announce(r AnnounceRequest) (AnnounceResponse, error) {
 	urlReq := t.serialize(r)
 	httpResp, err := http.Get(urlReq.String())
 	if err != nil {
-		return announceResponse{}, errors.Join(InvalidRespErr, err)
+		return AnnounceResponse{}, errors.Join(InvalidRespErr, err)
 	}
 
 	httpBody, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return announceResponse{}, errors.Join(InvalidRespErr, err)
+		return AnnounceResponse{}, errors.Join(InvalidRespErr, err)
 	}
 
 	resp, ok := t.deserialize(httpBody)
 	if !ok {
-		return announceResponse{}, InvalidRespErr
+		return AnnounceResponse{}, InvalidRespErr
 	}
 
 	return resp, nil
@@ -162,8 +162,8 @@ func (t httpTracker) serialize(r AnnounceRequest) *url.URL {
 	return fullUrl
 }
 
-func (t httpTracker) deserialize(httpResp []byte) (announceResponse, bool) {
-	r := announceResponse{}
+func (t httpTracker) deserialize(httpResp []byte) (AnnounceResponse, bool) {
+	r := AnnounceResponse{}
 
 	decoded, err := bencode.Decode(string(httpResp))
 	if err != nil {

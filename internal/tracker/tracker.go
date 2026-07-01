@@ -37,10 +37,9 @@ type AnnounceRequest struct {
 	Event      trackerEvent
 }
 
-type announceResponse struct {
+type AnnounceResponse struct {
 	Failure     *string
 	Warning     *string
-	trackerID   *string
 	MinInterval uint32
 	Interval    uint32
 	Complete    int64
@@ -57,7 +56,7 @@ type peer struct {
 // -------------- Interfaces ------------------
 
 type Tracker interface {
-	Announce(r AnnounceRequest) (announceResponse, error)
+	Announce(r AnnounceRequest) (AnnounceResponse, error)
 }
 
 // -------------- Functions ------------------
