@@ -4,7 +4,6 @@ import (
 	"Naverno/internal/bencode"
 	"Naverno/internal/tracker"
 	"context"
-	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -44,18 +43,18 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 
 	httpReq, err := http.NewRequestWithContext(ctx, "GET", urlReq.String(), nil)
 	if err != nil {
-		return nil, errors.Join(tracker.InvalidRespErr, err)
+		return nil, err
 	}
 
 	httpResp, err := t.client.Do(httpReq)
 	if err != nil {
-		return nil, errors.Join(tracker.InvalidRespErr, err)
+		return nil, err
 	}
 
 	defer httpResp.Body.Close()
 	httpBody, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, errors.Join(tracker.InvalidRespErr, err)
+		return nil, err
 	}
 
 	resp, ok := t.deserialize(httpBody)
@@ -98,6 +97,8 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 			}
 		}
 	}
+
+	t.logger.Debug("got peers from "+t.URL(), "peers", len(peers))
 
 	return &tracker.AnnounceResponse{
 		MinInterval:    time.Duration(resp.minInterval) * time.Second,
@@ -145,6 +146,7 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) *url.URL {
 	if r.Numwant != 0 {
 		query.WriteString("&numwant=")
 		query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Numwant))))
+		t.logger.Debug("want peers", "numwant", r.Numwant)
 	}
 
 	if (r.Ip != netip.Addr{}) {
@@ -179,12 +181,8 @@ func (t *HTTPTracker) deserialize(httpResp []byte) (announceResponse, bool) {
 	r.interval = int32(interval)
 	r.minInterval = int32(minInterval)
 
-	warning, warningOk := root.FindStr("warning message")
-	r.warning = ""
-	if warningOk {
-		str := string(warning)
-		r.warning = str
-	}
+	warning, _ := root.FindStrOrDef("warning message", "")
+	r.warning = string(warning)
 
 	failure, failureOk := root.FindStrOrDef("failure reason", "")
 	r.failure = string(failure)
@@ -199,8 +197,12 @@ func (t *HTTPTracker) deserialize(httpResp []byte) (announceResponse, bool) {
 	r.complete = int64(complete)
 	r.incomplete = int64(incomplete)
 
-	trackerid, _ := root.FindStrOrDef("tracker id", "")
+	trackerid, ok := root.FindStrOrDef("tracker id", "")
 	t.trackerid = string(trackerid)
+
+	if ok {
+		t.logger.Debug("tracker id", "id", string(trackerid))
+	}
 
 	peersNode, ok := root.Find("peers")
 	if !ok {
