@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"GoBit/internal/bencode"
+	"Naverno/internal/bencode"
 )
 
 func TestSimpleInt(t *testing.T) {

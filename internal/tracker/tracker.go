@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"context"
 	"net/netip"
 	"net/url"
 )
@@ -56,7 +57,7 @@ type peer struct {
 // -------------- Interfaces ------------------
 
 type Tracker interface {
-	Announce(r AnnounceRequest) (AnnounceResponse, error)
+	Announce(ctx context.Context, r AnnounceRequest) (AnnounceResponse, error)
 }
 
 // -------------- Functions ------------------

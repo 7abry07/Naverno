@@ -1,7 +1,7 @@
 package metadata
 
 import (
-	"GoBit/internal/bencode"
+	"Naverno/internal/bencode"
 	"crypto/sha1"
 	"net/url"
 	"strings"

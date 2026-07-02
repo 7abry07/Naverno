@@ -1,7 +1,7 @@
 package metadata_test
 
 import (
-	"GoBit/internal/metadata"
+	"Naverno/internal/metadata"
 	"os"
 	"testing"
 )

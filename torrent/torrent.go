@@ -1,7 +1,7 @@
 package torrent
 
 import (
-	"GoBit/internal/metadata"
+	"Naverno/internal/metadata"
 	"log/slog"
 )
 

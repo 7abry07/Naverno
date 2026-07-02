@@ -1,7 +1,8 @@
 package tracker
 
 import (
-	"GoBit/internal/bencode"
+	"Naverno/internal/bencode"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -111,9 +112,15 @@ func parseV6CompactPeers(peers string) ([]peer, bool) {
 
 // --------------- Methods -------------------
 
-func (t httpTracker) Announce(r AnnounceRequest) (AnnounceResponse, error) {
+func (t httpTracker) Announce(ctx context.Context, r AnnounceRequest) (AnnounceResponse, error) {
 	urlReq := t.serialize(r)
-	httpResp, err := http.Get(urlReq.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", urlReq.String(), nil)
+	if err != nil {
+		return AnnounceResponse{}, errors.Join(InvalidRespErr, err)
+	}
+
+	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return AnnounceResponse{}, errors.Join(InvalidRespErr, err)
 	}
