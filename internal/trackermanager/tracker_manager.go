@@ -8,15 +8,11 @@ import (
 	"net/url"
 )
 
-// -------------- Structs -------------------
-
 type TrackerManager struct {
 	logger *slog.Logger
 
 	httpTransport *http.Transport
 }
-
-// -------------- Functions -------------------
 
 func New(logger *slog.Logger) *TrackerManager {
 	m := TrackerManager{}
@@ -24,8 +20,6 @@ func New(logger *slog.Logger) *TrackerManager {
 	m.httpTransport = &http.Transport{}
 	return &m
 }
-
-// -------------- Methods -------------------
 
 func (m *TrackerManager) Close() {
 	m.httpTransport.CloseIdleConnections()
@@ -39,7 +33,7 @@ func (m *TrackerManager) Get(announce string) (tracker.Tracker, error) {
 
 	switch parsedAnnounce.Scheme {
 	case "http", "https":
-		httpTracker := httptracker.New(m.logger, parsedAnnounce, m.httpTransport)
+		httpTracker := httptracker.New(m.logger, *parsedAnnounce, m.httpTransport)
 		return httpTracker, nil
 	}
 

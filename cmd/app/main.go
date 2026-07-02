@@ -4,8 +4,10 @@ import (
 	"Naverno/internal/metadata"
 	"Naverno/internal/tracker"
 	"Naverno/internal/trackermanager"
+
 	"context"
 	"fmt"
+	"github.com/lmittmann/tint"
 	"log/slog"
 	"os"
 )
@@ -23,7 +25,9 @@ func main() {
 		panic(err)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{
+		Level: slog.LevelDebug,
+	}))
 
 	manager := trackermanager.New(logger)
 
@@ -52,6 +56,6 @@ func main() {
 	}
 
 	for _, p := range resp.Peers {
-		fmt.Printf("ip   -> %v\nport -> %v\n", p.Addr(), p.Port())
+		fmt.Printf("%v:%v\n", p.Addr(), p.Port())
 	}
 }

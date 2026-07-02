@@ -14,29 +14,23 @@ import (
 	"time"
 )
 
-// --------------- Structs -------------------
-
 type HTTPTracker struct {
-	announce *url.URL
+	announce url.URL
 	client   *http.Client
 	logger   *slog.Logger
 
 	trackerid string
 }
 
-// --------------- Functions -------------------
-
-func New(logger *slog.Logger, url *url.URL, transport *http.Transport) *HTTPTracker {
+func New(logger *slog.Logger, announce url.URL, transport *http.Transport) *HTTPTracker {
 	t := HTTPTracker{}
-	t.announce = url
+	t.announce = announce
 	t.client = &http.Client{Transport: transport}
 	t.trackerid = ""
 	t.logger = logger
 
 	return &t
 }
-
-// --------------- Methods -------------------
 
 func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (*tracker.AnnounceResponse, error) {
 	urlReq := t.serialize(r)
@@ -98,7 +92,7 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 		}
 	}
 
-	t.logger.Debug("got peers from "+t.URL(), "peers", len(peers))
+	t.logger.Debug("got peers", "tracker", t.URL(), "peers", len(peers))
 
 	return &tracker.AnnounceResponse{
 		MinInterval:    time.Duration(resp.minInterval) * time.Second,
@@ -114,7 +108,7 @@ func (t *HTTPTracker) URL() string {
 	return t.announce.String()
 }
 
-func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) *url.URL {
+func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) url.URL {
 	fullUrl := t.announce
 
 	query := strings.Builder{}
@@ -146,7 +140,7 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) *url.URL {
 	if r.Numwant != 0 {
 		query.WriteString("&numwant=")
 		query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Numwant))))
-		t.logger.Debug("want peers", "numwant", r.Numwant)
+		t.logger.Debug("want peers", "tracker", t.URL(), "numwant", r.Numwant)
 	}
 
 	if (r.Ip != netip.Addr{}) {
@@ -169,10 +163,12 @@ func (t *HTTPTracker) deserialize(httpResp []byte) (announceResponse, bool) {
 
 	decoded, err := bencode.Decode(string(httpResp))
 	if err != nil {
+		t.logger.Error("error in decoding tracker response", "tracker", t.URL())
 		return r, false
 	}
 	root, ok := decoded.Dict()
 	if !ok {
+		t.logger.Error("the response is not a bencode dictionary", "tracker", t.URL())
 		return r, false
 	}
 
@@ -206,6 +202,7 @@ func (t *HTTPTracker) deserialize(httpResp []byte) (announceResponse, bool) {
 
 	peersNode, ok := root.Find("peers")
 	if !ok {
+		t.logger.Error("no peers in tracker response", "tracker", t.URL())
 		return r, false
 	}
 
