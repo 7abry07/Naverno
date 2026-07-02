@@ -2,7 +2,7 @@ package trackermanager
 
 import (
 	"Naverno/internal/tracker"
-	httptracker "Naverno/internal/tracker/http"
+	"Naverno/internal/tracker/httptracker"
 	"log/slog"
 	"net/http"
 	"net/url"

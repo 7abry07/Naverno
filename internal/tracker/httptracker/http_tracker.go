@@ -70,7 +70,7 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 		}
 	}
 
-	peers := []tracker.Peer{}
+	peers := []netip.AddrPort{}
 
 	if resp.peers.Type() == bencode.List_t {
 		peersList, _ := resp.peers.List()

@@ -49,12 +49,7 @@ type AnnounceResponse struct {
 	Leechers       int64
 	Seeders        int64
 	WarningMessage string
-	Peers          []Peer
-}
-
-type Peer struct {
-	Ip   netip.Addr
-	Port uint16
+	Peers          []netip.AddrPort
 }
 
 type Error struct {

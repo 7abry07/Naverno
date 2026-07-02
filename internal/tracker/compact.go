@@ -5,8 +5,8 @@ import (
 	"net/netip"
 )
 
-func ParseV4CompactPeers(peers string) ([]Peer, bool) {
-	peerList := []Peer{}
+func ParseV4CompactPeers(peers string) ([]netip.AddrPort, bool) {
+	peerList := []netip.AddrPort{}
 
 	for {
 		if len(peers) == 0 {
@@ -18,12 +18,10 @@ func ParseV4CompactPeers(peers string) ([]Peer, bool) {
 
 		parsedIp, err := netip.ParseAddr(fmt.Sprintf("%v.%v.%v.%v", ip[0], ip[1], ip[2], ip[3]))
 		if err != nil {
-			return []Peer{}, false
+			return []netip.AddrPort{}, false
 		}
 
-		peerVal := Peer{}
-		peerVal.Ip = parsedIp
-		peerVal.Port = uint16(port[1]) | uint16(port[0])<<8
+		peerVal := netip.AddrPortFrom(parsedIp, uint16(port[1])|uint16(port[0])<<8)
 		peerList = append(peerList, peerVal)
 
 		peers = peers[6:]
@@ -31,8 +29,8 @@ func ParseV4CompactPeers(peers string) ([]Peer, bool) {
 	return peerList, true
 }
 
-func ParseV6CompactPeers(peers string) ([]Peer, bool) {
-	peerList := []Peer{}
+func ParseV6CompactPeers(peers string) ([]netip.AddrPort, bool) {
+	peerList := []netip.AddrPort{}
 
 	for {
 		if len(peers) == 0 {
@@ -52,12 +50,10 @@ func ParseV6CompactPeers(peers string) ([]Peer, bool) {
 			uint16(ip[15])|uint16(ip[14])<<8))
 
 		if err != nil {
-			return []Peer{}, false
+			return []netip.AddrPort{}, false
 		}
 
-		peerVal := Peer{}
-		peerVal.Ip = parsedIp
-		peerVal.Port = uint16(port[1]) | uint16(port[0])<<8
+		peerVal := netip.AddrPortFrom(parsedIp, uint16(port[1])|uint16(port[0])<<8)
 		peerList = append(peerList, peerVal)
 
 		peers = peers[18:]

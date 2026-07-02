@@ -2,12 +2,11 @@ package httptracker
 
 import (
 	"Naverno/internal/bencode"
-	"Naverno/internal/tracker"
 	"net/netip"
 )
 
-func ParseBencodedPeers(peers bencode.BList) ([]tracker.Peer, bool) {
-	peerList := []tracker.Peer{}
+func ParseBencodedPeers(peers bencode.BList) ([]netip.AddrPort, bool) {
+	peerList := []netip.AddrPort{}
 
 	for _, peerNode := range peers {
 		p, ok := peerNode.Dict()
@@ -26,10 +25,7 @@ func ParseBencodedPeers(peers bencode.BList) ([]tracker.Peer, bool) {
 			return peerList, false
 		}
 
-		peerVal := tracker.Peer{}
-
-		peerVal.Ip = parsedIp
-		peerVal.Port = uint16(port)
+		peerVal := netip.AddrPortFrom(parsedIp, uint16(port))
 		peerList = append(peerList, peerVal)
 	}
 
