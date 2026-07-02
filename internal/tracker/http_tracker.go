@@ -125,6 +125,7 @@ func (t httpTracker) Announce(ctx context.Context, r AnnounceRequest) (AnnounceR
 		return AnnounceResponse{}, errors.Join(InvalidRespErr, err)
 	}
 
+	defer httpResp.Body.Close()
 	httpBody, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return AnnounceResponse{}, errors.Join(InvalidRespErr, err)
@@ -140,7 +141,6 @@ func (t httpTracker) Announce(ctx context.Context, r AnnounceRequest) (AnnounceR
 
 func (t httpTracker) serialize(r AnnounceRequest) *url.URL {
 	fullUrl := t.announce
-	eventStr := []string{"none", "completed", "started", "stopped"}
 	query := fmt.Sprintf(
 		"info_hash=%v"+
 			"&peer_id=%v"+
@@ -160,7 +160,7 @@ func (t httpTracker) serialize(r AnnounceRequest) *url.URL {
 		url.QueryEscape(strconv.Itoa(int(r.Uploaded))),
 		url.QueryEscape(strconv.Itoa(int(r.Downloaded))),
 		url.QueryEscape(strconv.Itoa(int(r.Left))),
-		url.QueryEscape(eventStr[r.Event]),
+		url.QueryEscape(trackerEventName[r.Event]),
 		url.QueryEscape(r.Ip.String()),
 		url.QueryEscape(strconv.Itoa(int(r.Key))),
 	)
