@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-// --------------- Constants -------------------
-
 type trackerEvent uint8
 
 const (
@@ -28,7 +26,10 @@ func (e trackerEvent) String() string {
 	return trackerEventName[e]
 }
 
-// --------------- Structs -------------------
+type Tracker interface {
+	Announce(ctx context.Context, r AnnounceRequest) (*AnnounceResponse, error)
+	URL() string
+}
 
 type AnnounceRequest struct {
 	Infohash   [20]byte
@@ -60,15 +61,6 @@ type Error struct {
 	Reason  string
 	RetryIn time.Duration
 }
-
-// -------------- Interfaces ------------------
-
-type Tracker interface {
-	Announce(ctx context.Context, r AnnounceRequest) (*AnnounceResponse, error)
-	URL() string
-}
-
-// -------------- Methods ------------------
 
 func (e Error) Error() string {
 	return e.Reason

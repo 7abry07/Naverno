@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-// --------------- Functions -------------------
-
 func Parse(input string) (Metadata, error) {
 	m := Metadata{}
 

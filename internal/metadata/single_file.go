@@ -1,7 +1,5 @@
 package metadata
 
-// --------------- Structs -------------------
-
 type SingleFile struct {
 	name string
 
@@ -11,8 +9,6 @@ type SingleFile struct {
 
 	length int
 }
-
-// --------------- Methods --------------------
 
 func (s SingleFile) Name() string {
 	return s.name

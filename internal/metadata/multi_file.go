@@ -1,7 +1,5 @@
 package metadata
 
-// --------------- Structs -------------------
-
 type MultiFile struct {
 	name string
 
@@ -11,8 +9,6 @@ type MultiFile struct {
 
 	files []File
 }
-
-// --------------- Methods --------------------
 
 func (m MultiFile) Name() string {
 	return m.name

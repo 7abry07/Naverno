@@ -1,4 +1,4 @@
-package http_tracker
+package httptracker
 
 import (
 	"Naverno/internal/bencode"
@@ -74,7 +74,7 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 
 	if resp.peers.Type() == bencode.List_t {
 		peersList, _ := resp.peers.List()
-		parsedPeers, ok := tracker.ParseV4BencodedPeers(peersList)
+		parsedPeers, ok := ParseBencodedPeers(peersList)
 		if !ok {
 			return nil, tracker.InvalidRespErr
 		}

@@ -1,42 +1,9 @@
 package tracker
 
 import (
-	"Naverno/internal/bencode"
 	"fmt"
 	"net/netip"
 )
-
-// --------------- Functions -------------------
-
-func ParseV4BencodedPeers(peers bencode.BList) ([]Peer, bool) {
-	peerList := []Peer{}
-
-	for _, peerNode := range peers {
-		p, ok := peerNode.Dict()
-		if !ok {
-			return peerList, false
-		}
-
-		ip, _ := p.FindStrOrDef("ip", "")
-		port, _ := p.FindIntOrDef("port", 0)
-
-		if ip == "" || port == 0 {
-			continue
-		}
-		parsedIp, err := netip.ParseAddr(string(ip))
-		if err != nil {
-			return peerList, false
-		}
-
-		peerVal := Peer{}
-
-		peerVal.Ip = parsedIp
-		peerVal.Port = uint16(port)
-		peerList = append(peerList, peerVal)
-	}
-
-	return peerList, true
-}
 
 func ParseV4CompactPeers(peers string) ([]Peer, bool) {
 	peerList := []Peer{}

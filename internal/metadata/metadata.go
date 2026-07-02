@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-// --------------- Structs -------------------
-
 type Metadata struct {
 	Info
 
@@ -26,8 +24,6 @@ type File struct {
 	Path   string
 }
 
-// -------------- Interfaces ------------------
-
 type Info interface {
 	Name() string
 
@@ -39,8 +35,6 @@ type Info interface {
 
 	Files() []File
 }
-
-// --------------- Methods --------------------
 
 func (m Metadata) Announce() *url.URL {
 	return m.announce

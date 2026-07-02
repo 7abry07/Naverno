@@ -1,4 +1,4 @@
-package http_tracker
+package httptracker
 
 import "Naverno/internal/bencode"
 
