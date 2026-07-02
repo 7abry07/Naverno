@@ -3,7 +3,7 @@ package tracker
 import (
 	"context"
 	"net/netip"
-	"net/url"
+	"time"
 )
 
 // --------------- Constants -------------------
@@ -24,6 +24,10 @@ var trackerEventName = map[trackerEvent]string{
 	TRACKER_STOPPED:   "stopped",
 }
 
+func (e trackerEvent) String() string {
+	return trackerEventName[e]
+}
+
 // --------------- Structs -------------------
 
 type AnnounceRequest struct {
@@ -34,47 +38,38 @@ type AnnounceRequest struct {
 	Left       uint64
 	Ip         netip.Addr
 	Port       uint16
-	Key        uint32
+	Numwant    uint32
 	Event      trackerEvent
 }
 
 type AnnounceResponse struct {
-	Failure     *string
-	Warning     *string
-	MinInterval uint32
-	Interval    uint32
-	Complete    int64
-	Incomplete  int64
-	Downloaded  int64
-	PeerList    []peer
+	MinInterval    time.Duration
+	Interval       time.Duration
+	Leechers       int64
+	Seeders        int64
+	WarningMessage string
+	Peers          []Peer
 }
 
-type peer struct {
+type Peer struct {
 	Ip   netip.Addr
 	Port uint16
+}
+
+type Error struct {
+	Reason  string
+	RetryIn time.Duration
 }
 
 // -------------- Interfaces ------------------
 
 type Tracker interface {
-	Announce(ctx context.Context, r AnnounceRequest) (AnnounceResponse, error)
+	Announce(ctx context.Context, r AnnounceRequest) (*AnnounceResponse, error)
+	URL() string
 }
 
-// -------------- Functions ------------------
+// -------------- Methods ------------------
 
-func NewTracker(announceUrl string) (Tracker, error) {
-	parsedUrl, err := url.Parse(announceUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	switch parsedUrl.Scheme {
-	case "https":
-		fallthrough
-	case "http":
-		httptracker := httpTracker{}
-		httptracker.announce = parsedUrl
-		return httptracker, nil
-	}
-	return nil, InvalidSchemeErr
+func (e Error) Error() string {
+	return e.Reason
 }
