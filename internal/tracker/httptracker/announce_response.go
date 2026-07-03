@@ -4,8 +4,8 @@ type announceResponse struct {
 	failure     string
 	warning     string
 	retryIn     string
-	minInterval int32
-	interval    int32
+	minInterval int64
+	interval    int64
 	complete    int64
 	incomplete  int64
 

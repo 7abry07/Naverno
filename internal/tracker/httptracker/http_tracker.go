@@ -182,13 +182,13 @@ func (t *HTTPTracker) deserialize(httpResp []byte) (announceResponse, bool) {
 	if !ok {
 		interval = 1800
 	}
-	r.interval = int32(interval)
+	r.interval = interval
 
 	minInterval, ok := root["min interval"].(int64)
 	if !ok {
 		interval = 1800
 	}
-	r.minInterval = int32(minInterval)
+	r.minInterval = minInterval
 
 	warning, ok := root["warning message"].(string)
 	if !ok {
