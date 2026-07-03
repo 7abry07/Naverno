@@ -1,7 +1,5 @@
 package httptracker
 
-import "Naverno/internal/bencode"
-
 type announceResponse struct {
 	failure     string
 	warning     string
@@ -11,6 +9,6 @@ type announceResponse struct {
 	complete    int64
 	incomplete  int64
 
-	peers  bencode.BNode
-	peers6 bencode.BNode
+	peers  any
+	peers6 any
 }

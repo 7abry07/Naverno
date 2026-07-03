@@ -15,7 +15,7 @@ func TestSimpleInt(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected: [%v] | got: [%v]", 56, err)
 	}
-	intval, ok := val.Int()
+	intval, ok := val.(int64)
 	if !ok {
 		t.Errorf("expected: [%v] | got: [%v]", 56, "not int")
 	}
@@ -30,7 +30,7 @@ func TestSimpleString(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected: [%v] | got: [%v]", "'hello'", err)
 	}
-	strval, ok := val.Str()
+	strval, ok := val.(string)
 	if !ok {
 		t.Errorf("expected: [%v] | got: [%v]", "'hello'", "not string")
 	}
@@ -45,13 +45,13 @@ func TestSimpleList(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected: [%v] | got: [%v]", "list", err)
 	}
-	listval, ok := val.List()
+	listval, ok := val.([]any)
 	if !ok {
 		t.Errorf("expected: [%v] | got: [%v]", "list", "not list")
 	}
 
-	stritem, ok := listval[0].Str()
-	intitem, ok2 := listval[1].Int()
+	stritem, ok := listval[0].(string)
+	intitem, ok2 := listval[1].(int64)
 
 	if !ok {
 		t.Errorf("expected item: %v->[%v] | got: [%v]", 0, "hello", "not string")
@@ -74,16 +74,22 @@ func TestSimpleDict(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected: [%v] | got: [%v]", "dict", err)
 	}
-	dictval, ok := val.Dict()
+	dictval, ok := val.(map[string]any)
 	if !ok {
 		t.Errorf("expected: [%v] | got: [%v]", "dict", "not dict")
 	}
 
-	value, ok := dictval.FindInt("hello")
+	value, ok := dictval["hello"]
 	if !ok {
 		t.Errorf("expected key-value: [%v-%v] | got: [%v]", "hello", 56, "key not found")
 	}
-	if value != 56 {
+
+	intvalue, ok := value.(int64)
+	if !ok {
+		t.Errorf("expected key-value: [%v-%v] | got: [%v]", "hello", 56, "value not integer")
+	}
+
+	if intvalue != 56 {
 		t.Errorf("expected key-value: [%v-%v] | got: [%v-%v]", "hello", 56, "hello", value)
 	}
 }

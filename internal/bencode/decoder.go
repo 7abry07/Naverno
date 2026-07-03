@@ -7,26 +7,26 @@ import (
 
 const MaxDepth = 100
 
-func Decode(input string) (BNode, error) {
+func Decode(input string) (any, error) {
 	depth := 0
 	value, err := decode(&input, &depth)
 	if err != nil {
-		return BNode{}, err
+		return nil, err
 	}
 	if len(input) != 0 {
-		return BNode{}, TrailingInputErr
+		return nil, TrailingInputErr
 	}
 	return value, nil
 }
 
-func decode(input *string, depth *int) (BNode, error) {
+func decode(input *string, depth *int) (any, error) {
 	*depth++
 
 	if *depth == MaxDepth {
-		return BNode{}, MaximumNestingErr
+		return nil, MaximumNestingErr
 	}
 	if len(*input) == 0 {
-		return BNode{}, EmptyInputErr
+		return nil, EmptyInputErr
 	}
 
 	c := (*input)[0]
@@ -54,42 +54,43 @@ func decode(input *string, depth *int) (BNode, error) {
 			val, err := decodeStr(input)
 			*depth--
 			if err != nil {
-				return BNode{}, err
+				return nil, err
 			}
-			return NewStr(val), nil
+			return val, nil
 		}
 	case 'i':
 		{
 			val, err := decodeInt(input)
 			*depth--
 			if err != nil {
-				return BNode{}, err
+				return nil, err
 			}
-			return NewInt(val), nil
+			return val, nil
 		}
 	case 'l':
 		{
 			val, err := decodeList(input, depth)
 			*depth--
 			if err != nil {
-				return BNode{}, err
+				return nil, err
 			}
-			return NewList(val), nil
+			return val, nil
 		}
 	case 'd':
 		{
 			val, err := decodeDict(input, depth)
 			*depth--
 			if err != nil {
-				return BNode{}, err
+				return nil, err
 			}
-			return NewDict(val), nil
+			return val, nil
 		}
+	default:
+		return nil, InvalidTypeErr
 	}
-	return BNode{}, InvalidTypeErr
 }
 
-func decodeStr(input *string) (BStr, error) {
+func decodeStr(input *string) (string, error) {
 	lenEnd := strings.IndexByte(*input, ':')
 	if lenEnd == -1 {
 		return "", MissingColonErr
@@ -107,10 +108,10 @@ func decodeStr(input *string) (BStr, error) {
 
 	payload := (*input)[0:lenInt]
 	*input = (*input)[lenInt:]
-	return BStr(payload), nil
+	return payload, nil
 }
 
-func decodeInt(input *string) (BInt, error) {
+func decodeInt(input *string) (int64, error) {
 	*input = (*input)[1:]
 	intEnd := strings.IndexByte(*input, 'e')
 	if intEnd == -1 {
@@ -130,15 +131,15 @@ func decodeInt(input *string) (BInt, error) {
 	}
 
 	*input = (*input)[intEnd+1:]
-	return BInt(val), nil
+	return val, nil
 }
 
-func decodeList(input *string, depth *int) (BList, error) {
+func decodeList(input *string, depth *int) ([]any, error) {
 	*input = (*input)[1:]
-	var list BList
+	var list []any
 	for {
 		if len(*input) == 0 {
-			return BList{}, MissingListTermErr
+			return nil, MissingListTermErr
 		}
 		if (*input)[0] == 'e' {
 			*input = (*input)[1:]
@@ -147,24 +148,23 @@ func decodeList(input *string, depth *int) (BList, error) {
 
 		val, err := decode(input, depth)
 		if err != nil {
-			return BList{}, err
+			return nil, err
 		}
 
 		list = append(list, val)
 	}
 }
 
-func decodeDict(input *string, depth *int) (BDict, error) {
+func decodeDict(input *string, depth *int) (map[string]any, error) {
 	*input = (*input)[1:]
-	node := NewEmptyDict()
-	dict, _ := node.Dict()
+	dict := make(map[string]any)
 
 	previousKey := ""
 	first := true
 
 	for {
 		if len(*input) == 0 {
-			return BDict{}, MissingDictTermErr
+			return nil, MissingDictTermErr
 		}
 		if (*input)[0] == 'e' {
 			*input = (*input)[1:]
@@ -173,25 +173,25 @@ func decodeDict(input *string, depth *int) (BDict, error) {
 
 		keyNode, err := decode(input, depth)
 		if err != nil {
-			return BDict{}, err
+			return nil, err
 		}
 
-		key, ok := keyNode.Str()
+		key, ok := keyNode.(string)
 		if !ok {
-			return BDict{}, NonStrKeyErr
+			return nil, NonStrKeyErr
 		}
-		if key < BStr(previousKey) && !first {
-			return BDict{}, NonSortedKeysErr
+		if key < previousKey && !first {
+			return nil, NonSortedKeysErr
 		}
 
 		val, err := decode(input, depth)
 		if err != nil {
-			return BDict{}, err
+			return nil, err
 		}
 
 		_, exists := dict[string(key)]
 		if exists {
-			return BDict{}, DuplicateKeyErr
+			return nil, DuplicateKeyErr
 		}
 		dict[string(key)] = val
 		previousKey = string(key)

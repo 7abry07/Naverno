@@ -6,32 +6,32 @@ import (
 	"strings"
 )
 
-func Encode(n BNode) string {
+func Encode(n any) string {
 	var result strings.Builder
-	switch n.kind {
+	switch n := n.(type) {
 
-	case Int_t:
-		result.WriteString(encodeInt(n._int))
-	case Str_t:
-		result.WriteString(encodeStr(n._str))
-	case List_t:
-		result.WriteString(encodeList(n._list))
-	case Dict_t:
-		result.WriteString((encodeDict(n._dict)))
+	case int64:
+		result.WriteString(encodeInt(n))
+	case string:
+		result.WriteString(encodeStr(n))
+	case []any:
+		result.WriteString(encodeList(n))
+	case map[string]any:
+		result.WriteString((encodeDict(n)))
 
 	}
 	return result.String()
 }
 
-func encodeInt(i BInt) string {
+func encodeInt(i int64) string {
 	return fmt.Sprintf("i%de", i)
 }
 
-func encodeStr(s BStr) string {
+func encodeStr(s string) string {
 	return fmt.Sprintf("%d:%s", len(s), s)
 }
 
-func encodeList(l BList) string {
+func encodeList(l []any) string {
 	var result strings.Builder
 	result.WriteRune('l')
 	for _, val := range l {
@@ -41,7 +41,7 @@ func encodeList(l BList) string {
 	return result.String()
 }
 
-func encodeDict(d BDict) string {
+func encodeDict(d map[string]any) string {
 	var result strings.Builder
 	result.WriteRune('d')
 
@@ -52,7 +52,7 @@ func encodeDict(d BDict) string {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		result.WriteString(encodeStr(BStr(k)))
+		result.WriteString(encodeStr(k))
 		result.WriteString(Encode(d[k]))
 	}
 	result.WriteRune('e')

@@ -66,28 +66,34 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 
 	peers := []netip.AddrPort{}
 
-	if resp.peers.Type() == bencode.List_t {
-		peersList, _ := resp.peers.List()
-		parsedPeers, ok := ParseBencodedPeers(peersList)
-		if !ok {
-			return nil, tracker.InvalidRespErr
+	switch peersVal := resp.peers.(type) {
+	case []any:
+		{
+			parsedPeers, ok := ParseBencodedPeers(peersVal)
+			if !ok {
+				return nil, tracker.InvalidRespErr
+			}
+			peers = append(peers, parsedPeers...)
 		}
-		peers = append(peers, parsedPeers...)
-	} else if resp.peers.Type() == bencode.Str_t {
-		peersStr, _ := resp.peers.Str()
-		parsedPeers, ok := tracker.ParseV4CompactPeers(string(peersStr))
-		if !ok {
-			return nil, tracker.InvalidRespErr
+	case string:
+		{
+			parsedPeers, ok := tracker.ParseV4CompactPeers(peersVal)
+			if !ok {
+				return nil, tracker.InvalidRespErr
+			}
+			peers = append(peers, parsedPeers...)
 		}
-		peers = append(peers, parsedPeers...)
+
 	}
 
-	if resp.peers6.Type() == bencode.Str_t {
-		peersStr, _ := resp.peers6.Str()
-		if len(peersStr) != 0 {
-			parsedPeers, ok := tracker.ParseV6CompactPeers(string(peersStr))
-			if ok {
-				peers = append(peers, parsedPeers...)
+	switch peersVal := resp.peers6.(type) {
+	case string:
+		{
+			if len(peersVal) != 0 {
+				parsedPeers, ok := tracker.ParseV6CompactPeers(peersVal)
+				if ok {
+					peers = append(peers, parsedPeers...)
+				}
 			}
 		}
 	}
@@ -166,48 +172,64 @@ func (t *HTTPTracker) deserialize(httpResp []byte) (announceResponse, bool) {
 		t.logger.Error("error in decoding tracker response", "tracker", t.URL())
 		return r, false
 	}
-	root, ok := decoded.Dict()
+	root, ok := decoded.(map[string]any)
 	if !ok {
 		t.logger.Error("the response is not a bencode dictionary", "tracker", t.URL())
 		return r, false
 	}
 
-	interval, _ := root.FindIntOrDef("interval", 1800)
-	minInterval, _ := root.FindIntOrDef("min interval", 30)
+	interval, ok := root["interval"].(int64)
+	if !ok {
+		interval = 1800
+	}
 	r.interval = int32(interval)
+
+	minInterval, ok := root["min interval"].(int64)
+	if !ok {
+		interval = 1800
+	}
 	r.minInterval = int32(minInterval)
 
-	warning, _ := root.FindStrOrDef("warning message", "")
-	r.warning = string(warning)
+	warning, ok := root["warning message"].(string)
+	if !ok {
+		warning = ""
+	}
+	r.warning = warning
 
-	failure, failureOk := root.FindStrOrDef("failure reason", "")
-	r.failure = string(failure)
-	if failureOk {
-		retryIn, _ := root.FindStrOrDef("retry in", "never")
-		r.retryIn = string(retryIn)
+	failure, ok := root["failure reason"].(string)
+	if ok {
+		r.failure = failure
+		retryIn, _ := root["retry in"].(string)
+		r.retryIn = retryIn
 		return r, true
 	}
 
-	complete, _ := root.FindIntOrDef("complete", -1)
-	incomplete, _ := root.FindIntOrDef("incomplete", -1)
+	complete, ok := root["complete"].(int64)
+	if !ok {
+		complete = -1
+	}
+	incomplete, ok := root["incomplete"].(int64)
+	if !ok {
+		incomplete = -1
+	}
+
 	r.complete = int64(complete)
 	r.incomplete = int64(incomplete)
 
-	trackerid, ok := root.FindStrOrDef("tracker id", "")
-	t.trackerid = string(trackerid)
+	trackerid, ok := root["tracker id"].(string)
+	t.trackerid = trackerid
 
 	if ok {
-		t.logger.Debug("tracker id", "id", string(trackerid))
+		t.logger.Debug("tracker id", "id", trackerid)
 	}
 
-	peersNode, ok := root.Find("peers")
+	peersNode, ok := root["peers"]
 	if !ok {
 		t.logger.Error("no peers in tracker response", "tracker", t.URL())
 		return r, false
 	}
 
-	peers6Node, ok := root.Find("peers6")
-	r.peers6 = bencode.NewStr("")
+	peers6Node, ok := root["peers6"]
 	if ok {
 		r.peers6 = peers6Node
 	}

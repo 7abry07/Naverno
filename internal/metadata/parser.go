@@ -15,13 +15,13 @@ func Parse(input string) (Metadata, error) {
 		return m, err
 	}
 
-	root, ok := decoded.Dict()
+	root, ok := decoded.(map[string]any)
 	if !ok {
 		return m, RootNotDictErr
 	}
 
-	announce, ok := root.FindStr("announce")
-	announce_list, ok1 := root.FindList("announce-list")
+	announce, ok := root["announce"].(string)
+	announce_list, ok1 := root["announce-list"].([]any)
 	if !ok && !ok1 {
 		return m, MissingAnnounceErr
 	}
@@ -37,59 +37,55 @@ func Parse(input string) (Metadata, error) {
 		m.announce_list = &parsed_announce_list
 	}
 
-	creation_date, ok := root.FindInt("creation date")
+	creation_date, ok := root["creation date"].(int64)
 	if ok {
 		temp := int(creation_date)
 		m.creation_date = &temp
 	}
 
-	comment, ok := root.FindStr("comment")
+	comment, ok := root["comment"].(string)
 	if ok {
 		temp := string(comment)
 		m.comment = &temp
 	}
 
-	created_by, ok := root.FindStr("created by")
+	created_by, ok := root["created by"].(string)
 	if ok {
 		temp := string(created_by)
 		m.created_by = &temp
 	}
 
-	encoding, ok := root.FindStr("encoding")
+	encoding, ok := root["encoding"].(string)
 	if ok {
 		temp := string(encoding)
 		m.encoding = &temp
 	}
 
-	infoNode, ok := root.Find("info")
+	info, ok := root["info"].(map[string]any)
 	if !ok {
 		return m, MissingInfoErr
 	}
-	hash := sha1.Sum([]byte(bencode.Encode(infoNode)))
+
+	hash := sha1.Sum([]byte(bencode.Encode(info)))
 	m.infohash = hash
 
-	infoDict, ok := infoNode.Dict()
-	if !ok {
-		return m, MissingInfoErr
-	}
-
-	info, err := parseInfo(infoDict)
+	infoMarshaled, err := parseInfo(info)
 	if err != nil {
 		return m, err
 	}
 
-	m.Info = info
+	m.Info = infoMarshaled
 
 	return m, nil
 }
 
-func parseInfo(info bencode.BDict) (Info, error) {
-	piece_length, ok := info.FindInt("piece length")
+func parseInfo(info map[string]any) (Info, error) {
+	piece_length, ok := info["piece length"].(int64)
 	if !ok {
 		return nil, MissingPieceLenErr
 	}
 
-	pieces, ok := info.FindStr("pieces")
+	pieces, ok := info["pieces"].(string)
 	if !ok {
 		return nil, MissingPiecesErr
 	}
@@ -97,13 +93,13 @@ func parseInfo(info bencode.BDict) (Info, error) {
 		return nil, InvalidPiecesErr
 	}
 
-	name, ok := info.FindStr("name")
+	name, ok := info["name"].(string)
 	if !ok {
 		return nil, MissingNameErr
 	}
 
-	length, ok := info.FindInt("length")
-	filesList, ok1 := info.FindList("files")
+	length, ok := info["length"].(int64)
+	filesList, ok1 := info["files"].([]any)
 
 	if ok && ok1 {
 		return nil, BothLengthFilesPresentErr
@@ -118,7 +114,7 @@ func parseInfo(info bencode.BDict) (Info, error) {
 		single.pieces = ([]byte)(pieces)
 		single.length = int(length)
 
-		private, ok := info.FindInt("private")
+		private, ok := info["private"].(int64)
 		if ok {
 			temp := int(private)
 			single.private = &temp
@@ -136,7 +132,7 @@ func parseInfo(info bencode.BDict) (Info, error) {
 		}
 		multi.files = files
 
-		private, ok := info.FindInt("private")
+		private, ok := info["private"].(int64)
 		if ok {
 			temp := int(private)
 			multi.private = &temp
@@ -146,7 +142,7 @@ func parseInfo(info bencode.BDict) (Info, error) {
 	}
 }
 
-func parseAnnounce(announce bencode.BStr) (*url.URL, bool) {
+func parseAnnounce(announce string) (*url.URL, bool) {
 	parsed, err := url.Parse(string(announce))
 	if err != nil {
 		return nil, false
@@ -154,16 +150,16 @@ func parseAnnounce(announce bencode.BStr) (*url.URL, bool) {
 	return parsed, true
 }
 
-func parseAnnounceList(announce_list bencode.BList) ([][]*url.URL, bool) {
+func parseAnnounceList(announce_list []any) ([][]*url.URL, bool) {
 	result := [][]*url.URL{}
 	for _, lstnode := range announce_list {
-		lst, ok := lstnode.List()
+		lst, ok := lstnode.([]any)
 		if !ok {
 			return nil, false
 		}
 		resultLst := []*url.URL{}
 		for _, strnode := range lst {
-			str, ok := strnode.Str()
+			str, ok := strnode.(string)
 			if !ok {
 				return nil, false
 			}
@@ -178,11 +174,11 @@ func parseAnnounceList(announce_list bencode.BList) ([][]*url.URL, bool) {
 
 	return result, true
 }
-func parseFiles(files bencode.BList) ([]File, bool) {
+func parseFiles(files []any) ([]File, bool) {
 	result := []File{}
 
 	for _, node := range files {
-		dict, ok := node.Dict()
+		dict, ok := node.(map[string]any)
 		if !ok {
 			return []File{}, false
 		}
@@ -195,16 +191,16 @@ func parseFiles(files bencode.BList) ([]File, bool) {
 	return result, true
 }
 
-func parseFile(file bencode.BDict) (File, bool) {
-	length, lOk := file.FindInt("length")
-	pathlst, pOk := file.FindList("path")
+func parseFile(file map[string]any) (File, bool) {
+	length, lOk := file["length"].(int64)
+	pathlst, pOk := file["path"].([]any)
 	if !lOk || !pOk {
 		return File{}, false
 	}
 
 	var path strings.Builder
 	for i, frag := range pathlst {
-		strval, ok := frag.Str()
+		strval, ok := frag.(string)
 		if !ok {
 			return File{}, false
 		}
