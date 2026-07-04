@@ -15,14 +15,18 @@ import (
 func main() {
 	fmt.Println("hello world")
 
-	file, err := os.ReadFile("internal/metadata/testdata/fedora.torrent")
+	file, err := os.Open("internal/metadata/testdata/fedora.torrent")
 	if err != nil {
 		panic(err)
 	}
 
-	m, err := metadata.Parse(string(file))
+	meta, err := metadata.New(file)
 	if err != nil {
 		panic(err)
+	}
+
+	for _, file := range meta.Files {
+		fmt.Printf("file -> %v\n", file)
 	}
 
 	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{
@@ -40,7 +44,7 @@ func main() {
 	copy(pid[:], "-GB0001-hfjdjakfjfld")
 
 	req := tracker.AnnounceRequest{
-		Infohash:   m.Infohash(),
+		Infohash:   meta.Infohash,
 		PeerID:     pid,
 		Downloaded: 0,
 		Uploaded:   0,
