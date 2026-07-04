@@ -72,7 +72,7 @@ func (p *CompactPeer) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func ParseV4CompactPeers(peers string) ([]netip.AddrPort, bool) {
+func ParseV4CompactPeers(peers []byte) ([]netip.AddrPort, bool) {
 	peerList := []netip.AddrPort{}
 
 	for {
@@ -97,7 +97,7 @@ func ParseV4CompactPeers(peers string) ([]netip.AddrPort, bool) {
 	return peerList, true
 }
 
-func ParseV6CompactPeers(peers string) ([]netip.AddrPort, bool) {
+func ParseV6CompactPeers(peers []byte) ([]netip.AddrPort, bool) {
 	peerList := []netip.AddrPort{}
 
 	for {

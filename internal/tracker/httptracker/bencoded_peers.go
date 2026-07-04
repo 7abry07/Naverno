@@ -2,32 +2,27 @@ package httptracker
 
 import (
 	"net/netip"
+
+	"github.com/zeebo/bencode"
 )
 
-func ParseBencodedPeers(peers []any) ([]netip.AddrPort, bool) {
-	peerList := []netip.AddrPort{}
+type peer struct {
+	Ip   string `bencode:"ip"`
+	Port uint16 `bencode:"port"`
+}
 
-	for _, peerNode := range peers {
-		p, ok := peerNode.(map[string]any)
-		if !ok {
-			return peerList, false
-		}
+func ParseBencodedPeers(in []byte) ([]netip.AddrPort, bool) {
+	peers := []netip.AddrPort{}
+	peerList := []peer{}
+	bencode.DecodeBytes(in, &peerList)
 
-		ip, ok := p["ip"].(string)
-		port, ok1 := p["port"].(int64)
-
-		if !ok || !ok1 {
-			continue
-		}
-
-		parsedIp, err := netip.ParseAddr(string(ip))
+	for _, p := range peerList {
+		ip, err := netip.ParseAddr(p.Ip)
 		if err != nil {
-			return peerList, false
+			return []netip.AddrPort{}, false
 		}
-
-		peerVal := netip.AddrPortFrom(parsedIp, uint16(port))
-		peerList = append(peerList, peerVal)
+		peers = append(peers, netip.AddrPortFrom(ip, p.Port))
 	}
 
-	return peerList, true
+	return peers, true
 }

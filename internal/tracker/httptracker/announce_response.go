@@ -1,14 +1,16 @@
 package httptracker
 
-type announceResponse struct {
-	failure     string
-	warning     string
-	retryIn     string
-	minInterval int64
-	interval    int64
-	complete    int64
-	incomplete  int64
+import "github.com/zeebo/bencode"
 
-	peers  any
-	peers6 any
+type announceResponse struct {
+	Failure     string             `bencode:"failure reason"`
+	RetryIn     string             `bencode:"retry in"`
+	Warning     string             `bencode:"warning message"`
+	TrackerID   string             `bencode:"tracker id"`
+	MinInterval int64              `bencode:"min interval"`
+	Interval    int64              `bencode:"interval"`
+	Complete    int64              `bencode:"complete"`
+	Incomplete  int64              `bencode:"incomplete"`
+	Peers       bencode.RawMessage `bencode:"peers"`
+	Peers6      bencode.RawMessage `bencode:"peers6"`
 }
