@@ -128,12 +128,17 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) url.URL {
 	query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Uploaded))))
 	query.WriteString("&left=")
 	query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Left))))
-	query.WriteString("&compact=1")
-	query.WriteString("&no_peer_id=1")
-	query.WriteString("&event=")
-	query.WriteString(url.QueryEscape(r.Event.String()))
 	query.WriteString("&key=")
 	query.WriteString(url.QueryEscape(string(r.PeerID[16:20])))
+
+	query.WriteString("&compact=1")
+	query.WriteString("&no_peer_id=1")
+
+	if r.Event != tracker.TRACKER_NONE {
+		query.WriteString("&event=")
+		query.WriteString(url.QueryEscape(r.Event.String()))
+		t.logger.Debug("torrent announced", "tracker", t.URL(), "event", r.Event.String())
+	}
 
 	if r.Numwant != 0 {
 		query.WriteString("&numwant=")
