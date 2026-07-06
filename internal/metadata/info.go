@@ -50,15 +50,15 @@ func newInfo(in []byte) (*Info, error) {
 	}
 
 	if infoType.PieceLength == 0 {
-		return nil, InvalidPieceLengthErr
+		return nil, fmt.Errorf("the piece length is 0")
 	}
 
 	if len(infoType.Pieces)%sha1.Size != 0 {
-		return nil, InvalidPiecesErr
+		return nil, fmt.Errorf("the pieces length in bytes isn't divisible by sha1 size (20)")
 	}
 
 	if len(infoType.Pieces)/sha1.Size == 0 {
-		return nil, NoPiecesErr
+		return nil, fmt.Errorf("the torrent has 0 pieces")
 	}
 
 	info.Pieces = []byte(infoType.Pieces)

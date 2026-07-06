@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"io"
 	"net/url"
 	"time"
@@ -38,7 +39,7 @@ func New(in io.Reader) (*Metadata, error) {
 	}
 
 	if len(root.Info) == 0 {
-		return nil, MissingInfoErr
+		return nil, fmt.Errorf("missing info key")
 	}
 
 	if len(root.AnnounceList) > 0 {
@@ -52,7 +53,7 @@ func New(in io.Reader) (*Metadata, error) {
 			for _, tracker := range tier {
 				parsed, err := url.Parse(tracker)
 				if err != nil {
-					return nil, InvalidAnnounceErr
+					return nil, fmt.Errorf("announce-list contains an invalid URL")
 				}
 				tierVal = append(tierVal, *parsed)
 			}
@@ -66,11 +67,11 @@ func New(in io.Reader) (*Metadata, error) {
 
 		parsed, err := url.Parse(ann)
 		if err != nil {
-			return nil, InvalidAnnounceErr
+			return nil, fmt.Errorf("announce URL is invalid")
 		}
 		meta.AnnounceList = append(meta.AnnounceList, []url.URL{*parsed})
 	} else {
-		return nil, MissingAnnounceErr
+		return nil, fmt.Errorf("missing announce key")
 	}
 
 	info, err := newInfo(root.Info)

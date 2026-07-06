@@ -3,6 +3,7 @@ package trackermanager
 import (
 	"Naverno/internal/tracker"
 	"Naverno/internal/tracker/httptracker"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -37,5 +38,5 @@ func (m *TrackerManager) Get(announce string) (tracker.Tracker, error) {
 		return httpTracker, nil
 	}
 
-	return nil, tracker.InvalidSchemeErr
+	return nil, fmt.Errorf("the announce URL scheme is neither http or https")
 }
