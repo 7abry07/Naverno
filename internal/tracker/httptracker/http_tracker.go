@@ -3,6 +3,7 @@ package httptracker
 import (
 	"Naverno/internal/tracker"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -52,9 +53,9 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 		return nil, err
 	}
 
-	resp, ok := t.deserialize(httpBody)
-	if !ok {
-		return nil, tracker.InvalidRespErr
+	resp, err := t.deserialize(httpBody)
+	if err != nil {
+		return nil, err
 	}
 
 	if resp.Failure != "" {
@@ -71,7 +72,7 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 		if resp.Peers[0] == 'l' {
 			parsedPeers, ok := ParseBencodedPeers(resp.Peers)
 			if !ok {
-				return nil, tracker.InvalidRespErr
+				return nil, fmt.Errorf("bencoded peers decoding error")
 			}
 			peers = append(peers, parsedPeers...)
 		} else {
@@ -79,12 +80,12 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 			_, val, _ := strings.Cut(string(resp.Peers), ":")
 			parsedPeers, ok := tracker.ParseV4CompactPeers([]byte(val))
 			if !ok {
-				return nil, tracker.InvalidRespErr
+				return nil, fmt.Errorf("compact peers decoding error")
 			}
 			peers = append(peers, parsedPeers...)
 		}
 	} else {
-		return nil, tracker.InvalidRespErr
+		return nil, fmt.Errorf("missing peers in response")
 	}
 
 	if len(resp.Peers6) > 0 {
@@ -155,7 +156,7 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) url.URL {
 	return fullUrl
 }
 
-func (t *HTTPTracker) deserialize(resp []byte) (announceResponse, bool) {
+func (t *HTTPTracker) deserialize(resp []byte) (announceResponse, error) {
 	r := announceResponse{
 		Interval:    1800,
 		MinInterval: 30,
@@ -169,8 +170,7 @@ func (t *HTTPTracker) deserialize(resp []byte) (announceResponse, bool) {
 
 	err := bencode.DecodeBytes(resp, &r)
 	if err != nil {
-		t.logger.Error("error in decoding tracker response", "tracker", t.URL())
-		return r, false
+		return r, fmt.Errorf("response decoding error -> %v", err)
 	}
 
 	if r.TrackerID != "" {
@@ -178,5 +178,5 @@ func (t *HTTPTracker) deserialize(resp []byte) (announceResponse, bool) {
 		t.logger.Debug("new tracker id received", "tracker", t.URL(), "tracker id", r.TrackerID)
 	}
 
-	return r, true
+	return r, nil
 }
