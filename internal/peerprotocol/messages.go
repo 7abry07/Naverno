@@ -103,8 +103,8 @@ func (m Request) Marshal() []byte {
 }
 func (m Piece) Marshal() []byte {
 	marshaled := []byte{}
-	marshaled = binary.BigEndian.AppendUint32(marshaled, 13)
-	marshaled = append(marshaled, 6)
+	marshaled = binary.BigEndian.AppendUint32(marshaled, uint32(9+len(m.Data)))
+	marshaled = append(marshaled, 7)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Idx)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Begin)
 	marshaled = append(marshaled, m.Data...)
@@ -114,7 +114,7 @@ func (m Piece) Marshal() []byte {
 func (m Cancel) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 13)
-	marshaled = append(marshaled, 6)
+	marshaled = append(marshaled, 8)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Idx)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Begin)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Length)
@@ -136,36 +136,36 @@ func Decode(data []byte) (Message, error) {
 	id := data[4:5]
 
 	switch id[0] {
-	case 0:
+	case ChokeID:
 		if length != 1 {
 			return nil, fmt.Errorf("invalid choke message")
 		}
 		return Choke{}, nil
-	case 1:
+	case UnchokeID:
 		if length != 1 {
 			return nil, fmt.Errorf("invalid unchoke message")
 		}
 		return Unchoke{}, nil
-	case 2:
+	case InterestedID:
 		if length != 1 {
 			return nil, fmt.Errorf("invalid interested message")
 		}
 		return Interested{}, nil
-	case 3:
+	case UninterestedID:
 		if length != 1 {
 			return nil, fmt.Errorf("invalid uninterested message")
 		}
 		return Uninterested{}, nil
-	case 4:
+	case HaveID:
 		if length != 5 {
 			return nil, fmt.Errorf("invalid have message")
 		}
 		payload := data[5:]
 		idx := binary.BigEndian.Uint32(payload)
 		return Have{idx}, nil
-	case 5:
+	case BitfieldID:
 		return Bitfield{data[5:]}, nil
-	case 6:
+	case RequestID:
 		if length != 13 {
 			return nil, fmt.Errorf("invalid request message")
 		}
@@ -174,8 +174,7 @@ func Decode(data []byte) (Message, error) {
 		begin := binary.BigEndian.Uint32(payload[4:8])
 		length := binary.BigEndian.Uint32(payload[8:12])
 		return Request{idx, begin, length}, nil
-
-	case 7:
+	case PieceID:
 		if length < 9 {
 			return nil, fmt.Errorf("invalid piece message")
 		}
@@ -185,7 +184,7 @@ func Decode(data []byte) (Message, error) {
 		block := payload[8:]
 		return Piece{idx, begin, block}, nil
 
-	case 8:
+	case CancelID:
 		if length != 13 {
 			return nil, fmt.Errorf("invalid cancel message")
 		}
