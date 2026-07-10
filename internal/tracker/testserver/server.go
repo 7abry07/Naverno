@@ -42,7 +42,7 @@ type HTTPServer struct {
 	m     sync.RWMutex
 }
 
-func StartHttp() {
+func StartHttp() func() error {
 	s := HTTPServer{}
 	s.store = make(map[[20]byte][]tracker.CompactPeer)
 	s.m = sync.RWMutex{}
@@ -55,6 +55,8 @@ func StartHttp() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/announce", s.announce)
 	go http.Serve(listener, mux)
+
+	return listener.Close
 }
 
 func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {

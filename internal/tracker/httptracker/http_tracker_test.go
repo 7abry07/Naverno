@@ -15,7 +15,8 @@ import (
 )
 
 func TestTracker(t *testing.T) {
-	testserver.StartHttp()
+	stop := testserver.StartHttp()
+	defer stop()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	announce, _ := url.Parse("http://localhost:8000/announce")
