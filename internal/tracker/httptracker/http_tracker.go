@@ -26,6 +26,11 @@ type HTTPTracker struct {
 
 func New(logger *slog.Logger, announce url.URL, transport *http.Transport) *HTTPTracker {
 	t := HTTPTracker{}
+
+	if logger == nil {
+		panic("passed logger is nil")
+	}
+
 	t.announce = announce
 	t.client = &http.Client{Transport: transport}
 	t.trackerid = ""
@@ -89,11 +94,12 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 	}
 
 	if len(resp.Peers6) > 0 {
-
-		_, val, _ := strings.Cut(string(resp.Peers), ":")
-		parsedPeers, ok := tracker.ParseV6CompactPeers([]byte(val))
+		_, val, ok := strings.Cut(string(resp.Peers6), ":")
 		if ok {
-			peers = append(peers, parsedPeers...)
+			parsedPeers, ok := tracker.ParseV6CompactPeers([]byte(val))
+			if ok {
+				peers = append(peers, parsedPeers...)
+			}
 		}
 	}
 

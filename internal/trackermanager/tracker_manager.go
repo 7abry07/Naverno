@@ -17,6 +17,11 @@ type TrackerManager struct {
 
 func New(logger *slog.Logger) *TrackerManager {
 	m := TrackerManager{}
+
+	if logger == nil {
+		panic("passed logger is nil")
+	}
+
 	m.logger = logger
 	m.httpTransport = &http.Transport{}
 	return &m
