@@ -3,7 +3,6 @@ package testserver
 import (
 	"Naverno/internal/tracker"
 	"errors"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
@@ -21,11 +20,11 @@ const (
 )
 
 type announceResponse struct {
-	Failure  string `bencode:"failure reason,omitempty"`
-	RetryIn  string `bencode:"retry in,omitempty"`
-	Interval int64  `bencode:"interval,omitempty"`
-	Peers    string `bencode:"peers,omitempty"`
-	Peers6   string `bencode:"peers6,omitempty"`
+	Failure  string             `bencode:"failure reason,omitempty"`
+	RetryIn  string             `bencode:"retry in,omitempty"`
+	Interval int64              `bencode:"interval,omitempty"`
+	Peers    bencode.RawMessage `bencode:"peers,omitempty"`
+	Peers6   bencode.RawMessage `bencode:"peers6,omitempty"`
 }
 
 type announceRequest struct {
@@ -43,7 +42,7 @@ type HTTPServer struct {
 	m     sync.RWMutex
 }
 
-func StartHttp(logger *slog.Logger) {
+func StartHttp() {
 	s := HTTPServer{}
 	s.store = make(map[[20]byte][]tracker.CompactPeer)
 	s.m = sync.RWMutex{}
@@ -100,11 +99,13 @@ func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		emptyString, _ := bencode.EncodeBytes("")
+
 		s.store[req.InfoHash] = out
 		s.sendResponse(announceResponse{
 			Interval: announceInterval,
-			Peers:    "",
-			Peers6:   "",
+			Peers:    emptyString,
+			Peers6:   emptyString,
 		}, w)
 
 		return
@@ -130,12 +131,12 @@ func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	formattedPeers, err := bencode.EncodeString(compactPeers)
+	formattedPeers, err := bencode.EncodeBytes(compactPeers)
 	if err != nil {
 		panic(err)
 	}
 
-	formattedPeers6, err := bencode.EncodeString(compactPeers6)
+	formattedPeers6, err := bencode.EncodeBytes(compactPeers6)
 	if err != nil {
 		panic(err)
 	}
@@ -153,6 +154,14 @@ func parseRequest(values url.Values) (announceRequest, error) {
 	ih := values.Get("info_hash")
 	pid := values.Get("peer_id")
 
+	if len(ih) != 20 {
+		return req, errors.New("invalid info_hash")
+	}
+
+	if len(pid) != 20 {
+		return req, errors.New("invalid peer_id")
+	}
+
 	copy(req.InfoHash[:], ih)
 	copy(req.PeerID[:], pid)
 
@@ -160,7 +169,16 @@ func parseRequest(values url.Values) (announceRequest, error) {
 	if err != nil {
 		return req, errors.New("invalid port")
 	}
+	if port == 0 {
+		return req, errors.New("invalid port")
+	}
 	req.Port = uint16(port)
+
+	switch req.Event {
+	case "", "started", "stopped", "completed":
+	default:
+		return req, errors.New("invalid event")
+	}
 
 	req.Event = values.Get("event")
 	req.Compact = values.Get("compact") == "1"
@@ -186,33 +204,7 @@ func parseRequest(values url.Values) (announceRequest, error) {
 		req.Ip = netip.Addr{}
 	}
 
-	if err := ValidateAnnounceRequest(req); err != nil {
-		return req, err
-	}
-
 	return req, nil
-}
-
-func ValidateAnnounceRequest(req announceRequest) error {
-	if len(req.InfoHash) != 20 {
-		return errors.New("invalid info_hash")
-	}
-
-	if len(req.PeerID) != 20 {
-		return errors.New("invalid peer_id")
-	}
-
-	if req.Port == 0 {
-		return errors.New("invalid port")
-	}
-
-	switch req.Event {
-	case "", "started", "stopped", "completed":
-	default:
-		return errors.New("invalid event")
-	}
-
-	return nil
 }
 
 func (s *HTTPServer) sendFailure(failure string, w http.ResponseWriter) {
