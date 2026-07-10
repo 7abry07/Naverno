@@ -44,20 +44,18 @@ type peer struct {
 }
 
 type HTTPServer struct {
-	store  map[[20]byte][]peer
-	m      sync.RWMutex
-	logger *slog.Logger
+	store map[[20]byte][]peer
+	m     sync.RWMutex
 }
 
 func StartHttp(logger *slog.Logger) {
 	s := HTTPServer{}
 	s.store = make(map[[20]byte][]peer)
 	s.m = sync.RWMutex{}
-	s.logger = logger
 
 	listener, err := net.Listen("tcp", ":8000")
 	if err != nil {
-		s.logger.Error("error in opening listening socket", "error", err)
+		panic(err)
 	}
 
 	mux := http.NewServeMux()
@@ -130,13 +128,11 @@ func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 
 		compactPeer, err := tracker.NewCompactPeer(peer.Ip, peer.Port)
 		if err != nil {
-			s.logger.Error("error in creating compact peer", "error", err)
-			return
+			panic(err)
 		}
 		marshaled, err := compactPeer.MarshalBinary()
 		if err != nil {
-			s.logger.Error("error in marshaling compact peer", "error", err)
-			return
+			panic(err)
 		}
 
 		if len(marshaled) == 18 {
@@ -144,21 +140,18 @@ func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 		} else if len(marshaled) == 6 {
 			compactPeers = append(compactPeers, marshaled...)
 		} else {
-			s.logger.Error("error in marshaling compact peer", "error", "ip:port len is neither 6 or 18")
-			return
+			panic(err)
 		}
 	}
 
 	formattedPeers, err = bencode.EncodeBytes(compactPeers)
 	if err != nil {
-		s.logger.Error("error in marshaling compact peers", "error", err)
-		return
+		panic(err)
 	}
 
 	formattedPeers6, err = bencode.EncodeBytes(compactPeers6)
 	if err != nil {
-		s.logger.Error("error in marshaling compact peers", "error", err)
-		return
+		panic(err)
 	}
 
 	s.sendResponse(announceResponse{
@@ -245,8 +238,7 @@ func (s *HTTPServer) sendFailure(failure string, w http.ResponseWriter) {
 func (s *HTTPServer) sendResponse(resp announceResponse, w http.ResponseWriter) {
 	encodedResp, err := bencode.EncodeBytes(resp)
 	if err != nil {
-		s.logger.Error("error in encoding response", "error", err)
-		return
+		panic(err)
 	}
 	w.Write(encodedResp)
 }
