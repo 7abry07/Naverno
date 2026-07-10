@@ -21,11 +21,11 @@ const (
 )
 
 type announceResponse struct {
-	Failure  string             `bencode:"failure reason,omitempty"`
-	RetryIn  string             `bencode:"retry in,omitempty"`
-	Interval int64              `bencode:"interval,omitempty"`
-	Peers    bencode.RawMessage `bencode:"peers,omitempty"`
-	Peers6   bencode.RawMessage `bencode:"peers6,omitempty"`
+	Failure  string `bencode:"failure reason,omitempty"`
+	RetryIn  string `bencode:"retry in,omitempty"`
+	Interval int64  `bencode:"interval,omitempty"`
+	Peers    string `bencode:"peers,omitempty"`
+	Peers6   string `bencode:"peers6,omitempty"`
 }
 
 type announceRequest struct {
@@ -38,19 +38,14 @@ type announceRequest struct {
 	Compact  bool
 }
 
-type peer struct {
-	Ip   string `bencode:"ip"`
-	Port uint16 `bencode:"port"`
-}
-
 type HTTPServer struct {
-	store map[[20]byte][]peer
+	store map[[20]byte][]tracker.CompactPeer
 	m     sync.RWMutex
 }
 
 func StartHttp(logger *slog.Logger) {
 	s := HTTPServer{}
-	s.store = make(map[[20]byte][]peer)
+	s.store = make(map[[20]byte][]tracker.CompactPeer)
 	s.m = sync.RWMutex{}
 
 	listener, err := net.Listen("tcp", ":8000")
@@ -66,22 +61,22 @@ func StartHttp(logger *slog.Logger) {
 func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 	s.m.Lock()
 	defer s.m.Unlock()
+
 	req, err := parseRequest(r.URL.Query())
 	if err != nil {
 		s.sendFailure(err.Error(), w)
 	}
 
-	thisPeer := peer{}
-	thisPeer.Port = req.Port
+	port := req.Port
+	ip := r.RemoteAddr
 	if (req.Ip != netip.Addr{}) {
-		thisPeer.Ip = req.Ip.String()
-	} else {
-		thisPeer.Ip = r.RemoteAddr
+		ip = req.Ip.String()
 	}
+	thisPeer, _ := tracker.NewCompactPeer(ip, port)
 
 	peers, ok := s.store[req.InfoHash]
 	if !ok {
-		s.store[req.InfoHash] = []peer{}
+		s.store[req.InfoHash] = []tracker.CompactPeer{}
 	}
 
 	if len(peers) > int(min(maxNumwant, req.Numwant)) {
@@ -97,7 +92,7 @@ func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 	case "started":
 		s.store[req.InfoHash] = append(s.store[req.InfoHash], thisPeer)
 	case "stopped":
-		out := []peer{}
+		out := []tracker.CompactPeer{}
 
 		for _, p := range peers {
 			if p != thisPeer {
@@ -108,15 +103,12 @@ func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 		s.store[req.InfoHash] = out
 		s.sendResponse(announceResponse{
 			Interval: announceInterval,
-			Peers:    bencode.RawMessage{'0', ':'},
-			Peers6:   bencode.RawMessage{'0', ':'},
+			Peers:    "",
+			Peers6:   "",
 		}, w)
 
 		return
 	}
-
-	formattedPeers := bencode.RawMessage{}
-	formattedPeers6 := bencode.RawMessage{}
 
 	compactPeers := []byte{}
 	compactPeers6 := []byte{}
@@ -126,30 +118,24 @@ func (s *HTTPServer) announce(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		compactPeer, err := tracker.NewCompactPeer(peer.Ip, peer.Port)
-		if err != nil {
-			panic(err)
-		}
-		marshaled, err := compactPeer.MarshalBinary()
+		marshaled, err := peer.MarshalBinary()
 		if err != nil {
 			panic(err)
 		}
 
-		if len(marshaled) == 18 {
-			compactPeers6 = append(compactPeers6, marshaled...)
-		} else if len(marshaled) == 6 {
+		if peer.Ip.Is4() {
 			compactPeers = append(compactPeers, marshaled...)
 		} else {
-			panic(err)
+			compactPeers6 = append(compactPeers6, marshaled...)
 		}
 	}
 
-	formattedPeers, err = bencode.EncodeBytes(compactPeers)
+	formattedPeers, err := bencode.EncodeString(compactPeers)
 	if err != nil {
 		panic(err)
 	}
 
-	formattedPeers6, err = bencode.EncodeBytes(compactPeers6)
+	formattedPeers6, err := bencode.EncodeString(compactPeers6)
 	if err != nil {
 		panic(err)
 	}
