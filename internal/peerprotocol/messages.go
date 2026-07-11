@@ -8,6 +8,7 @@ import (
 
 type Message interface {
 	Marshal() []byte
+	ID() MessageID
 }
 
 type KeepAlive struct{}
