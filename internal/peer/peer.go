@@ -4,9 +4,10 @@ import (
 	"Naverno/internal/peerprotocol"
 	"encoding/binary"
 	"io"
-	"math"
 	"net"
 	"time"
+
+	"github.com/bits-and-blooms/bitset"
 )
 
 const (
@@ -23,7 +24,7 @@ type Peer struct {
 
 	conn net.Conn
 
-	Pieces          []byte
+	Pieces          *bitset.BitSet
 	canSendBitfield bool
 
 	selfTimeout *time.Ticker
@@ -46,6 +47,8 @@ func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
 		panic("passed nil connection to Peer constructor")
 	}
 
+	bitset.New(uint(pieceCount))
+
 	return &Peer{
 		conn:            conn,
 		IsChoked:        true,
@@ -53,7 +56,7 @@ func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
 		IsInteresting:   false,
 		AmInteresting:   false,
 		canSendBitfield: true,
-		Pieces:          make([]byte, int(math.Ceil(float64(pieceCount/8)))),
+		Pieces:          bitset.New(uint(pieceCount)),
 		selfTimeout:     time.NewTicker(selfTimeoutDuration),
 		peerTimeout:     time.NewTimer(peerTimeoutDuration),
 		out:             make(chan peerprotocol.Message),
@@ -64,31 +67,31 @@ func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
 }
 
 func (p *Peer) Choke() {
-	if p.IsChoked {
-		return
+	if !p.IsChoked {
+		p.out <- peerprotocol.Choke{}
 	}
-	p.out <- peerprotocol.Choke{}
+	p.IsChoked = true
 }
 
 func (p *Peer) Unchoke() {
-	if !p.IsChoked {
-		return
+	if p.IsChoked {
+		p.out <- peerprotocol.Unchoke{}
 	}
-	p.out <- peerprotocol.Unchoke{}
+	p.IsChoked = false
 }
 
 func (p *Peer) Interesting() {
-	if p.IsInteresting {
-		return
+	if !p.IsInteresting {
+		p.out <- peerprotocol.Interested{}
 	}
-	p.out <- peerprotocol.Interested{}
+	p.IsInteresting = true
 }
 
 func (p *Peer) Uninteresting() {
-	if !p.IsInteresting {
-		return
+	if p.IsInteresting {
+		p.out <- peerprotocol.Uninterested{}
 	}
-	p.out <- peerprotocol.Uninterested{}
+	p.IsInteresting = false
 }
 
 func (p *Peer) Bitfield(pieces []byte) {
