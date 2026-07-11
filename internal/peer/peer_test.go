@@ -64,16 +64,45 @@ func TestPeerMessages(t *testing.T) {
 	p := peer.New([20]byte{}, conn, 80)
 	go p.Run(incomingMessC, disconnectingC)
 
+	testTime := time.NewTimer(time.Second * 5)
 	for range len(messagesExp) {
 		select {
 		case p := <-incomingMessC:
 			messagesRec = append(messagesRec, p.Message)
-		case _ = <-disconnectingC:
+		case <-disconnectingC:
 			t.Fatal("peer disconnected")
+		case <-testTime.C:
+			t.Fatal("test time was excedded")
 		}
 	}
 
 	if !reflect.DeepEqual(messagesExp, messagesRec) {
 		t.Fatal("messages read by peer are not equal to the messages that were actually sent")
+	}
+}
+
+func TestInvalidMessage(t *testing.T) {
+	incomingMessC := make(chan peer.PeerMessage)
+	disconnectingC := make(chan *peer.Peer)
+
+	buf := []byte{}
+	buf = append(buf, []byte{0, 0, 0, 1, 255}...)
+	conn := NewMockConn(buf)
+
+	p := peer.New([20]byte{}, conn, 80)
+	go p.Run(incomingMessC, disconnectingC)
+
+	testTime := time.NewTimer(time.Second * 5)
+	disconnected := false
+	select {
+	case <-incomingMessC:
+	case <-disconnectingC:
+		disconnected = true
+	case <-testTime.C:
+		t.Fatal("test time was excedded")
+	}
+
+	if !disconnected {
+		t.Fatal("peer should have disconnected but didn't")
 	}
 }
