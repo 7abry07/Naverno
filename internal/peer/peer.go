@@ -5,14 +5,8 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
-	"time"
 
 	"github.com/bits-and-blooms/bitset"
-)
-
-const (
-	selfTimeoutDuration = time.Minute * 2
-	peerTimeoutDuration = time.Minute * 2
 )
 
 type Peer struct {
@@ -24,11 +18,7 @@ type Peer struct {
 
 	conn net.Conn
 
-	Pieces          *bitset.BitSet
-	canSendBitfield bool
-
-	selfTimeout *time.Ticker
-	peerTimeout *time.Timer
+	Pieces *bitset.BitSet
 
 	out chan peerprotocol.Message
 	in  chan peerprotocol.Message
@@ -50,19 +40,16 @@ func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
 	bitset.New(uint(pieceCount))
 
 	return &Peer{
-		conn:            conn,
-		IsChoked:        true,
-		AmChoked:        true,
-		IsInteresting:   false,
-		AmInteresting:   false,
-		canSendBitfield: true,
-		Pieces:          bitset.New(uint(pieceCount)),
-		selfTimeout:     time.NewTicker(selfTimeoutDuration),
-		peerTimeout:     time.NewTimer(peerTimeoutDuration),
-		out:             make(chan peerprotocol.Message),
-		in:              make(chan peerprotocol.Message),
-		closeC:          make(chan struct{}),
-		doneC:           make(chan struct{}),
+		conn:          conn,
+		IsChoked:      true,
+		AmChoked:      true,
+		IsInteresting: false,
+		AmInteresting: false,
+		Pieces:        bitset.New(uint(pieceCount)),
+		out:           make(chan peerprotocol.Message),
+		in:            make(chan peerprotocol.Message),
+		closeC:        make(chan struct{}),
+		doneC:         make(chan struct{}),
 	}
 }
 
@@ -87,16 +74,7 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			disconnected <- p
 			close(p.doneC)
 			return
-		case <-p.peerTimeout.C:
-			close(p.closeC)
-		case <-p.selfTimeout.C:
-			p.writeMessage(peerprotocol.KeepAlive{})
 		case mess := <-p.in:
-			p.peerTimeout = time.NewTimer(peerTimeoutDuration)
-			if mess.ID() == peerprotocol.BitfieldID && !p.canSendBitfield {
-				close(p.closeC)
-			}
-			p.canSendBitfield = true
 			inbox <- PeerMessage{p, mess}
 		case mess := <-p.out:
 			p.writeMessage(mess)

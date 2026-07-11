@@ -37,7 +37,7 @@ func (c *MockConn) SetDeadline(t time.Time) error      { return nil }
 func (c *MockConn) SetReadDeadline(t time.Time) error  { return nil }
 func (c *MockConn) SetWriteDeadline(t time.Time) error { return nil }
 
-func TestPeer(t *testing.T) {
+func TestPeerMessages(t *testing.T) {
 	incomingMessC := make(chan peer.PeerMessage)
 	disconnectingC := make(chan *peer.Peer)
 
@@ -45,6 +45,7 @@ func TestPeer(t *testing.T) {
 	messagesRec := []peerprotocol.Message{}
 
 	messagesExp = append(messagesExp, peerprotocol.Bitfield{Pieces: make([]byte, 10)})
+	messagesExp = append(messagesExp, peerprotocol.KeepAlive{})
 	messagesExp = append(messagesExp, peerprotocol.Choke{})
 	messagesExp = append(messagesExp, peerprotocol.Unchoke{})
 	messagesExp = append(messagesExp, peerprotocol.Interested{})
@@ -58,7 +59,6 @@ func TestPeer(t *testing.T) {
 	for _, m := range messagesExp {
 		buf = append(buf, m.Marshal()...)
 	}
-
 	conn := NewMockConn(buf)
 
 	p := peer.New([20]byte{}, conn, 80)
