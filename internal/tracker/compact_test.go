@@ -2,7 +2,6 @@ package tracker_test
 
 import (
 	"Naverno/internal/tracker"
-	"fmt"
 	"testing"
 )
 
@@ -21,8 +20,6 @@ func TestCompactPeers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("(NewCompactPeer) unexpected error -> %v", err)
 	}
-
-	fmt.Printf("marshaled -> %v\n", marshaled)
 
 	err = p2.UnmarshalBinary(marshaled)
 	if err != nil {

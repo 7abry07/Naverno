@@ -66,55 +66,20 @@ func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
 	}
 }
 
-func (p *Peer) Choke() {
-	if !p.IsChoked {
-		p.out <- peerprotocol.Choke{}
-	}
-	p.IsChoked = true
+func (p *Peer) HasPiece(idx uint32) bool {
+	return p.Pieces.Test(uint(idx))
 }
 
-func (p *Peer) Unchoke() {
-	if p.IsChoked {
-		p.out <- peerprotocol.Unchoke{}
-	}
-	p.IsChoked = false
+func (p *Peer) IsChoking() bool {
+	return p.AmChoked
 }
 
-func (p *Peer) Interesting() {
-	if !p.IsInteresting {
-		p.out <- peerprotocol.Interested{}
-	}
-	p.IsInteresting = true
-}
-
-func (p *Peer) Uninteresting() {
-	if p.IsInteresting {
-		p.out <- peerprotocol.Uninterested{}
-	}
-	p.IsInteresting = false
-}
-
-func (p *Peer) Bitfield(pieces []byte) {
-	p.out <- peerprotocol.Bitfield{Pieces: pieces}
-}
-
-func (p *Peer) Have(idx uint32) {
-	p.out <- peerprotocol.Have{Idx: idx}
-}
-
-func (p *Peer) Request(idx uint32, begin uint32, length uint32) {
-	p.out <- peerprotocol.Request{Idx: idx, Begin: begin, Length: length}
-}
-
-func (p *Peer) Piece(idx uint32, begin uint32, data []byte) {
-	p.out <- peerprotocol.Piece{Idx: idx, Begin: begin, Data: data}
-}
-
-func (p *Peer) Cancel(idx uint32, begin uint32, length uint32) {
-	p.out <- peerprotocol.Cancel{Idx: idx, Begin: begin, Length: length}
+func (p *Peer) IsInterested() bool {
+	return p.AmInteresting
 }
 
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
+	go p.listen()
 	for {
 		select {
 		case <-p.closeC:
@@ -144,27 +109,79 @@ func (p *Peer) Stop() <-chan struct{} {
 	return p.doneC
 }
 
+func (p *Peer) Choke() {
+	if !p.IsChoked {
+		p.out <- peerprotocol.Choke{}
+		p.IsChoked = true
+	}
+}
+
+func (p *Peer) Unchoke() {
+	if p.IsChoked {
+		p.out <- peerprotocol.Unchoke{}
+		p.IsChoked = false
+	}
+}
+
+func (p *Peer) Interesting() {
+	if !p.IsInteresting {
+		p.out <- peerprotocol.Interested{}
+		p.IsInteresting = true
+	}
+}
+
+func (p *Peer) Uninteresting() {
+	if p.IsInteresting {
+		p.out <- peerprotocol.Uninterested{}
+		p.IsInteresting = false
+	}
+}
+
+func (p *Peer) Bitfield(pieces []byte) {
+	p.out <- peerprotocol.Bitfield{Pieces: pieces}
+}
+
+func (p *Peer) Have(idx uint32) {
+	p.out <- peerprotocol.Have{Idx: idx}
+}
+
+func (p *Peer) Request(idx uint32, begin uint32, length uint32) {
+	p.out <- peerprotocol.Request{Idx: idx, Begin: begin, Length: length}
+}
+
+func (p *Peer) Piece(idx uint32, begin uint32, data []byte) {
+	p.out <- peerprotocol.Piece{Idx: idx, Begin: begin, Data: data}
+}
+
+func (p *Peer) Cancel(idx uint32, begin uint32, length uint32) {
+	p.out <- peerprotocol.Cancel{Idx: idx, Begin: begin, Length: length}
+}
+
 func (p *Peer) listen() {
-	lengthBytes := make([]byte, 4)
-	_, err := io.ReadFull(p.conn, lengthBytes)
-	if err != nil {
-		close(p.closeC)
+	for {
+		lengthBytes := make([]byte, 4)
+		_, err := io.ReadFull(p.conn, lengthBytes)
+		if err != nil {
+			close(p.closeC)
+			return
+		}
+		length := binary.BigEndian.Uint32(lengthBytes)
+
+		messBytes := make([]byte, length)
+		_, err = io.ReadFull(p.conn, messBytes)
+
+		fullMess := []byte{}
+		fullMess = append(fullMess, lengthBytes...)
+		fullMess = append(fullMess, messBytes...)
+
+		mess, err := peerprotocol.Decode(fullMess)
+		if err != nil {
+			close(p.closeC)
+			return
+		}
+
+		p.in <- mess
 	}
-	length := binary.BigEndian.Uint32(lengthBytes)
-
-	messBytes := make([]byte, length)
-	_, err = io.ReadFull(p.conn, messBytes)
-
-	fullMess := []byte{}
-	fullMess = append(fullMess, lengthBytes...)
-	fullMess = append(fullMess, messBytes...)
-
-	mess, err := peerprotocol.Decode(fullMess)
-	if err != nil {
-		close(p.closeC)
-	}
-
-	p.in <- mess
 }
 
 func (p *Peer) writeMessage(mess peerprotocol.Message) error {
