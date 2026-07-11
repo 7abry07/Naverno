@@ -4,6 +4,7 @@ import (
 	"Naverno/internal/peerprotocol"
 	"encoding/binary"
 	"io"
+	"math"
 	"net"
 	"time"
 )
@@ -22,8 +23,8 @@ type Peer struct {
 
 	conn net.Conn
 
-	Pieces           []byte
-	bitfieldReceived bool
+	Pieces          []byte
+	canSendBitfield bool
 
 	selfTimeout *time.Ticker
 	peerTimeout *time.Timer
@@ -35,31 +36,79 @@ type Peer struct {
 	doneC  chan struct{}
 }
 
-func New(ID [20]byte, conn net.Conn) *Peer {
+type PeerMessage struct {
+	*Peer
+	Message peerprotocol.Message
+}
+
+func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
 	if conn == nil {
 		panic("passed nil connection to Peer constructor")
 	}
 
 	return &Peer{
-		conn:             conn,
-		IsChoked:         true,
-		AmChoked:         true,
-		IsInteresting:    false,
-		AmInteresting:    false,
-		bitfieldReceived: false,
-		Pieces:           []byte{},
-		selfTimeout:      time.NewTicker(selfTimeoutDuration),
-		peerTimeout:      time.NewTimer(peerTimeoutDuration),
-		out:              make(chan peerprotocol.Message),
-		in:               make(chan peerprotocol.Message),
-		closeC:           make(chan struct{}),
-		doneC:            make(chan struct{}),
+		conn:            conn,
+		IsChoked:        true,
+		AmChoked:        true,
+		IsInteresting:   false,
+		AmInteresting:   false,
+		canSendBitfield: true,
+		Pieces:          make([]byte, int(math.Ceil(float64(pieceCount/8)))),
+		selfTimeout:     time.NewTicker(selfTimeoutDuration),
+		peerTimeout:     time.NewTimer(peerTimeoutDuration),
+		out:             make(chan peerprotocol.Message),
+		in:              make(chan peerprotocol.Message),
+		closeC:          make(chan struct{}),
+		doneC:           make(chan struct{}),
 	}
 }
 
-type PeerMessage struct {
-	*Peer
-	Message peerprotocol.Message
+func (p *Peer) Choke() {
+	if p.IsChoked {
+		return
+	}
+	p.out <- peerprotocol.Choke{}
+}
+
+func (p *Peer) Unchoke() {
+	if !p.IsChoked {
+		return
+	}
+	p.out <- peerprotocol.Unchoke{}
+}
+
+func (p *Peer) Interesting() {
+	if p.IsInteresting {
+		return
+	}
+	p.out <- peerprotocol.Interested{}
+}
+
+func (p *Peer) Uninteresting() {
+	if !p.IsInteresting {
+		return
+	}
+	p.out <- peerprotocol.Uninterested{}
+}
+
+func (p *Peer) Bitfield(pieces []byte) {
+	p.out <- peerprotocol.Bitfield{Pieces: pieces}
+}
+
+func (p *Peer) Have(idx uint32) {
+	p.out <- peerprotocol.Have{Idx: idx}
+}
+
+func (p *Peer) Request(idx uint32, begin uint32, length uint32) {
+	p.out <- peerprotocol.Request{Idx: idx, Begin: begin, Length: length}
+}
+
+func (p *Peer) Piece(idx uint32, begin uint32, data []byte) {
+	p.out <- peerprotocol.Piece{Idx: idx, Begin: begin, Data: data}
+}
+
+func (p *Peer) Cancel(idx uint32, begin uint32, length uint32) {
+	p.out <- peerprotocol.Cancel{Idx: idx, Begin: begin, Length: length}
 }
 
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
@@ -76,15 +125,10 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			p.writeMessage(peerprotocol.KeepAlive{})
 		case mess := <-p.in:
 			p.peerTimeout = time.NewTimer(peerTimeoutDuration)
-
-			if mess.ID() == peerprotocol.BitfieldID && p.bitfieldReceived {
-				if p.bitfieldReceived {
-					close(p.closeC)
-					break
-				}
-				p.bitfieldReceived = true
+			if mess.ID() == peerprotocol.BitfieldID && !p.canSendBitfield {
+				close(p.closeC)
 			}
-
+			p.canSendBitfield = true
 			inbox <- PeerMessage{p, mess}
 		case mess := <-p.out:
 			p.writeMessage(mess)
