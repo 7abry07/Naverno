@@ -3,39 +3,11 @@ package peer_test
 import (
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
-	"bytes"
-	"net"
+	"Naverno/internal/test"
 	"reflect"
 	"testing"
 	"time"
 )
-
-type MockConn struct {
-	readBuf  bytes.Buffer
-	WriteBuf bytes.Buffer
-}
-
-func NewMockConn(data []byte) *MockConn {
-	return &MockConn{
-		readBuf:  *bytes.NewBuffer(data),
-		WriteBuf: *bytes.NewBuffer([]byte{}),
-	}
-}
-
-func (c *MockConn) Read(b []byte) (int, error) {
-	return c.readBuf.Read(b)
-}
-
-func (c *MockConn) Write(b []byte) (int, error) {
-	return c.WriteBuf.Write(b)
-}
-
-func (c *MockConn) Close() error                       { return nil }
-func (c *MockConn) LocalAddr() net.Addr                { return nil }
-func (c *MockConn) RemoteAddr() net.Addr               { return nil }
-func (c *MockConn) SetDeadline(t time.Time) error      { return nil }
-func (c *MockConn) SetReadDeadline(t time.Time) error  { return nil }
-func (c *MockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 func TestRead(t *testing.T) {
 	incomingMessC := make(chan peer.PeerMessage)
@@ -59,7 +31,7 @@ func TestRead(t *testing.T) {
 	for _, m := range messagesExp {
 		buf = append(buf, m.Marshal()...)
 	}
-	conn := NewMockConn(buf)
+	conn := test.NewMockConn(buf)
 
 	p := peer.New([20]byte{}, conn, 80)
 	go p.Run(incomingMessC, disconnectingC)
@@ -85,14 +57,14 @@ func TestWrite(t *testing.T) {
 	incomingMessC := make(chan peer.PeerMessage)
 	disconnectingC := make(chan *peer.Peer)
 
-	conn := NewMockConn([]byte{})
+	conn := test.NewMockConn([]byte{})
 	p := peer.New([20]byte{}, conn, 80)
 	go p.Run(incomingMessC, disconnectingC)
 
 	p.Have(5)
 
 	buf := make([]byte, 13)
-	conn.WriteBuf.Read(buf)
+	conn.ReadSent(buf)
 
 	mess, err := peerprotocol.Decode(buf)
 	if err != nil {
@@ -115,7 +87,7 @@ func TestInvalidRead(t *testing.T) {
 
 	buf := []byte{}
 	buf = append(buf, []byte{0, 0, 0, 1, 255}...)
-	conn := NewMockConn(buf)
+	conn := test.NewMockConn(buf)
 
 	p := peer.New([20]byte{}, conn, 80)
 	go p.Run(incomingMessC, disconnectingC)
