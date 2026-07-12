@@ -19,9 +19,8 @@ type Peer struct {
 	Pieces        *bitset.BitSet
 
 	conn net.Conn
-
-	out *writer.Writer
-	in  *reader.Reader
+	out  *writer.Writer
+	in   *reader.Reader
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -57,12 +56,24 @@ func (p *Peer) HasPiece(idx uint32) bool {
 	return p.Pieces.Test(uint(idx))
 }
 
+func (p *Peer) SetPiece(idx uint32) {
+	p.Pieces.Set(uint(idx))
+}
+
 func (p *Peer) IsChoking() bool {
 	return p.AmChoked
 }
 
 func (p *Peer) IsInterested() bool {
 	return p.AmInteresting
+}
+
+func (p *Peer) Choking() bool {
+	return p.IsChoked
+}
+
+func (p *Peer) Interested() bool {
+	return p.IsInteresting
 }
 
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
