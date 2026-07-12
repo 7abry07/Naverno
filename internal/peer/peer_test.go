@@ -37,7 +37,7 @@ func (c *MockConn) SetDeadline(t time.Time) error      { return nil }
 func (c *MockConn) SetReadDeadline(t time.Time) error  { return nil }
 func (c *MockConn) SetWriteDeadline(t time.Time) error { return nil }
 
-func TestPeerMessages(t *testing.T) {
+func TestRead(t *testing.T) {
 	incomingMessC := make(chan peer.PeerMessage)
 	disconnectingC := make(chan *peer.Peer)
 
@@ -81,7 +81,35 @@ func TestPeerMessages(t *testing.T) {
 	}
 }
 
-func TestInvalidMessage(t *testing.T) {
+func TestWrite(t *testing.T) {
+	incomingMessC := make(chan peer.PeerMessage)
+	disconnectingC := make(chan *peer.Peer)
+
+	conn := NewMockConn([]byte{})
+	p := peer.New([20]byte{}, conn, 80)
+	go p.Run(incomingMessC, disconnectingC)
+
+	p.Have(5)
+
+	buf := make([]byte, 13)
+	conn.WriteBuf.Read(buf)
+
+	mess, err := peerprotocol.Decode(buf)
+	if err != nil {
+		t.Fatalf("unexpected error -> %v", err)
+	}
+
+	haveMess, ok := mess.(peerprotocol.Have)
+	if !ok {
+		t.Fatalf("expected have (4) message, got %v message instead", mess.ID())
+	}
+
+	if haveMess.Idx != 5 {
+		t.Fatal("message read isn't equal to message sent")
+	}
+}
+
+func TestInvalidRead(t *testing.T) {
 	incomingMessC := make(chan peer.PeerMessage)
 	disconnectingC := make(chan *peer.Peer)
 
