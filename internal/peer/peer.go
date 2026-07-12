@@ -5,6 +5,7 @@ import (
 	"Naverno/internal/peer/writer"
 	"Naverno/internal/peerprotocol"
 	"net"
+	"time"
 
 	"github.com/bits-and-blooms/bitset"
 )
@@ -15,10 +16,9 @@ type Peer struct {
 	IsInteresting bool
 	AmChoked      bool
 	AmInteresting bool
+	Pieces        *bitset.BitSet
 
 	conn net.Conn
-
-	Pieces *bitset.BitSet
 
 	out *writer.Writer
 	in  *reader.Reader
@@ -46,12 +46,10 @@ func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
 		IsInteresting: false,
 		AmInteresting: false,
 		Pieces:        bitset.New(uint(pieceCount)),
-		// out:           make(chan peerprotocol.Message),
-		// in:            make(chan peerprotocol.Message),
-		out:    writer.New(conn),
-		in:     reader.New(conn),
-		closeC: make(chan struct{}),
-		doneC:  make(chan struct{}),
+		out:           writer.New(conn),
+		in:            reader.New(conn),
+		closeC:        make(chan struct{}),
+		doneC:         make(chan struct{}),
 	}
 }
 
@@ -70,6 +68,10 @@ func (p *Peer) IsInterested() bool {
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 	go p.in.Run()
 	go p.out.Run()
+
+	peerTimeout := time.NewTimer(time.Minute * 2)
+	selfTimeout := time.NewTicker(time.Minute)
+
 	for {
 		select {
 		case <-p.closeC:
@@ -77,11 +79,16 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			disconnected <- p
 			close(p.doneC)
 			return
+		case <-selfTimeout.C:
+			p.out.Write(peerprotocol.KeepAlive{})
+		case <-peerTimeout.C:
+			close(p.closeC)
 		case <-p.in.Error():
 			close(p.closeC)
 		case <-p.out.Error():
 			close(p.closeC)
 		case mess := <-p.in.Messages():
+			peerTimeout = time.NewTimer(time.Minute * 2)
 			inbox <- PeerMessage{p, mess}
 		}
 	}
