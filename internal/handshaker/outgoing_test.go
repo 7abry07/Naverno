@@ -3,6 +3,7 @@ package handshaker_test
 import (
 	"Naverno/internal/handshaker"
 	"Naverno/internal/test"
+	"bytes"
 	"testing"
 	"time"
 )
@@ -43,5 +44,31 @@ func TestValidHandshake(t *testing.T) {
 
 	if handshakedConn.Extensions != remoteExt {
 		t.Errorf("expected extension bytes -> %#v | got -> %#v", remoteExt, handshakedConn.Extensions)
+	}
+
+	buf := make([]byte, 68)
+	_, err := conn.ReadSent(buf)
+	if err != nil {
+		t.Fatalf("unexpected error -> %v", err)
+	}
+
+	if buf[0] != 19 {
+		t.Errorf("expected pstrlen -> %#v | got -> %#v", 19, buf[0])
+	}
+
+	if !bytes.Equal(buf[1:20], []byte("BitTorrent protocol")) {
+		t.Errorf("expected pstr -> %#v | got -> %#v", "BitTorrent protocol", buf[1:20])
+	}
+
+	if !bytes.Equal(buf[20:28], ext[:]) {
+		t.Errorf("expected extensions -> %#v | got -> %#v", ext[:], buf[1:19])
+	}
+
+	if !bytes.Equal(buf[28:48], ih[:]) {
+		t.Errorf("expected info hash -> %#v | got -> %#v", ih, buf[28:48])
+	}
+
+	if !bytes.Equal(buf[48:68], pid[:]) {
+		t.Errorf("expected peer id -> %#v | got -> %#v", pid, buf[48:68])
 	}
 }

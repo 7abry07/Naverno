@@ -30,8 +30,9 @@ func (o *OutgoingHandshaker) Run(result chan<- HandshakedConn) {
 	protocolStr := "BitTorrent protocol"
 	handshakeLen := 49 + len(protocolStr)
 
-	buf := make([]byte, handshakeLen)
+	buf := []byte{}
 	buf = append(buf, byte(len(protocolStr)))
+	buf = append(buf, []byte(protocolStr)...)
 	buf = append(buf, o.extensions[:]...)
 	buf = append(buf, o.ih[:]...)
 	buf = append(buf, o.pid[:]...)

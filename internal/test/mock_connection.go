@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"io"
 	"net"
 	"time"
 )
@@ -34,5 +35,5 @@ func (c *MockConn) SetReadDeadline(t time.Time) error  { return nil }
 func (c *MockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 func (c *MockConn) ReadSent(b []byte) (int, error) {
-	return c.writeBuf.Read(b)
+	return io.ReadFull(&c.writeBuf, b)
 }
