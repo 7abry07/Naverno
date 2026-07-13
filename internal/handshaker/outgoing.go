@@ -39,17 +39,20 @@ func (o *OutgoingHandshaker) Run(result chan<- HandshakeResult) {
 	if err != nil {
 		hsResult.Error = err
 		result <- hsResult
+		return
 	}
 
-	remoteHs.Unmarshal(o.conn)
+	err = remoteHs.Unmarshal(o.conn)
 	if err != nil {
 		hsResult.Error = err
 		result <- hsResult
+		return
 	}
 
 	if !bytes.Equal(remoteHs.InfoHash[:], o.infohash[:]) {
 		hsResult.Error = fmt.Errorf("info hash is not equal")
 		result <- hsResult
+		return
 	}
 
 	for i, b := range remoteHs.Extensions {
