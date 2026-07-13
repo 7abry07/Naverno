@@ -3,7 +3,6 @@ package handshaker
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net"
 	"time"
 )
@@ -11,7 +10,7 @@ import (
 type OutgoingHandshaker struct {
 	conn       net.Conn
 	pid        [20]byte
-	ih         [20]byte
+	infohash   [20]byte
 	extensions [8]byte
 	timeout    time.Duration
 }
@@ -20,91 +19,45 @@ func NewOutgoingHandshaker(conn net.Conn, pid [20]byte, ih [20]byte, extensions 
 	return &OutgoingHandshaker{
 		conn:       conn,
 		pid:        pid,
-		ih:         ih,
+		infohash:   ih,
 		extensions: extensions,
 		timeout:    timeout,
 	}
 }
 
-func (o *OutgoingHandshaker) Run(result chan<- HandshakedConn) {
-	protocolStr := "BitTorrent protocol"
-	handshakeLen := 49 + len(protocolStr)
-
-	buf := []byte{}
-	buf = append(buf, byte(len(protocolStr)))
-	buf = append(buf, []byte(protocolStr)...)
-	buf = append(buf, o.extensions[:]...)
-	buf = append(buf, o.ih[:]...)
-	buf = append(buf, o.pid[:]...)
+func (o *OutgoingHandshaker) Run(result chan<- HandshakeResult) {
+	hsResult := HandshakeResult{}
+	remoteHs := Handshake{}
+	hs := Handshake{
+		Extensions: o.extensions,
+		InfoHash:   o.infohash,
+		PeerID:     o.pid,
+	}
 
 	o.conn.SetDeadline(time.Now().Add(o.timeout))
-	_, err := o.conn.Write(buf)
+	_, err := o.conn.Write(hs.Marshal())
 	if err != nil {
-		result <- HandshakedConn{
-			nil,
-			[20]byte{},
-			[8]byte{},
-			err,
-		}
+		hsResult.Error = err
+		result <- hsResult
 	}
 
-	readBuf := bytes.NewBuffer(make([]byte, handshakeLen))
-	_, err = io.ReadFull(o.conn, readBuf.Bytes())
+	remoteHs.Unmarshal(o.conn)
 	if err != nil {
-		result <- HandshakedConn{
-			nil,
-			[20]byte{},
-			[8]byte{},
-			err,
-		}
+		hsResult.Error = err
+		result <- hsResult
 	}
 
-	pstrlen, _ := readBuf.ReadByte()
-	pstr := make([]byte, len(protocolStr))
-	extensions := [8]byte{}
-	ih := [20]byte{}
-	pid := [20]byte{}
-
-	readBuf.Read(pstr)
-	readBuf.Read(extensions[:])
-	readBuf.Read(ih[:])
-	readBuf.Read(pid[:])
-
-	if pstrlen != 19 {
-		result <- HandshakedConn{
-			nil,
-			[20]byte{},
-			[8]byte{},
-			fmt.Errorf("protocol string length is invalid"),
-		}
+	if !bytes.Equal(remoteHs.InfoHash[:], o.infohash[:]) {
+		hsResult.Error = fmt.Errorf("info hash is not equal")
+		result <- hsResult
 	}
 
-	if !bytes.Equal(pstr, []byte(protocolStr)) {
-		result <- HandshakedConn{
-			nil,
-			[20]byte{},
-			[8]byte{},
-			fmt.Errorf("protocol string is invalid"),
-		}
+	for i, b := range remoteHs.Extensions {
+		remoteHs.Extensions[i] = o.extensions[i] & b
 	}
 
-	if !bytes.Equal(ih[:], o.ih[:]) {
-		result <- HandshakedConn{
-			nil,
-			[20]byte{},
-			[8]byte{},
-			fmt.Errorf("info hash is not equal"),
-		}
-	}
-
-	for i, b := range extensions {
-		extensions[i] = o.extensions[i] & b
-	}
-
-	result <- HandshakedConn{
-		o.conn,
-		pid,
-		extensions,
-		nil,
-	}
+	hsResult.Conn = o.conn
+	hsResult.PeerID = remoteHs.PeerID
+	hsResult.Extensions = remoteHs.Extensions
+	result <- hsResult
 }
