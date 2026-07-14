@@ -1,6 +1,7 @@
 package handshaker
 
 import (
+	"Naverno/internal/util"
 	"fmt"
 	"net"
 	"time"
@@ -58,7 +59,7 @@ func (i *IncomingHandshaker) Run(result chan<- *IncomingHandshaker, validInfoHas
 		remoteHs.Extensions[i] = extensions[i] & b
 	}
 
-	_, err = i.Conn.Write(hs.Marshal())
+	err = util.WriteFull(i.Conn, hs.Marshal())
 	if err != nil {
 		i.Error = err
 		return

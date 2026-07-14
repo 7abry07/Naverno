@@ -1,6 +1,7 @@
 package handshaker
 
 import (
+	"Naverno/internal/util"
 	"bytes"
 	"fmt"
 	"net"
@@ -43,7 +44,7 @@ func (o *OutgoingHandshaker) Run(result chan<- *OutgoingHandshaker, pid [20]byte
 	}
 
 	o.Conn.SetDeadline(time.Now().Add(timeout))
-	_, err := o.Conn.Write(hs.Marshal())
+	err := util.WriteFull(o.Conn, hs.Marshal())
 	if err != nil {
 		o.Error = err
 		return
