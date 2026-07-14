@@ -77,6 +77,7 @@ func (p *Peer) Interested() bool {
 }
 
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
+	defer close(p.doneC)
 	go p.in.Run()
 	go p.out.Run()
 
@@ -87,8 +88,9 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 		select {
 		case <-p.closeC:
 			p.conn.Close()
+			p.out.Close()
+			p.in.Close()
 			disconnected <- p
-			close(p.doneC)
 			return
 		case <-selfTimeout.C:
 			p.out.Write(peerprotocol.KeepAlive{})
@@ -105,9 +107,9 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 	}
 }
 
-func (p *Peer) Stop() <-chan struct{} {
+func (p *Peer) Stop() {
 	close(p.closeC)
-	return p.doneC
+	<-p.doneC
 }
 
 func (p *Peer) Choke() {

@@ -10,6 +10,9 @@ type Writer struct {
 	conn     net.Conn
 	messages chan peerprotocol.Message
 	fatal    chan error
+
+	closeC chan struct{}
+	doneC  chan struct{}
 }
 
 func New(conn net.Conn) *Writer {
@@ -17,17 +20,30 @@ func New(conn net.Conn) *Writer {
 		conn:     conn,
 		messages: make(chan peerprotocol.Message),
 		fatal:    make(chan error),
+		closeC:   make(chan struct{}),
+		doneC:    make(chan struct{}),
 	}
 }
 
 func (w *Writer) Run() {
-	for mess := range w.messages {
-		err := util.WriteFull(w.conn, mess.Marshal())
-		if err != nil {
-			w.fatal <- err
+	defer close(w.doneC)
+	for {
+		select {
+		case <-w.closeC:
 			return
+		case mess := <-w.messages:
+			err := util.WriteFull(w.conn, mess.Marshal())
+			if err != nil {
+				w.fatal <- err
+				return
+			}
 		}
 	}
+}
+
+func (w *Writer) Close() {
+	close(w.closeC)
+	<-w.doneC
 }
 
 func (w *Writer) Error() <-chan error {
