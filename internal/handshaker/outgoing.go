@@ -12,15 +12,29 @@ type OutgoingHandshaker struct {
 	PeerID     [20]byte
 	Extensions [8]byte
 	Error      error
+
+	closeC chan struct{}
+	doneC  chan struct{}
 }
 
 func NewOutgoingHandshaker(conn net.Conn) *OutgoingHandshaker {
 	return &OutgoingHandshaker{
-		Conn: conn,
+		Conn:   conn,
+		closeC: make(chan struct{}),
+		doneC:  make(chan struct{}),
 	}
 }
 
 func (o *OutgoingHandshaker) Run(result chan<- *OutgoingHandshaker, pid [20]byte, ih [20]byte, extensions [8]byte, timeout time.Duration) {
+	defer close(o.doneC)
+	defer func() {
+		select {
+		case result <- o:
+		case <-o.closeC:
+			o.Conn.Close()
+		}
+	}()
+
 	remoteHs := Handshake{}
 	hs := Handshake{
 		Extensions: extensions,
@@ -32,20 +46,17 @@ func (o *OutgoingHandshaker) Run(result chan<- *OutgoingHandshaker, pid [20]byte
 	_, err := o.Conn.Write(hs.Marshal())
 	if err != nil {
 		o.Error = err
-		result <- o
 		return
 	}
 
 	err = remoteHs.Unmarshal(o.Conn)
 	if err != nil {
 		o.Error = err
-		result <- o
 		return
 	}
 
 	if !bytes.Equal(remoteHs.InfoHash[:], ih[:]) {
 		o.Error = fmt.Errorf("info hash is not equal")
-		result <- o
 		return
 	}
 
@@ -55,5 +66,9 @@ func (o *OutgoingHandshaker) Run(result chan<- *OutgoingHandshaker, pid [20]byte
 
 	o.PeerID = remoteHs.PeerID
 	o.Extensions = remoteHs.Extensions
-	result <- o
+}
+
+func (o *OutgoingHandshaker) Close() {
+	close(o.closeC)
+	<-o.doneC
 }
