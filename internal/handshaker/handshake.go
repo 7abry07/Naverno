@@ -4,20 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net"
 )
 
 const (
 	ProtocolStringLength = byte(19)
 	ProtocolString       = "BitTorrent protocol"
 )
-
-type HandshakeResult struct {
-	Conn       net.Conn
-	PeerID     [20]byte
-	Extensions [8]byte
-	Error      error
-}
 
 type Handshake struct {
 	Extensions [8]byte

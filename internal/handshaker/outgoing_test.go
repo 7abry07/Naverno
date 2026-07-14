@@ -22,15 +22,15 @@ func TestValidHandshake(t *testing.T) {
 	handshakeSent = append(handshakeSent, remotePid[:]...)
 
 	conn := test.NewMockConn(handshakeSent)
-	result := make(chan handshaker.HandshakeResult)
+	result := make(chan *handshaker.OutgoingHandshaker)
 
 	ext := [8]byte{0}
 	ih := [20]byte{1}
 	pid := [20]byte{2}
 	ext[0] |= 1 << 7
 
-	outgoing := handshaker.NewOutgoingHandshaker(conn, pid, ih, ext, time.Second*5)
-	go outgoing.Run(result)
+	outgoing := handshaker.NewOutgoingHandshaker(conn)
+	go outgoing.Run(result, pid, ih, ext, time.Second*5)
 
 	handshakedConn := <-result
 	if handshakedConn.Error != nil {
