@@ -27,6 +27,7 @@ func NewOutgoingHandshaker(conn net.Conn) *OutgoingHandshaker {
 }
 
 func (o *OutgoingHandshaker) Run(result chan<- *OutgoingHandshaker, pid [20]byte, ih [20]byte, extensions [8]byte, timeout time.Duration) {
+	defer o.Conn.SetDeadline(time.Time{})
 	defer close(o.doneC)
 	defer func() {
 		select {

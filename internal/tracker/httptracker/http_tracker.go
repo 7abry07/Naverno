@@ -103,7 +103,7 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 		}
 	}
 
-	t.logger.Debug("got peers", "tracker", t.URL(), "peers", len(peers))
+	t.logger.Info("tracker -> got peers", "tracker", t.URL(), "peers", len(peers))
 
 	return &tracker.AnnounceResponse{
 		MinInterval:    time.Duration(resp.MinInterval) * time.Second,
@@ -186,7 +186,7 @@ func (t *HTTPTracker) deserialize(resp []byte) (announceResponse, error) {
 
 	if r.TrackerID != "" {
 		t.trackerid = r.TrackerID
-		t.logger.Debug("new tracker id received", "tracker", t.URL(), "tracker id", r.TrackerID)
+		t.logger.Info("tracker -> new tracker id received", "tracker", t.URL(), "tracker id", r.TrackerID)
 	}
 
 	return r, nil

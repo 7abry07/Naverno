@@ -15,6 +15,23 @@ const (
 	KeepAliveID    = 255
 )
 
+var messageStr = map[MessageID]string{
+	ChokeID:        "choke",
+	UnchokeID:      "unchoke",
+	InterestedID:   "interested",
+	UninterestedID: "uninterested",
+	HaveID:         "have",
+	BitfieldID:     "bitfield",
+	RequestID:      "request",
+	PieceID:        "piece",
+	CancelID:       "cancel",
+	KeepAliveID:    "keepalive",
+}
+
+func (id MessageID) String() string {
+	return messageStr[id]
+}
+
 func (KeepAlive) ID() MessageID    { return KeepAliveID }
 func (Choke) ID() MessageID        { return ChokeID }
 func (Unchoke) ID() MessageID      { return UnchokeID }

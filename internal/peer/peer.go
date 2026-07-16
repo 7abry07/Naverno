@@ -4,6 +4,7 @@ import (
 	"Naverno/internal/peer/reader"
 	"Naverno/internal/peer/writer"
 	"Naverno/internal/peerprotocol"
+	"log/slog"
 	"net"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 )
 
 type Peer struct {
+	logger *slog.Logger
+
 	ID            [20]byte
 	IsChoked      bool
 	IsInteresting bool
@@ -31,20 +34,23 @@ type PeerMessage struct {
 	Message peerprotocol.Message
 }
 
-func New(ID [20]byte, conn net.Conn, pieceCount uint32) *Peer {
+func New(logger *slog.Logger, ID [20]byte, conn net.Conn) *Peer {
 	if conn == nil {
 		panic("passed nil connection to Peer constructor")
 	}
-
-	bitset.New(uint(pieceCount))
+	if logger == nil {
+		panic("passed nil logger to Peer constructor")
+	}
 
 	return &Peer{
+		ID:            ID,
+		logger:        logger,
 		conn:          conn,
 		IsChoked:      true,
 		AmChoked:      true,
 		IsInteresting: false,
 		AmInteresting: false,
-		Pieces:        bitset.New(uint(pieceCount)),
+		Pieces:        nil,
 		out:           writer.New(conn),
 		in:            reader.New(conn),
 		closeC:        make(chan struct{}),
@@ -87,21 +93,35 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 	for {
 		select {
 		case <-p.closeC:
-			p.conn.Close()
-			p.out.Close()
-			p.in.Close()
-			disconnected <- p
 			return
 		case <-selfTimeout.C:
 			p.out.Write(peerprotocol.KeepAlive{})
 		case <-peerTimeout.C:
-			close(p.closeC)
-		case <-p.in.Error():
-			close(p.closeC)
-		case <-p.out.Error():
-			close(p.closeC)
+			p.logger.Warn("peer -> didn't send any message in 2 minutes", "peer", string(p.ID[:]))
+			select {
+			case disconnected <- p:
+			case <-p.closeC:
+			}
+			return
+		case err := <-p.in.Error():
+			select {
+			case disconnected <- p:
+				p.logger.Warn("peer -> reader error", "peer", string(p.ID[:]), "error", err.Error())
+			case <-p.closeC:
+			}
+			return
+		case err := <-p.out.Error():
+			select {
+			case disconnected <- p:
+				p.logger.Warn("peer -> writer error", "peer", string(p.ID[:]), "error", err.Error())
+			case <-p.closeC:
+			}
+			return
 		case mess := <-p.in.Messages():
 			peerTimeout = time.NewTimer(time.Minute * 2)
+			if mess.ID() == peerprotocol.KeepAliveID {
+				continue
+			}
 			inbox <- PeerMessage{p, mess}
 		}
 	}
@@ -109,35 +129,30 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 
 func (p *Peer) Stop() {
 	close(p.closeC)
+	p.conn.Close()
+	p.out.Close()
+	p.in.Close()
 	<-p.doneC
 }
 
 func (p *Peer) Choke() {
-	if !p.IsChoked {
-		p.out.Write(peerprotocol.Choke{})
-		p.IsChoked = true
-	}
+	p.IsChoked = true
+	p.out.Write(peerprotocol.Choke{})
 }
 
 func (p *Peer) Unchoke() {
-	if p.IsChoked {
-		p.out.Write(peerprotocol.Unchoke{})
-		p.IsChoked = false
-	}
+	p.IsChoked = false
+	p.out.Write(peerprotocol.Unchoke{})
 }
 
 func (p *Peer) Interesting() {
-	if !p.IsInteresting {
-		p.out.Write(peerprotocol.Interested{})
-		p.IsInteresting = true
-	}
+	p.IsInteresting = true
+	p.out.Write(peerprotocol.Interested{})
 }
 
 func (p *Peer) Uninteresting() {
-	if p.IsInteresting {
-		p.out.Write(peerprotocol.Uninterested{})
-		p.IsInteresting = false
-	}
+	p.IsInteresting = false
+	p.out.Write(peerprotocol.Uninterested{})
 }
 
 func (p *Peer) Bitfield(pieces []byte) {
