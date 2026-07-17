@@ -17,8 +17,8 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 
 func (t *Torrent) handleNewConn(conn net.Conn) {
 	hs := handshaker.NewOutgoingHandshaker(conn)
-	t.outgoingHandshakes = append(t.outgoingHandshakes, hs)
-	go hs.Run(t.outgoingHandshakeResults, t.pid, t.meta.Infohash, t.extensions, time.Second*2)
+	t.outgoing = append(t.outgoing, hs)
+	go hs.Run(t.outgoingResults, t.pid, t.meta.Infohash, t.extensions, time.Second*2)
 	t.logger.Info("torrent -> started handshaker for connection", "Address", conn.RemoteAddr().String())
 }
 
@@ -35,7 +35,7 @@ func (t *Torrent) Dial(peers []netip.AddrPort) {
 	}
 }
 
-func (t *Torrent) ClosePeers() {
+func (t *Torrent) closePeers() {
 	for _, p := range t.peers {
 		p.Stop()
 	}

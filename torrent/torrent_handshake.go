@@ -6,7 +6,7 @@ import (
 	"Naverno/internal/util"
 )
 
-func (t *Torrent) handleIncoming(res *handshaker.IncomingHandshaker) {
+func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 	if res.Error != nil {
 		t.logger.Warn("torrent -> error during handshake", "Address", res.Conn.RemoteAddr().String(), "Error", res.Error.Error())
 		return
@@ -17,8 +17,8 @@ func (t *Torrent) handleIncoming(res *handshaker.IncomingHandshaker) {
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 }
 
-func (t *Torrent) handleOutgoing(res *handshaker.OutgoingHandshaker) {
-	t.outgoingHandshakes = util.Remove(t.outgoingHandshakes, res, func(e1, e2 *handshaker.OutgoingHandshaker) bool { return e1 == e2 })
+func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
+	t.outgoing = util.Remove(t.outgoing, res, func(e1, e2 *handshaker.OutgoingHandshaker) bool { return e1 == e2 })
 	if res.Error != nil {
 		t.logger.Warn("torrent -> error during handshake", "Address", res.Conn.RemoteAddr().String(), "Error", res.Error.Error())
 		return
@@ -29,8 +29,20 @@ func (t *Torrent) handleOutgoing(res *handshaker.OutgoingHandshaker) {
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 }
 
-func (t *Torrent) CloseHandshakes() {
-	for _, hs := range t.outgoingHandshakes {
+func (t *Torrent) closeHandshakes() {
+	for _, hs := range t.outgoing {
 		hs.Close()
 	}
+}
+
+func (s *Session) listen() {
+	conn, err := s.listener.Accept()
+	if err != nil {
+		select {
+		case <-s.closeC:
+		case s.listenErr <- err:
+		}
+		return
+	}
+	s.incomingConns <- conn
 }

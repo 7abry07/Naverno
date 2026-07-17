@@ -2,18 +2,13 @@ package torrent
 
 import (
 	"Naverno/internal/handshaker"
-	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
 	"Naverno/internal/trackermanager"
-	"Naverno/internal/util"
-	"fmt"
 	"log/slog"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Session struct {
@@ -22,17 +17,17 @@ type Session struct {
 	port       uint16
 	extensions [8]byte
 
-	listener           net.Listener
-	trackerManager     *trackermanager.TrackerManager
-	logger             *slog.Logger
-	torrents           map[[20]byte]*Torrent
-	torrentsMut        sync.Mutex
-	incomingHandshakes []*handshaker.IncomingHandshaker
+	listener       net.Listener
+	trackerManager *trackermanager.TrackerManager
+	logger         *slog.Logger
+	torrents       map[[20]byte]*Torrent
+	torrentsMut    sync.Mutex
+	incoming       []*handshaker.IncomingHandshaker
 
-	newTorrent                chan *Torrent
-	removeTorrent             chan *Torrent
-	incomingConns             chan net.Conn
-	incomingHandshakesResults chan *handshaker.IncomingHandshaker
+	newTorrent      chan *Torrent
+	removeTorrent   chan *Torrent
+	incomingConns   chan net.Conn
+	incomingResults chan *handshaker.IncomingHandshaker
 
 	listenErr chan error
 	closeC    chan struct{}
@@ -57,22 +52,22 @@ func StartSession(logger *slog.Logger) *Session {
 	}
 
 	s := Session{
-		logger:                    logger,
-		listener:                  listener,
-		torrents:                  make(map[[20]byte]*Torrent),
-		torrentsMut:               sync.Mutex{},
-		port:                      uint16(port),
-		currentTid:                0,
-		pid:                       peer.GenerateRandomID(),
-		extensions:                [8]byte{},
-		trackerManager:            trackermanager.New(logger),
-		incomingHandshakes:        []*handshaker.IncomingHandshaker{},
-		newTorrent:                make(chan *Torrent),
-		removeTorrent:             make(chan *Torrent),
-		incomingHandshakesResults: make(chan *handshaker.IncomingHandshaker),
-		listenErr:                 make(chan error),
-		closeC:                    make(chan struct{}),
-		doneC:                     make(chan struct{}),
+		logger:          logger,
+		listener:        listener,
+		torrents:        make(map[[20]byte]*Torrent),
+		torrentsMut:     sync.Mutex{},
+		port:            uint16(port),
+		currentTid:      0,
+		pid:             peer.GenerateRandomID(),
+		extensions:      [8]byte{},
+		trackerManager:  trackermanager.New(logger),
+		incoming:        []*handshaker.IncomingHandshaker{},
+		newTorrent:      make(chan *Torrent),
+		removeTorrent:   make(chan *Torrent),
+		incomingResults: make(chan *handshaker.IncomingHandshaker),
+		listenErr:       make(chan error),
+		closeC:          make(chan struct{}),
+		doneC:           make(chan struct{}),
 	}
 
 	go s.Run()
@@ -83,56 +78,29 @@ func StartSession(logger *slog.Logger) *Session {
 func (s *Session) Run() {
 
 	defer close(s.doneC)
+	defer s.listener.Close()
+	defer s.trackerManager.Close()
+	defer s.stopTorrents()
+	defer s.stopHandshakes()
+	defer s.logger.Info("session stopped")
+
 	go s.listen()
 
 	for {
 		select {
 		case <-s.closeC:
-			{
-				s.listener.Close()
-				s.trackerManager.Close()
-				s.stopTorrents()
-				s.stopHandshakes()
-				s.logger.Info("session stopped")
-				return
-			}
+			return
 		case err := <-s.listenErr:
-			{
-				s.logger.Error("session -> error while listening for connection", "error", err.Error())
-				close(s.closeC)
-			}
+			s.logger.Error("session -> error while listening for connection", "error", err.Error())
+			close(s.closeC)
 		case t := <-s.newTorrent:
-			{
-				go t.run()
-				s.torrentsMut.Lock()
-				s.torrents[t.meta.Infohash] = t
-				s.torrentsMut.Unlock()
-			}
+			s.handleNewTorrent(t)
 		case t := <-s.removeTorrent:
-			{
-				t.Stop()
-				s.torrentsMut.Lock()
-				delete(s.torrents, t.meta.Infohash)
-				s.torrentsMut.Unlock()
-			}
+			s.handleRemoveTorrent(t)
 		case conn := <-s.incomingConns:
-			{
-				s.logger.Info("session -> started handshaker for connection", "Address", conn.RemoteAddr().String())
-				hs := handshaker.NewIncomingHandshaker(conn)
-				s.incomingHandshakes = append(s.incomingHandshakes, hs)
-				go hs.Run(s.incomingHandshakesResults, s.checkInfoHash, s.pid, s.extensions, time.Second*5)
-			}
-		case res := <-s.incomingHandshakesResults:
-			{
-				s.torrentsMut.Lock()
-				s.incomingHandshakes = util.Remove(s.incomingHandshakes, res, func(e1, e2 *handshaker.IncomingHandshaker) bool { return e1 == e2 })
-				torr, ok := s.torrents[res.InfoHash]
-				if !ok {
-					panic("didn't find torrent in map from the handshaker infohash")
-				}
-				torr.incomingHandshakeResults <- res
-				s.torrentsMut.Unlock()
-			}
+			s.handleIncomingConn(conn)
+		case res := <-s.incomingResults:
+			s.handleIncomingResult(res)
 		}
 	}
 }
@@ -140,57 +108,4 @@ func (s *Session) Run() {
 func (s *Session) Stop() {
 	close(s.closeC)
 	<-s.doneC
-}
-
-func (s *Session) NewTorrentFromFile(path string) (*Torrent, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("error opening torrent file -> %v", err)
-	}
-
-	meta, err := metadata.New(file)
-	if err != nil {
-		return nil, fmt.Errorf("error creating torrent metadata -> %v", err)
-	}
-
-	t, err := newTorrentFromMetadata(s, s.currentTid, meta)
-	if err != nil {
-		return nil, err
-	}
-
-	s.currentTid++
-	s.newTorrent <- t
-
-	return t, nil
-}
-
-func (s *Session) stopTorrents() {
-	for _, torr := range s.torrents {
-		torr.Stop()
-	}
-}
-
-func (s *Session) stopHandshakes() {
-	for _, hs := range s.incomingHandshakes {
-		hs.Close()
-	}
-}
-
-func (s *Session) checkInfoHash(ih [20]byte) bool {
-	defer s.torrentsMut.Unlock()
-	s.torrentsMut.Lock()
-	_, ok := s.torrents[ih]
-	return ok
-}
-
-func (s *Session) listen() {
-	conn, err := s.listener.Accept()
-	if err != nil {
-		select {
-		case <-s.closeC:
-		case s.listenErr <- err:
-		}
-		return
-	}
-	s.incomingConns <- conn
 }
