@@ -24,9 +24,11 @@ type Info struct {
 	Name        string
 	Infohash    [20]byte
 	PieceLength int64
-	Private     bool
+	PieceCount  int64
+	Length      int64
 	Pieces      []byte
 	Files       []File
+	Private     bool
 }
 
 func newInfo(in []byte) (*Info, error) {
@@ -53,7 +55,7 @@ func newInfo(in []byte) (*Info, error) {
 		return nil, fmt.Errorf("the piece length is 0")
 	}
 
-	if len(infoType.Pieces)%sha1.Size != 0 {
+	if len(infoType.Pieces)%20 != 0 {
 		return nil, fmt.Errorf("the pieces length in bytes isn't divisible by sha1 size (20)")
 	}
 
@@ -62,6 +64,7 @@ func newInfo(in []byte) (*Info, error) {
 	}
 
 	info.Pieces = []byte(infoType.Pieces)
+	info.PieceCount = int64(len(info.Pieces) / 20)
 	info.Private = infoType.Private
 	info.PieceLength = infoType.PieceLength
 	info.Name = infoType.Name
@@ -80,6 +83,10 @@ func newInfo(in []byte) (*Info, error) {
 		}
 	} else {
 		info.Files = append(info.Files, File{infoType.Length, infoType.Name})
+	}
+
+	for _, f := range info.Files {
+		info.Length += f.Length
 	}
 
 	hash := sha1.New()

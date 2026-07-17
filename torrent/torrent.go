@@ -26,9 +26,9 @@ type Torrent struct {
 	peers              []*peer.Peer
 	outgoingHandshakes []*handshaker.OutgoingHandshaker
 
-	downloaded uint64
-	uploaded   uint64
-	left       uint64
+	downloaded int64
+	uploaded   int64
+	left       int64
 
 	newConns                 chan net.Conn
 	disconnectedPeers        chan *peer.Peer
@@ -49,7 +49,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		port:                     sess.port,
 		downloaded:               0,
 		uploaded:                 0,
-		left:                     0,
+		left:                     meta.Length,
 		newConns:                 make(chan net.Conn),
 		peerMessages:             make(chan peer.PeerMessage),
 		disconnectedPeers:        make(chan *peer.Peer),
@@ -61,10 +61,6 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		pid:                      sess.pid,
 		id:                       id,
 		extensions:               sess.extensions,
-	}
-
-	for _, f := range t.meta.Files {
-		t.left += uint64(f.Length)
 	}
 
 	for _, urls := range meta.AnnounceList {

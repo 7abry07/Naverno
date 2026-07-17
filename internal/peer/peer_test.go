@@ -34,7 +34,8 @@ func TestRead(t *testing.T) {
 	}
 	conn := test.NewMockConn(buf)
 
-	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), [20]byte{}, conn)
+	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), conn, [20]byte{}, [8]byte{})
+
 	go p.Run(incomingMessC, disconnectingC)
 
 	testTime := time.NewTimer(time.Second * 5)
@@ -59,7 +60,7 @@ func TestWrite(t *testing.T) {
 	disconnectingC := make(chan *peer.Peer)
 
 	conn := test.NewMockConn([]byte{})
-	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), [20]byte{}, conn)
+	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), conn, [20]byte{}, [8]byte{})
 	go p.Run(incomingMessC, disconnectingC)
 
 	p.Have(5)
@@ -90,7 +91,7 @@ func TestInvalidRead(t *testing.T) {
 	buf = append(buf, []byte{0, 0, 0, 1, 255}...)
 	conn := test.NewMockConn(buf)
 
-	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), [20]byte{}, conn)
+	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), conn, [20]byte{}, [8]byte{})
 	go p.Run(incomingMessC, disconnectingC)
 
 	testTime := time.NewTimer(time.Second * 5)

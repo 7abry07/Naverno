@@ -34,9 +34,9 @@ type Tracker interface {
 type AnnounceRequest struct {
 	Infohash   [20]byte
 	PeerID     [20]byte
-	Downloaded uint64
-	Uploaded   uint64
-	Left       uint64
+	Downloaded int64
+	Uploaded   int64
+	Left       int64
 	Ip         netip.Addr
 	Port       uint16
 	Numwant    uint32
