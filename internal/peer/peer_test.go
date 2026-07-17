@@ -18,12 +18,11 @@ func TestRead(t *testing.T) {
 	messagesExp := []peerprotocol.Message{}
 	messagesRec := []peerprotocol.Message{}
 
-	messagesExp = append(messagesExp, peerprotocol.Bitfield{Pieces: make([]byte, 10)})
-	messagesExp = append(messagesExp, peerprotocol.KeepAlive{})
 	messagesExp = append(messagesExp, peerprotocol.Choke{})
 	messagesExp = append(messagesExp, peerprotocol.Unchoke{})
 	messagesExp = append(messagesExp, peerprotocol.Interested{})
 	messagesExp = append(messagesExp, peerprotocol.Uninterested{})
+	messagesExp = append(messagesExp, peerprotocol.Bitfield{Pieces: make([]byte, 10)})
 	messagesExp = append(messagesExp, peerprotocol.Have{Idx: 5})
 	messagesExp = append(messagesExp, peerprotocol.Request{Idx: 5, Begin: 500, Length: 100})
 	messagesExp = append(messagesExp, peerprotocol.Piece{Idx: 5, Begin: 500, Data: make([]byte, 100)})

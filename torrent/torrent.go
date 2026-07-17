@@ -14,13 +14,19 @@ import (
 )
 
 type Torrent struct {
-	pid [20]byte
+	pid  [20]byte
+	port uint16
 
+	logger             *slog.Logger
 	session            *Session
 	meta               *metadata.Metadata
 	trackers           []tracker.Tracker
 	peers              []*peer.Peer
 	outgoingHandshakes []*handshaker.OutgoingHandshaker
+
+	downloaded uint64
+	uploaded   uint64
+	left       uint64
 
 	newConns                 chan net.Conn
 	disconnectedPeers        chan *peer.Peer
@@ -28,28 +34,34 @@ type Torrent struct {
 	incomingHandshakeResults chan *handshaker.IncomingHandshaker
 	outgoingHandshakeResults chan *handshaker.OutgoingHandshaker
 
-	logger *slog.Logger
-
 	closeC chan struct{}
 	doneC  chan struct{}
 }
 
 func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata) (*Torrent, error) {
-	t := Torrent{}
+	t := Torrent{
+		session:                  sess,
+		meta:                     meta,
+		logger:                   sess.logger,
+		peers:                    []*peer.Peer{},
+		port:                     sess.port,
+		downloaded:               0,
+		uploaded:                 0,
+		left:                     0,
+		newConns:                 make(chan net.Conn),
+		peerMessages:             make(chan peer.PeerMessage),
+		disconnectedPeers:        make(chan *peer.Peer),
+		outgoingHandshakes:       []*handshaker.OutgoingHandshaker{},
+		outgoingHandshakeResults: make(chan *handshaker.OutgoingHandshaker),
+		incomingHandshakeResults: make(chan *handshaker.IncomingHandshaker),
+		closeC:                   make(chan struct{}),
+		doneC:                    make(chan struct{}),
+		pid:                      sess.pid,
+	}
 
-	t.session = sess
-	t.meta = meta
-	t.logger = sess.logger
-	t.peers = []*peer.Peer{}
-	t.newConns = make(chan net.Conn)
-	t.peerMessages = make(chan peer.PeerMessage)
-	t.disconnectedPeers = make(chan *peer.Peer)
-	t.outgoingHandshakes = []*handshaker.OutgoingHandshaker{}
-	t.outgoingHandshakeResults = make(chan *handshaker.OutgoingHandshaker)
-	t.incomingHandshakeResults = make(chan *handshaker.IncomingHandshaker)
-	t.closeC = make(chan struct{})
-	t.doneC = make(chan struct{})
-	t.pid = sess.pid
+	for _, f := range t.meta.Files {
+		t.left += uint64(f.Length)
+	}
 
 	for _, urls := range meta.AnnounceList {
 		for _, url := range urls {
@@ -74,7 +86,7 @@ func (t *Torrent) start() {
 		Uploaded:   0,
 		Left:       0,
 		Event:      tracker.TRACKER_STARTED,
-		Port:       t.session.Port,
+		Port:       t.port,
 	}
 
 	for _, tr := range t.trackers {
@@ -116,7 +128,7 @@ func (t *Torrent) run() {
 				Uploaded:   0,
 				Left:       0,
 				Event:      tracker.TRACKER_STOPPED,
-				Port:       t.session.Port,
+				Port:       t.port,
 			}
 			for _, tr := range t.trackers {
 				tr.Announce(context.TODO(), announceStop)
@@ -167,7 +179,7 @@ func (t *Torrent) run() {
 	}
 }
 
-func (t *Torrent) stop() {
+func (t *Torrent) Stop() {
 	close(t.closeC)
 	<-t.doneC
 }
