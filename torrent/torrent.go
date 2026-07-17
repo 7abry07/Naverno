@@ -83,13 +83,13 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 }
 
 func (t *Torrent) run() {
-	go t.announcer.Run(t.peersC)
-
 	defer close(t.doneC)
 	defer t.closePeers()
 	defer t.closeHandshakes()
 	defer t.closeAnnouncer()
 	defer t.logger.Info("torrent -> stopped")
+
+	go t.announcer.Run(t.peersC)
 
 	for {
 		select {

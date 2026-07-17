@@ -76,7 +76,6 @@ func StartSession(logger *slog.Logger) *Session {
 }
 
 func (s *Session) Run() {
-
 	defer close(s.doneC)
 	defer s.listener.Close()
 	defer s.trackerManager.Close()
