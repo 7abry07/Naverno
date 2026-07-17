@@ -41,16 +41,14 @@ func NewAnnouncer(logger *slog.Logger, torrentC chan Torrent, trackers []tracker
 
 func (a *Announcer) Run(peers chan []netip.AddrPort) {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	defer cancel()
+
 	defer close(a.doneC)
 
 	announceTimer := time.NewTimer(0)
 
 	for _, tr := range a.trackers {
-		timeout, cancel := context.WithTimeout(ctx, time.Second*3)
-		res, err := a.announce(timeout, tr, tracker.TRACKER_STARTED)
-		cancel()
+		res, err := a.announce(ctx, tr, tracker.TRACKER_STARTED)
 		if err != nil {
 			a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
 			continue
@@ -65,18 +63,14 @@ func (a *Announcer) Run(peers chan []netip.AddrPort) {
 		case <-a.closeC:
 			{
 				for _, tr := range a.trackers {
-					timeout, cancel := context.WithTimeout(ctx, time.Second*3)
-					go a.announce(timeout, tr, tracker.TRACKER_STOPPED)
-					defer cancel()
+					go a.announce(ctx, tr, tracker.TRACKER_STOPPED)
 				}
 				return
 			}
 		case <-announceTimer.C:
 			{
 				for _, tr := range a.trackers {
-					timeout, cancel := context.WithTimeout(ctx, time.Second*3)
-					res, err := a.announce(timeout, tr, tracker.TRACKER_NONE)
-					cancel()
+					res, err := a.announce(ctx, tr, tracker.TRACKER_NONE)
 					if err != nil {
 						a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
 						continue
@@ -91,6 +85,8 @@ func (a *Announcer) Run(peers chan []netip.AddrPort) {
 }
 
 func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, event tracker.TrackerEvent) (*tracker.AnnounceResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
 	a.torrentC <- Torrent{}
 	torrent := <-a.torrentC
 
