@@ -4,27 +4,18 @@ import (
 	"Naverno/internal/tracker"
 	"Naverno/internal/tracker/httptracker"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 )
 
 type TrackerManager struct {
-	logger *slog.Logger
-
 	httpTransport *http.Transport
 }
 
-func New(logger *slog.Logger) *TrackerManager {
-	m := TrackerManager{}
-
-	if logger == nil {
-		panic("passed logger is nil")
+func New() *TrackerManager {
+	return &TrackerManager{
+		httpTransport: &http.Transport{},
 	}
-
-	m.logger = logger
-	m.httpTransport = &http.Transport{}
-	return &m
 }
 
 func (m *TrackerManager) Close() {

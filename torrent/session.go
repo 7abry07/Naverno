@@ -60,7 +60,7 @@ func StartSession(logger *slog.Logger) *Session {
 		currentTid:      0,
 		pid:             peer.GenerateRandomID(),
 		extensions:      [8]byte{},
-		trackerManager:  trackermanager.New(logger),
+		trackerManager:  trackermanager.New(),
 		incoming:        []*handshaker.IncomingHandshaker{},
 		newTorrent:      make(chan *Torrent),
 		removeTorrent:   make(chan *Torrent),

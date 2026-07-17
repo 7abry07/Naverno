@@ -5,8 +5,6 @@ import (
 	"Naverno/internal/tracker/httptracker"
 	"Naverno/internal/tracker/testserver"
 	"context"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -18,10 +16,9 @@ func TestTracker(t *testing.T) {
 	stop := testserver.StartHttp()
 	defer stop()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	announce, _ := url.Parse("http://localhost:8000/announce")
 
-	tr := httptracker.New(logger, *announce, &http.Transport{})
+	tr := httptracker.New(*announce, &http.Transport{})
 
 	peer1, _ := netip.ParseAddrPort("192.168.1.1:6881")
 	peer2, _ := netip.ParseAddrPort("192.168.1.2:6882")
