@@ -48,7 +48,9 @@ func (a *Announcer) Run(peers chan []netip.AddrPort) {
 	announceTimer := time.NewTimer(0)
 
 	for _, tr := range a.trackers {
-		res, err := a.announce(ctx, tr, tracker.TRACKER_STARTED)
+		timeout, cancel := context.WithTimeout(ctx, time.Second*3)
+		res, err := a.announce(timeout, tr, tracker.TRACKER_STARTED)
+		cancel()
 		if err != nil {
 			a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
 			continue
@@ -63,14 +65,18 @@ func (a *Announcer) Run(peers chan []netip.AddrPort) {
 		case <-a.closeC:
 			{
 				for _, tr := range a.trackers {
-					go a.announce(ctx, tr, tracker.TRACKER_STOPPED)
+					timeout, cancel := context.WithTimeout(ctx, time.Second*3)
+					go a.announce(timeout, tr, tracker.TRACKER_STOPPED)
+					defer cancel()
 				}
 				return
 			}
 		case <-announceTimer.C:
 			{
 				for _, tr := range a.trackers {
-					res, err := a.announce(ctx, tr, tracker.TRACKER_NONE)
+					timeout, cancel := context.WithTimeout(ctx, time.Second*3)
+					res, err := a.announce(timeout, tr, tracker.TRACKER_NONE)
+					cancel()
 					if err != nil {
 						a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
 						continue

@@ -2,10 +2,11 @@ package main
 
 import (
 	"Naverno/torrent"
-	"log/slog"
-	"os"
-
 	"github.com/lmittmann/tint"
+	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
 )
 
 func main() {
@@ -16,6 +17,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	go http.ListenAndServe(":6060", nil)
 
 	c := make(chan any)
 	<-c

@@ -96,6 +96,14 @@ func (t *Torrent) run() {
 				t.ClosePeers()
 				t.CloseHandshakes()
 				t.announcer.Close()
+				<-t.torrentAnnounce
+				t.torrentAnnounce <- announcer.Torrent{
+					InfoHash:   t.meta.Infohash,
+					PeerID:     t.pid,
+					Downloaded: t.downloaded,
+					Uploaded:   t.uploaded,
+					Left:       t.left,
+				}
 				t.logger.Info("torrent -> stopped")
 				return
 			}
