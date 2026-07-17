@@ -46,7 +46,7 @@ func New(logger *slog.Logger, conn net.Conn, ID [20]byte, extensions [8]byte) *P
 	return &Peer{
 		ID:            ID,
 		Extensions:    extensions,
-		logger:        logger,
+		logger:        logger.With("PeerID", string(ID[:])),
 		conn:          conn,
 		IsChoked:      true,
 		AmChoked:      true,
@@ -99,7 +99,7 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 		case <-selfTimeout.C:
 			p.out.Write(peerprotocol.KeepAlive{})
 		case <-peerTimeout.C:
-			p.logger.Warn("peer -> didn't send any message in 2 minutes", "peer", string(p.ID[:]))
+			p.logger.Warn("peer -> didn't send any message in 2 minutes")
 			select {
 			case disconnected <- p:
 			case <-p.closeC:
@@ -108,14 +108,14 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 		case err := <-p.in.Error():
 			select {
 			case disconnected <- p:
-				p.logger.Warn("peer -> reader error", "peer", string(p.ID[:]), "error", err.Error())
+				p.logger.Warn("peer -> reader error", "Error", err.Error())
 			case <-p.closeC:
 			}
 			return
 		case err := <-p.out.Error():
 			select {
 			case disconnected <- p:
-				p.logger.Warn("peer -> writer error", "peer", string(p.ID[:]), "error", err.Error())
+				p.logger.Warn("peer -> writer error", "error", err.Error())
 			case <-p.closeC:
 			}
 			return
