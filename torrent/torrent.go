@@ -14,8 +14,9 @@ import (
 )
 
 type Torrent struct {
-	pid  [20]byte
-	port uint16
+	pid        [20]byte
+	port       uint16
+	extensions [8]byte
 
 	logger             *slog.Logger
 	session            *Session
@@ -57,6 +58,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata) (*Torrent, e
 		closeC:                   make(chan struct{}),
 		doneC:                    make(chan struct{}),
 		pid:                      sess.pid,
+		extensions:               sess.extensions,
 	}
 
 	for _, f := range t.meta.Files {
@@ -82,9 +84,9 @@ func (t *Torrent) start() {
 	announceReq := tracker.AnnounceRequest{
 		Infohash:   t.meta.Infohash,
 		PeerID:     t.pid,
-		Downloaded: 0,
-		Uploaded:   0,
-		Left:       0,
+		Downloaded: t.downloaded,
+		Uploaded:   t.uploaded,
+		Left:       t.left,
 		Event:      tracker.TRACKER_STARTED,
 		Port:       t.port,
 	}
@@ -124,9 +126,9 @@ func (t *Torrent) run() {
 			announceStop := tracker.AnnounceRequest{
 				Infohash:   t.meta.Infohash,
 				PeerID:     t.pid,
-				Downloaded: 0,
-				Uploaded:   0,
-				Left:       0,
+				Downloaded: t.downloaded,
+				Uploaded:   t.uploaded,
+				Left:       t.left,
 				Event:      tracker.TRACKER_STOPPED,
 				Port:       t.port,
 			}
@@ -139,7 +141,7 @@ func (t *Torrent) run() {
 			{
 				hs := handshaker.NewOutgoingHandshaker(conn)
 				t.outgoingHandshakes = append(t.outgoingHandshakes, hs)
-				go hs.Run(t.outgoingHandshakeResults, t.pid, t.meta.Infohash, [8]byte{0}, time.Second*2)
+				go hs.Run(t.outgoingHandshakeResults, t.pid, t.meta.Infohash, t.extensions, time.Second*2)
 				t.logger.Info("torrent -> started handshaker for connection", "address", conn.RemoteAddr().String())
 			}
 		case res := <-t.outgoingHandshakeResults:
@@ -150,7 +152,7 @@ func (t *Torrent) run() {
 					continue
 				}
 				t.logger.Info("torrent -> connected to peer", "peer", string(res.PeerID[:]), "peers", len(t.peers))
-				pe := peer.New(t.logger, res.PeerID, res.Conn)
+				pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
 				t.peers = append(t.peers, pe)
 				go pe.Run(t.peerMessages, t.disconnectedPeers)
 			}
@@ -161,7 +163,7 @@ func (t *Torrent) run() {
 					continue
 				}
 				t.logger.Info("torrent -> peer connected to us", "peer", string(res.PeerID[:]), "peers", len(t.peers))
-				pe := peer.New(t.logger, res.PeerID, res.Conn)
+				pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
 				t.peers = append(t.peers, pe)
 				go pe.Run(t.peerMessages, t.disconnectedPeers)
 			}

@@ -15,6 +15,7 @@ type Peer struct {
 	logger *slog.Logger
 
 	ID            [20]byte
+	Extensions    [8]byte
 	IsChoked      bool
 	IsInteresting bool
 	AmChoked      bool
@@ -34,7 +35,7 @@ type PeerMessage struct {
 	Message peerprotocol.Message
 }
 
-func New(logger *slog.Logger, ID [20]byte, conn net.Conn) *Peer {
+func New(logger *slog.Logger, conn net.Conn, ID [20]byte, extensions [8]byte) *Peer {
 	if conn == nil {
 		panic("passed nil connection to Peer constructor")
 	}
@@ -44,6 +45,7 @@ func New(logger *slog.Logger, ID [20]byte, conn net.Conn) *Peer {
 
 	return &Peer{
 		ID:            ID,
+		Extensions:    extensions,
 		logger:        logger,
 		conn:          conn,
 		IsChoked:      true,

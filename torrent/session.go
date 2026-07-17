@@ -17,8 +17,9 @@ import (
 )
 
 type Session struct {
-	pid  [20]byte
-	port uint16
+	pid        [20]byte
+	port       uint16
+	extensions [8]byte
 
 	listener           net.Listener
 	trackerManager     *trackermanager.TrackerManager
@@ -61,6 +62,7 @@ func StartSession(logger *slog.Logger) *Session {
 		torrentsMut:               sync.Mutex{},
 		port:                      uint16(port),
 		pid:                       peer.GenerateRandomID(),
+		extensions:                [8]byte{},
 		trackerManager:            trackermanager.New(logger),
 		incomingHandshakes:        []*handshaker.IncomingHandshaker{},
 		newTorrent:                make(chan *Torrent),
@@ -117,7 +119,7 @@ func (s *Session) Run() {
 			{
 				hs := handshaker.NewIncomingHandshaker(conn)
 				s.incomingHandshakes = append(s.incomingHandshakes, hs)
-				go hs.Run(s.incomingHandshakesResults, s.checkInfoHash, s.pid, [8]byte{}, time.Second*5)
+				go hs.Run(s.incomingHandshakesResults, s.checkInfoHash, s.pid, s.extensions, time.Second*5)
 			}
 		case res := <-s.incomingHandshakesResults:
 			{
