@@ -97,15 +97,8 @@ func (t *Torrent) run(ctx context.Context) {
 		select {
 		case <-t.closeC:
 			{
-
-				for _, p := range t.peers {
-					p.Stop()
-					t.logger.Info("torrent -> active peer closed", "Peer", string(p.ID[:]))
-				}
-				for _, hs := range t.outgoingHandshakes {
-					hs.Close()
-					t.logger.Info("torrent -> running handshake closed", "Address", hs.Conn.RemoteAddr())
-				}
+				t.ClosePeers()
+				t.CloseHandshakes()
 				t.announcer.Close()
 				t.logger.Info("torrent -> stopped")
 				return
@@ -178,6 +171,18 @@ func (t *Torrent) Dial(addrs []netip.AddrPort) {
 			}
 			t.newConns <- conn
 		}()
+	}
+}
+
+func (t *Torrent) ClosePeers() {
+	for _, p := range t.peers {
+		p.Stop()
+	}
+}
+
+func (t *Torrent) CloseHandshakes() {
+	for _, hs := range t.outgoingHandshakes {
+		hs.Close()
 	}
 }
 

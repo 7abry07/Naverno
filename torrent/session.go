@@ -93,12 +93,9 @@ func (s *Session) Run(ctx context.Context) {
 		case <-s.closeC:
 			{
 				s.listener.Close()
-				for _, torr := range s.torrents {
-					torr.Stop()
-				}
-				for _, hs := range s.incomingHandshakes {
-					hs.Close()
-				}
+				s.trackerManager.Close()
+				s.stopTorrents()
+				s.stopHandshakes()
 				s.logger.Info("session stopped")
 				return
 			}
@@ -123,6 +120,7 @@ func (s *Session) Run(ctx context.Context) {
 			}
 		case conn := <-s.incomingConns:
 			{
+				s.logger.Info("session -> started handshaker for connection", "Address", conn.RemoteAddr().String())
 				hs := handshaker.NewIncomingHandshaker(conn)
 				s.incomingHandshakes = append(s.incomingHandshakes, hs)
 				go hs.Run(s.incomingHandshakesResults, s.checkInfoHash, s.pid, s.extensions, time.Second*5)
@@ -167,6 +165,18 @@ func (s *Session) NewTorrentFromFile(path string) (*Torrent, error) {
 	s.newTorrent <- t
 
 	return t, nil
+}
+
+func (s *Session) stopTorrents() {
+	for _, torr := range s.torrents {
+		torr.Stop()
+	}
+}
+
+func (s *Session) stopHandshakes() {
+	for _, hs := range s.incomingHandshakes {
+		hs.Close()
+	}
 }
 
 func (s *Session) checkInfoHash(ih [20]byte) bool {
