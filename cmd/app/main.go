@@ -2,7 +2,6 @@ package main
 
 import (
 	"Naverno/torrent"
-	"context"
 	"log/slog"
 	"os"
 
@@ -12,7 +11,7 @@ import (
 func main() {
 	logger := slog.New(tint.NewHandler(os.Stdout, nil))
 
-	sess := torrent.StartSession(context.Background(), logger)
+	sess := torrent.StartSession(logger)
 	_, err := sess.NewTorrentFromFile("internal/metadata/testdata/debian.torrent")
 	if err != nil {
 		panic(err)

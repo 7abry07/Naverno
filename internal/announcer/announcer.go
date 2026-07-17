@@ -39,8 +39,8 @@ func NewAnnouncer(logger *slog.Logger, torrentC chan Torrent, trackers []tracker
 	return &a
 }
 
-func (a *Announcer) Run(ctx context.Context, peers chan []netip.AddrPort) {
-	ctx, cancel := context.WithCancel(ctx)
+func (a *Announcer) Run(peers chan []netip.AddrPort) {
+	ctx, cancel := context.WithCancel(context.Background())
 
 	defer cancel()
 	defer close(a.doneC)

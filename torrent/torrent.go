@@ -7,7 +7,6 @@ import (
 	"Naverno/internal/peer"
 	"Naverno/internal/tracker"
 	"Naverno/internal/util"
-	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -85,13 +84,10 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 	return &t, nil
 }
 
-func (t *Torrent) run(ctx context.Context) {
-	ctx, cancel := context.WithCancel(ctx)
-
-	go t.announcer.Run(ctx, t.peersC)
+func (t *Torrent) run() {
+	go t.announcer.Run(t.peersC)
 
 	defer close(t.doneC)
-	defer cancel()
 
 	for {
 		select {
