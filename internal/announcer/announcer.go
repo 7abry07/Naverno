@@ -87,7 +87,9 @@ func (a *Announcer) Run(peers chan []netip.AddrPort) {
 func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, event tracker.TrackerEvent) (*tracker.AnnounceResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
-	a.torrentC <- Torrent{}
+	if event != tracker.TRACKER_STOPPED {
+		a.torrentC <- Torrent{}
+	}
 	torrent := <-a.torrentC
 
 	req := tracker.AnnounceRequest{
@@ -105,7 +107,8 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, event trac
 	return tr.Announce(ctx, req)
 }
 
-func (a *Announcer) Close() {
+func (a *Announcer) Close(torrent Torrent) {
 	close(a.closeC)
+	a.torrentC <- torrent
 	<-a.doneC
 }
