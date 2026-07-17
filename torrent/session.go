@@ -6,6 +6,7 @@ import (
 	"Naverno/internal/peer"
 	"Naverno/internal/trackermanager"
 	"Naverno/internal/util"
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -39,7 +40,7 @@ type Session struct {
 	doneC     chan struct{}
 }
 
-func StartSession(logger *slog.Logger) *Session {
+func StartSession(ctx context.Context, logger *slog.Logger) *Session {
 	if logger == nil {
 		panic("cannot pass nil logger to session")
 	}
@@ -75,13 +76,16 @@ func StartSession(logger *slog.Logger) *Session {
 		doneC:                     make(chan struct{}),
 	}
 
-	go s.Run()
+	go s.Run(ctx)
 
 	return &s
 }
 
-func (s *Session) Run() {
+func (s *Session) Run(ctx context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
+
 	defer close(s.doneC)
+	defer cancel()
 	go s.listen()
 
 	for {
@@ -105,7 +109,7 @@ func (s *Session) Run() {
 			}
 		case t := <-s.newTorrent:
 			{
-				t.start()
+				go t.run(ctx)
 				s.torrentsMut.Lock()
 				s.torrents[t.meta.Infohash] = t
 				s.torrentsMut.Unlock()

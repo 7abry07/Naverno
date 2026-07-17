@@ -103,8 +103,6 @@ func (t *HTTPTracker) Announce(ctx context.Context, r tracker.AnnounceRequest) (
 		}
 	}
 
-	t.logger.Info("tracker -> got peers", "tracker", t.URL(), "peers", len(peers))
-
 	return &tracker.AnnounceResponse{
 		MinInterval:    time.Duration(resp.MinInterval) * time.Second,
 		Interval:       time.Duration(resp.Interval) * time.Second,
@@ -143,13 +141,13 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) url.URL {
 	if r.Event != tracker.TRACKER_NONE {
 		query.WriteString("&event=")
 		query.WriteString(url.QueryEscape(r.Event.String()))
-		t.logger.Debug("torrent announced", "tracker", t.URL(), "event", r.Event.String())
+		t.logger.Info("tracker -> announced", "tracker", t.URL(), "event", r.Event.String())
 	}
 
 	if r.Numwant != 0 {
 		query.WriteString("&numwant=")
 		query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Numwant))))
-		t.logger.Debug("want peers", "tracker", t.URL(), "numwant", r.Numwant)
+		t.logger.Debug("tracker -> want peers", "tracker", t.URL(), "numwant", r.Numwant)
 	}
 
 	if (r.Ip != netip.Addr{}) {

@@ -80,8 +80,11 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 	return &t, nil
 }
 
-func (t *Torrent) start() {
-	go t.run()
+func (t *Torrent) run(ctx context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
+
+	defer close(t.doneC)
+	defer cancel()
 
 	announceReq := tracker.AnnounceRequest{
 		Infohash:   t.meta.Infohash,
@@ -94,7 +97,7 @@ func (t *Torrent) start() {
 	}
 
 	for _, tr := range t.trackers {
-		res, err := tr.Announce(context.TODO(), announceReq)
+		res, err := tr.Announce(ctx, announceReq)
 		if err != nil {
 			t.logger.Warn("torrent -> error in announcing to tracker", "torrendID", t.id, "tracker", tr.URL(), "error", err.Error())
 			continue
@@ -110,10 +113,6 @@ func (t *Torrent) start() {
 			}()
 		}
 	}
-}
-
-func (t *Torrent) run() {
-	defer close(t.doneC)
 
 	for {
 		select {
@@ -135,9 +134,10 @@ func (t *Torrent) run() {
 				Left:       t.left,
 				Event:      tracker.TRACKER_STOPPED,
 				Port:       t.port,
+				Numwant:    0,
 			}
 			for _, tr := range t.trackers {
-				tr.Announce(context.TODO(), announceStop)
+				tr.Announce(ctx, announceStop)
 			}
 			t.logger.Info("torrent -> stopped", "torrendID", t.id)
 			return
