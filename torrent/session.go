@@ -17,6 +17,7 @@ import (
 )
 
 type Session struct {
+	currentTid uint32
 	pid        [20]byte
 	port       uint16
 	extensions [8]byte
@@ -61,6 +62,7 @@ func StartSession(logger *slog.Logger) *Session {
 		torrents:                  make(map[[20]byte]*Torrent),
 		torrentsMut:               sync.Mutex{},
 		port:                      uint16(port),
+		currentTid:                0,
 		pid:                       peer.GenerateRandomID(),
 		extensions:                [8]byte{},
 		trackerManager:            trackermanager.New(logger),
@@ -152,11 +154,12 @@ func (s *Session) NewTorrentFromFile(path string) (*Torrent, error) {
 		return nil, fmt.Errorf("error creating torrent metadata -> %v", err)
 	}
 
-	t, err := newTorrentFromMetadata(s, meta)
+	t, err := newTorrentFromMetadata(s, s.currentTid, meta)
 	if err != nil {
 		return nil, err
 	}
 
+	s.currentTid++
 	s.newTorrent <- t
 
 	return t, nil

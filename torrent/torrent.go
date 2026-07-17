@@ -14,6 +14,7 @@ import (
 )
 
 type Torrent struct {
+	id         uint32
 	pid        [20]byte
 	port       uint16
 	extensions [8]byte
@@ -39,7 +40,7 @@ type Torrent struct {
 	doneC  chan struct{}
 }
 
-func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata) (*Torrent, error) {
+func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (*Torrent, error) {
 	t := Torrent{
 		session:                  sess,
 		meta:                     meta,
@@ -58,6 +59,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata) (*Torrent, e
 		closeC:                   make(chan struct{}),
 		doneC:                    make(chan struct{}),
 		pid:                      sess.pid,
+		id:                       id,
 		extensions:               sess.extensions,
 	}
 
@@ -94,14 +96,14 @@ func (t *Torrent) start() {
 	for _, tr := range t.trackers {
 		res, err := tr.Announce(context.TODO(), announceReq)
 		if err != nil {
-			t.logger.Warn("torrent -> error in announcing to tracker", "tracker", tr.URL(), "error", err.Error())
+			t.logger.Warn("torrent -> error in announcing to tracker", "torrendID", t.id, "tracker", tr.URL(), "error", err.Error())
 			continue
 		}
 		for _, p := range res.Peers {
 			go func() {
 				conn, err := net.DialTimeout("tcp", p.String(), time.Second*5)
 				if err != nil {
-					t.logger.Warn("torrent -> error in connecting to peer", "address", p.Addr().String(), "error", err.Error())
+					t.logger.Warn("torrent -> error in connecting to peer", "torrendID", t.id, "address", p.Addr().String(), "error", err.Error())
 					return
 				}
 				t.newConns <- conn
@@ -118,9 +120,11 @@ func (t *Torrent) run() {
 		case <-t.closeC:
 			for _, p := range t.peers {
 				p.Stop()
+				t.logger.Info("torrent -> active peer closed", "torrendID", t.id, "peer", string(p.ID[:]))
 			}
 			for _, hs := range t.outgoingHandshakes {
 				hs.Close()
+				t.logger.Info("torrent -> running handshake closed", "torrendID", t.id, "address", hs.Conn.RemoteAddr())
 			}
 
 			announceStop := tracker.AnnounceRequest{
@@ -135,23 +139,23 @@ func (t *Torrent) run() {
 			for _, tr := range t.trackers {
 				tr.Announce(context.TODO(), announceStop)
 			}
-			t.logger.Info("torrent stopped")
+			t.logger.Info("torrent -> stopped", "torrendID", t.id)
 			return
 		case conn := <-t.newConns:
 			{
 				hs := handshaker.NewOutgoingHandshaker(conn)
 				t.outgoingHandshakes = append(t.outgoingHandshakes, hs)
 				go hs.Run(t.outgoingHandshakeResults, t.pid, t.meta.Infohash, t.extensions, time.Second*2)
-				t.logger.Info("torrent -> started handshaker for connection", "address", conn.RemoteAddr().String())
+				t.logger.Info("torrent -> started handshaker for connection", "torrendID", t.id, "address", conn.RemoteAddr().String())
 			}
 		case res := <-t.outgoingHandshakeResults:
 			{
 				t.outgoingHandshakes = util.Remove(t.outgoingHandshakes, res, func(e1, e2 *handshaker.OutgoingHandshaker) bool { return e1 == e2 })
 				if res.Error != nil {
-					t.logger.Warn("torrent -> error during handshake", "address", res.Conn.RemoteAddr().String(), "error", res.Error.Error())
+					t.logger.Warn("torrent -> error during handshake", "torrendID", t.id, "address", res.Conn.RemoteAddr().String(), "error", res.Error.Error())
 					continue
 				}
-				t.logger.Info("torrent -> connected to peer", "peer", string(res.PeerID[:]), "peers", len(t.peers))
+				t.logger.Info("torrent -> connected to peer", "torrendID", t.id, "peer", string(res.PeerID[:]), "peers", len(t.peers))
 				pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
 				t.peers = append(t.peers, pe)
 				go pe.Run(t.peerMessages, t.disconnectedPeers)
@@ -159,10 +163,10 @@ func (t *Torrent) run() {
 		case res := <-t.incomingHandshakeResults:
 			{
 				if res.Error != nil {
-					t.logger.Warn("torrent -> error during incoming handshake", "address", res.Conn.RemoteAddr().String(), "error", res.Error.Error())
+					t.logger.Warn("torrent -> error during handshake", "torrendID", t.id, "address", res.Conn.RemoteAddr().String(), "error", res.Error.Error())
 					continue
 				}
-				t.logger.Info("torrent -> peer connected to us", "peer", string(res.PeerID[:]), "peers", len(t.peers))
+				t.logger.Info("torrent -> peer connected to us", "torrendID", t.id, "peer", string(res.PeerID[:]), "peers", len(t.peers))
 				pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
 				t.peers = append(t.peers, pe)
 				go pe.Run(t.peerMessages, t.disconnectedPeers)
@@ -170,12 +174,12 @@ func (t *Torrent) run() {
 		case pe := <-t.disconnectedPeers:
 			{
 				t.peers = util.Remove(t.peers, pe, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
-				t.logger.Info("torrent -> peer disconnected", "peer", string(pe.ID[:]), "peers", len(t.peers))
+				t.logger.Info("torrent -> peer disconnected", "torrendID", t.id, "peer", string(pe.ID[:]), "peers", len(t.peers))
 				pe.Stop()
 			}
 		case pe := <-t.peerMessages:
 			{
-				t.logger.Info("torrent -> received message from peer", "peer", string(pe.ID[:]), "message", pe.Message.ID().String())
+				t.logger.Info("torrent -> received message from peer", "torrendID", t.id, "peer", string(pe.ID[:]), "message", pe.Message.ID().String())
 			}
 		}
 	}
