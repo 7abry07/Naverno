@@ -86,17 +86,15 @@ func (t *Torrent) run() {
 	go t.announcer.Run(t.peersC)
 
 	defer close(t.doneC)
+	defer t.ClosePeers()
+	defer t.CloseHandshakes()
+	defer t.closeAnnouncer()
+	defer t.logger.Info("torrent -> stopped")
 
 	for {
 		select {
 		case <-t.closeC:
-			{
-				t.ClosePeers()
-				t.CloseHandshakes()
-				t.closeAnnouncer()
-				t.logger.Info("torrent -> stopped")
-				return
-			}
+			return
 		case peers := <-t.peersC:
 			t.Dial(peers)
 		case <-t.torrentAnnounce:
