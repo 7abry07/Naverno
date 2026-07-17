@@ -1,6 +1,7 @@
 package torrent
 
 import (
+	"Naverno/internal/announcer"
 	"Naverno/internal/handshaker"
 	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"time"
 )
 
@@ -22,7 +24,7 @@ type Torrent struct {
 	logger             *slog.Logger
 	session            *Session
 	meta               *metadata.Metadata
-	trackers           []tracker.Tracker
+	announcer          *announcer.Announcer
 	peers              []*peer.Peer
 	outgoingHandshakes []*handshaker.OutgoingHandshaker
 
@@ -33,6 +35,8 @@ type Torrent struct {
 	newConns                 chan net.Conn
 	disconnectedPeers        chan *peer.Peer
 	peerMessages             chan peer.PeerMessage
+	torrentAnnounce          chan announcer.Torrent
+	peersC                   chan []netip.AddrPort
 	incomingHandshakeResults chan *handshaker.IncomingHandshaker
 	outgoingHandshakeResults chan *handshaker.OutgoingHandshaker
 
@@ -50,10 +54,12 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		downloaded:               0,
 		uploaded:                 0,
 		left:                     meta.Length,
+		outgoingHandshakes:       []*handshaker.OutgoingHandshaker{},
 		newConns:                 make(chan net.Conn),
 		peerMessages:             make(chan peer.PeerMessage),
 		disconnectedPeers:        make(chan *peer.Peer),
-		outgoingHandshakes:       []*handshaker.OutgoingHandshaker{},
+		torrentAnnounce:          make(chan announcer.Torrent),
+		peersC:                   make(chan []netip.AddrPort),
 		outgoingHandshakeResults: make(chan *handshaker.OutgoingHandshaker),
 		incomingHandshakeResults: make(chan *handshaker.IncomingHandshaker),
 		closeC:                   make(chan struct{}),
@@ -63,15 +69,18 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		extensions:               sess.extensions,
 	}
 
+	trackers := []tracker.Tracker{}
 	for _, urls := range meta.AnnounceList {
 		for _, url := range urls {
 			tr, err := sess.trackerManager.Get(url.String())
 			if err != nil {
 				return nil, fmt.Errorf("error in getting tracker implementation -> %v", err)
 			}
-			t.trackers = append(t.trackers, tr)
+			trackers = append(trackers, tr)
 		}
 	}
+
+	t.announcer = announcer.NewAnnouncer(t.logger, t.torrentAnnounce, trackers, t.port)
 
 	return &t, nil
 }
@@ -79,64 +88,42 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 func (t *Torrent) run(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 
+	go t.announcer.Run(ctx, t.peersC)
+
 	defer close(t.doneC)
 	defer cancel()
-
-	announceReq := tracker.AnnounceRequest{
-		Infohash:   t.meta.Infohash,
-		PeerID:     t.pid,
-		Downloaded: t.downloaded,
-		Uploaded:   t.uploaded,
-		Left:       t.left,
-		Event:      tracker.TRACKER_STARTED,
-		Port:       t.port,
-	}
-
-	for _, tr := range t.trackers {
-		res, err := tr.Announce(ctx, announceReq)
-		if err != nil {
-			t.logger.Warn("torrent -> error in announcing to tracker", "Tracker URL", tr.URL(), "Error", err.Error())
-			continue
-		}
-		for _, p := range res.Peers {
-			go func() {
-				conn, err := net.DialTimeout("tcp", p.String(), time.Second*5)
-				if err != nil {
-					t.logger.Warn("torrent -> error in connecting to peer", "Address", p.Addr().String(), "Error", err.Error())
-					return
-				}
-				t.newConns <- conn
-			}()
-		}
-	}
 
 	for {
 		select {
 		case <-t.closeC:
-			for _, p := range t.peers {
-				p.Stop()
-				t.logger.Info("torrent -> active peer closed", "Peer", string(p.ID[:]))
-			}
-			for _, hs := range t.outgoingHandshakes {
-				hs.Close()
-				t.logger.Info("torrent -> running handshake closed", "Address", hs.Conn.RemoteAddr())
-			}
+			{
 
-			announceStop := tracker.AnnounceRequest{
-				Infohash:   t.meta.Infohash,
-				PeerID:     t.pid,
-				Downloaded: t.downloaded,
-				Uploaded:   t.uploaded,
-				Left:       t.left,
-				Event:      tracker.TRACKER_STOPPED,
-				Port:       t.port,
-				Numwant:    0,
+				for _, p := range t.peers {
+					p.Stop()
+					t.logger.Info("torrent -> active peer closed", "Peer", string(p.ID[:]))
+				}
+				for _, hs := range t.outgoingHandshakes {
+					hs.Close()
+					t.logger.Info("torrent -> running handshake closed", "Address", hs.Conn.RemoteAddr())
+				}
+				t.announcer.Close()
+				t.logger.Info("torrent -> stopped")
+				return
 			}
-			for _, tr := range t.trackers {
-				tr.Announce(ctx, announceStop)
+		case peers := <-t.peersC:
+			{
+				t.Dial(peers)
 			}
-			t.logger.Info("torrent -> stopped")
-			return
+		case <-t.torrentAnnounce:
+			{
+				t.torrentAnnounce <- announcer.Torrent{
+					InfoHash:   t.meta.Infohash,
+					PeerID:     t.pid,
+					Downloaded: t.downloaded,
+					Uploaded:   t.uploaded,
+					Left:       t.left,
+				}
+			}
 		case conn := <-t.newConns:
 			{
 				hs := handshaker.NewOutgoingHandshaker(conn)
@@ -175,9 +162,22 @@ func (t *Torrent) run(ctx context.Context) {
 			}
 		case pe := <-t.peerMessages:
 			{
-				t.logger.Info("torrent -> received message from peer", "Peer", string(pe.ID[:]), "Message", pe.Message.ID().String())
+				t.logger.Info("torrent -> received message from peer", "PeerID", string(pe.ID[:]), "Message", pe.Message.ID().String())
 			}
 		}
+	}
+}
+
+func (t *Torrent) Dial(addrs []netip.AddrPort) {
+	for _, a := range addrs {
+		go func() {
+			conn, err := net.DialTimeout("tcp", a.String(), time.Second*5)
+			if err != nil {
+				t.logger.Warn("torrent -> error in connecting to remote peer", "Address", a.Addr().String(), "Error", err.Error())
+				return
+			}
+			t.newConns <- conn
+		}()
 	}
 }
 

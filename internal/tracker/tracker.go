@@ -6,23 +6,23 @@ import (
 	"time"
 )
 
-type trackerEvent uint8
+type TrackerEvent uint8
 
 const (
-	TRACKER_NONE trackerEvent = iota
+	TRACKER_NONE TrackerEvent = iota
 	TRACKER_STARTED
 	TRACKER_COMPLETED
 	TRACKER_STOPPED
 )
 
-var trackerEventName = map[trackerEvent]string{
+var trackerEventName = map[TrackerEvent]string{
 	TRACKER_NONE:      "",
 	TRACKER_STARTED:   "started",
 	TRACKER_COMPLETED: "completed",
 	TRACKER_STOPPED:   "stopped",
 }
 
-func (e trackerEvent) String() string {
+func (e TrackerEvent) String() string {
 	return trackerEventName[e]
 }
 
@@ -40,7 +40,7 @@ type AnnounceRequest struct {
 	Ip         netip.Addr
 	Port       uint16
 	Numwant    uint32
-	Event      trackerEvent
+	Event      TrackerEvent
 }
 
 type AnnounceResponse struct {
