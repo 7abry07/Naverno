@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -19,22 +18,16 @@ import (
 type HTTPTracker struct {
 	announce url.URL
 	client   *http.Client
-	logger   *slog.Logger
 
 	trackerid string
 }
 
-func New(logger *slog.Logger, announce url.URL, transport *http.Transport) *HTTPTracker {
+func New(announce url.URL, transport *http.Transport) *HTTPTracker {
 	t := HTTPTracker{}
-
-	if logger == nil {
-		panic("passed logger is nil")
-	}
 
 	t.announce = announce
 	t.client = &http.Client{Transport: transport}
 	t.trackerid = ""
-	t.logger = logger.With("Tracker URL", t.announce.String())
 
 	return &t
 }
@@ -141,13 +134,11 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) url.URL {
 	if r.Event != tracker.TRACKER_NONE {
 		query.WriteString("&event=")
 		query.WriteString(url.QueryEscape(r.Event.String()))
-		t.logger.Info("tracker -> announced", "Event", r.Event.String())
 	}
 
 	if r.Numwant != 0 {
 		query.WriteString("&numwant=")
 		query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Numwant))))
-		t.logger.Debug("tracker -> want peers", "Numwant", r.Numwant)
 	}
 
 	if (r.Ip != netip.Addr{}) {
@@ -184,7 +175,6 @@ func (t *HTTPTracker) deserialize(resp []byte) (announceResponse, error) {
 
 	if r.TrackerID != "" {
 		t.trackerid = r.TrackerID
-		t.logger.Info("tracker -> new tracker id received", "TrackerID", r.TrackerID)
 	}
 
 	return r, nil

@@ -77,7 +77,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		}
 	}
 
-	t.announcer = announcer.NewAnnouncer(t.logger, t.torrentAnnounce, trackers, t.port)
+	t.announcer = announcer.New(t.logger, t.torrentAnnounce, trackers, t.port)
 
 	return &t, nil
 }

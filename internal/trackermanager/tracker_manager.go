@@ -39,7 +39,7 @@ func (m *TrackerManager) Get(announce string) (tracker.Tracker, error) {
 
 	switch parsedAnnounce.Scheme {
 	case "http", "https":
-		httpTracker := httptracker.New(m.logger, *parsedAnnounce, m.httpTransport)
+		httpTracker := httptracker.New(*parsedAnnounce, m.httpTransport)
 		return httpTracker, nil
 	}
 
