@@ -72,9 +72,10 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 			torrentC <- Torrent{}
 			torrent := <-torrentC
 
-			for _, tier := range a.trackers {
+			for i, tier := range a.trackers {
 				res, ok := a.announceTier(ctx, tier, torrent)
 				if ok {
+					a.trackers[i] = tier
 					peers <- res
 					break
 				}
