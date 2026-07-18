@@ -6,7 +6,6 @@ import (
 	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
 	"Naverno/internal/tracker"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -66,15 +65,18 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		extensions:        sess.extensions,
 	}
 
-	trackers := []tracker.Tracker{}
+	trackers := [][]tracker.Tracker{}
 	for _, urls := range meta.AnnounceList {
+		tier := []tracker.Tracker{}
 		for _, url := range urls {
 			tr, err := sess.trackerManager.Get(url.String())
 			if err != nil {
-				return nil, fmt.Errorf("error in getting tracker implementation -> %v", err)
+				t.logger.Warn("torrent -> couldn't get tracker implementation", "Tracker URL", url.String(), "Error", err.Error())
+				continue
 			}
-			trackers = append(trackers, tr)
+			tier = append(tier, tr)
 		}
+		trackers = append(trackers, tier)
 	}
 
 	t.announcer = announcer.New(t.logger, trackers, t.port)
