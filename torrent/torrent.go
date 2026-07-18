@@ -110,7 +110,7 @@ func (t *Torrent) run() {
 		case res := <-t.incomingResults:
 			t.handleIncomingResult(res)
 		case p := <-t.peerMessages:
-			t.logger.Info("torrent -> received message from peer", "PeerID", string(p.ID[:]), "Message", p.Message.ID().String())
+			t.handlePeerMessage(p)
 		}
 	}
 }

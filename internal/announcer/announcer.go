@@ -127,17 +127,13 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 		req.Numwant = 0
 	}
 
+	a.logger.Info("announcer -> announcing to tracker", "Tracker URL", tr.URL(), "Event", event.String())
 	return tr.Announce(ctx, req)
 }
 
 func (a *Announcer) Close(t Torrent, tC chan Torrent) {
 	close(a.closeC)
-	if !a.announceTimer.Stop() {
-		select {
-		case <-a.announceTimer.C:
-		default:
-		}
-	}
+	a.announceTimer.Stop()
 	tC <- t
 	<-a.doneC
 }
