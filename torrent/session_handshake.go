@@ -37,3 +37,15 @@ func (s *Session) stopHandshakes() {
 		hs.Close()
 	}
 }
+
+func (s *Session) listen() {
+	conn, err := s.listener.Accept()
+	if err != nil {
+		select {
+		case <-s.closeC:
+		case s.listenErr <- err:
+		}
+		return
+	}
+	s.incomingConns <- conn
+}

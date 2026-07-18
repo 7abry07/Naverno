@@ -35,15 +35,3 @@ func (t *Torrent) closeHandshakes() {
 		hs.Close()
 	}
 }
-
-func (s *Session) listen() {
-	conn, err := s.listener.Accept()
-	if err != nil {
-		select {
-		case <-s.closeC:
-		case s.listenErr <- err:
-		}
-		return
-	}
-	s.incomingConns <- conn
-}
