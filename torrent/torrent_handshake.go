@@ -27,6 +27,7 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
 	t.peers = append(t.peers, pe)
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
+	pe.Bitfield(util.BitsetToBytes(t.pieces))
 }
 
 func (t *Torrent) closeHandshakes() {
