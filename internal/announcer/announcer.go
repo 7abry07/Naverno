@@ -15,13 +15,11 @@ type Announcer struct {
 	numwant       uint32
 	port          uint16
 
-	torrentC chan Torrent
-
 	closeC chan struct{}
 	doneC  chan struct{}
 }
 
-func New(logger *slog.Logger, torrentC chan Torrent, trackers []tracker.Tracker, port uint16) *Announcer {
+func New(logger *slog.Logger, trackers []tracker.Tracker, port uint16) *Announcer {
 	if logger == nil {
 		panic("passed nil logger to Announcer")
 	}
@@ -30,7 +28,6 @@ func New(logger *slog.Logger, torrentC chan Torrent, trackers []tracker.Tracker,
 		trackers:      trackers,
 		logger:        logger,
 		announceTimer: nil,
-		torrentC:      torrentC,
 		numwant:       200,
 		port:          port,
 
@@ -41,7 +38,7 @@ func New(logger *slog.Logger, torrentC chan Torrent, trackers []tracker.Tracker,
 	return &a
 }
 
-func (a *Announcer) Run(peers chan []netip.AddrPort) {
+func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -49,8 +46,8 @@ func (a *Announcer) Run(peers chan []netip.AddrPort) {
 
 	a.announceTimer = time.NewTimer(0)
 
-	a.torrentC <- Torrent{}
-	torrent := <-a.torrentC
+	torrentC <- Torrent{}
+	torrent := <-torrentC
 
 	for _, tr := range a.trackers {
 		res, err := a.announce(ctx, tr, torrent, tracker.TRACKER_STARTED)
@@ -66,14 +63,14 @@ func (a *Announcer) Run(peers chan []netip.AddrPort) {
 	for {
 		select {
 		case <-a.closeC:
-			torrent := <-a.torrentC
+			torrent := <-torrentC
 			for _, tr := range a.trackers {
 				go a.announce(ctx, tr, torrent, tracker.TRACKER_STOPPED)
 			}
 			return
 		case <-a.announceTimer.C:
-			a.torrentC <- Torrent{}
-			torrent := <-a.torrentC
+			torrentC <- Torrent{}
+			torrent := <-torrentC
 
 			for _, tr := range a.trackers {
 				res, err := a.announce(ctx, tr, torrent, tracker.TRACKER_NONE)
@@ -112,9 +109,8 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 	return tr.Announce(ctx, req)
 }
 
-func (a *Announcer) Close(torrent Torrent) {
+func (a *Announcer) Close() {
 	close(a.closeC)
-	a.torrentC <- torrent
 	a.announceTimer.Stop()
 	<-a.announceTimer.C
 	<-a.doneC

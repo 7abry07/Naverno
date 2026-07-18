@@ -77,7 +77,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		}
 	}
 
-	t.announcer = announcer.New(t.logger, t.torrentAnnounce, trackers, t.port)
+	t.announcer = announcer.New(t.logger, trackers, t.port)
 
 	return &t, nil
 }
@@ -89,7 +89,7 @@ func (t *Torrent) run() {
 	defer t.closeAnnouncer()
 	defer t.logger.Info("torrent -> stopped")
 
-	go t.announcer.Run(t.peersC)
+	go t.announcer.Run(t.torrentAnnounce, t.peersC)
 
 	for {
 		select {
