@@ -77,17 +77,16 @@ func StartSession(logger *slog.Logger) *Session {
 
 func (s *Session) Run() {
 	defer close(s.doneC)
-	defer s.listener.Close()
-	defer s.trackerManager.Close()
-	defer s.stopTorrents()
-	defer s.stopHandshakes()
-	defer s.logger.Info("session stopped")
-
 	go s.listen()
 
 	for {
 		select {
 		case <-s.closeC:
+			s.listener.Close()
+			s.trackerManager.Close()
+			s.stopTorrents()
+			s.stopHandshakes()
+			s.logger.Info("session stopped")
 			return
 		case err := <-s.listenErr:
 			s.logger.Error("session -> error while listening for connection", "error", err.Error())

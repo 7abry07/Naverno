@@ -86,16 +86,16 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 
 func (t *Torrent) run() {
 	defer close(t.doneC)
-	defer t.closePeers()
-	defer t.closeHandshakes()
-	defer t.closeAnnouncer()
-	defer t.logger.Info("torrent -> stopped")
 
 	go t.announcer.Run(t.torrentAnnounce, t.peersC)
 
 	for {
 		select {
 		case <-t.closeC:
+			t.closePeers()
+			t.closeHandshakes()
+			t.closeAnnouncer()
+			t.logger.Info("torrent -> stopped")
 			return
 		case conn := <-t.newConns:
 			t.handleNewConn(conn)

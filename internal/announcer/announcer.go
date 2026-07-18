@@ -64,7 +64,7 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 			torrent := <-torrentC
 			for _, tier := range a.trackers {
 				for _, tr := range tier {
-					go a.announce(ctx, tr, torrent, tracker.TRACKER_STOPPED)
+					a.announce(ctx, tr, torrent, tracker.TRACKER_STOPPED)
 				}
 			}
 			return
@@ -112,7 +112,6 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent Torrent, event tracker.TrackerEvent) (*tracker.AnnounceResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
-
 	req := tracker.AnnounceRequest{
 		Infohash:   torrent.InfoHash,
 		PeerID:     torrent.PeerID,
@@ -131,7 +130,7 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 	return tr.Announce(ctx, req)
 }
 
-func (a *Announcer) Close() {
+func (a *Announcer) Close(t Torrent, tC chan Torrent) {
 	close(a.closeC)
 	if !a.announceTimer.Stop() {
 		select {
@@ -139,5 +138,6 @@ func (a *Announcer) Close() {
 		default:
 		}
 	}
+	tC <- t
 	<-a.doneC
 }

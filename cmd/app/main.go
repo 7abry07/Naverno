@@ -15,14 +15,14 @@ func main() {
 	logger := slog.New(tint.NewHandler(os.Stdout, nil))
 
 	sess := torrent.StartSession(logger)
-	t, err := sess.NewTorrentFromFile("internal/metadata/testdata/debian.torrent")
+	_, err := sess.NewTorrentFromFile("internal/metadata/testdata/debian.torrent")
 	if err != nil {
 		panic(err)
 	}
 
 	go http.ListenAndServe(":6060", nil)
 	time.Sleep(time.Second * 10)
-	t.Stop()
+	sess.Stop()
 
 	c := make(chan any)
 	<-c
