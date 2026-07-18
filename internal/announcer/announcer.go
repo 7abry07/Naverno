@@ -118,7 +118,6 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 		Downloaded: torrent.Downloaded,
 		Uploaded:   torrent.Uploaded,
 		Left:       torrent.Left,
-		Ip:         netip.Addr{},
 		Port:       a.port,
 		Numwant:    a.numwant,
 		Event:      event,
@@ -133,7 +132,11 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 
 func (a *Announcer) Close() {
 	close(a.closeC)
-	a.announceTimer.Stop()
-	<-a.announceTimer.C
+	if !a.announceTimer.Stop() {
+		select {
+		case <-a.announceTimer.C:
+		default:
+		}
+	}
 	<-a.doneC
 }
