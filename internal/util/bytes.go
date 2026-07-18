@@ -2,7 +2,26 @@ package util
 
 import (
 	"encoding/binary"
+	"fmt"
+
+	"github.com/bits-and-blooms/bitset"
 )
+
+func BytesToBitset(data []byte, bits uint) (*bitset.BitSet, error) {
+	minimumBits := ((bits + 7) / 8) * 8
+	if len(data)*8 != int(minimumBits) {
+		return nil, fmt.Errorf("invalid length")
+	}
+	buf := make([]byte, minimumBits/8)
+	copy(buf, data)
+	return bitset.FromWithLength(bits, BytesToUint64s(buf)), nil
+}
+
+func BitsetToBytes(bs *bitset.BitSet) []byte {
+	minimumStorage := ((bs.Len() + 7) / 8)
+	b := Uint64sToBytes(bs.Words(), int(minimumStorage))
+	return b
+}
 
 func BytesToUint64s(data []byte) []uint64 {
 	padded := make([]byte, (len(data)+7)&^7)
@@ -16,9 +35,9 @@ func BytesToUint64s(data []byte) []uint64 {
 	return out
 }
 
-func Uint64sToBytes(data []uint64, bits int) []byte {
-	out := make([]byte, bits/8)
-	buf := make([]byte, len(data)/8)
+func Uint64sToBytes(data []uint64, datalen int) []byte {
+	out := make([]byte, datalen)
+	buf := []byte{}
 
 	for _, w := range data {
 		b := make([]byte, 8)
@@ -26,14 +45,10 @@ func Uint64sToBytes(data []uint64, bits int) []byte {
 		buf = append(buf, b...)
 	}
 
-	if len(buf)*8 < bits {
-		panic("slice is too short")
+	if len(buf) < datalen {
+		panic(fmt.Errorf("slice is too short, slice length -> %v | length -> %v", len(buf), datalen))
 	}
 
-	if bits%8 != 0 {
-		panic("bit count isn't a multiple of 8")
-	}
-
-	copy(out, buf[:bits/8])
+	copy(out, buf[:datalen])
 	return out
 }

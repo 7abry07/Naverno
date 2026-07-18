@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+
+	"github.com/bits-and-blooms/bitset"
 )
 
 type Torrent struct {
@@ -27,6 +29,7 @@ type Torrent struct {
 	downloaded int64
 	uploaded   int64
 	left       int64
+	pieces     *bitset.BitSet
 
 	newConns          chan net.Conn
 	disconnectedPeers chan *peer.Peer
@@ -50,6 +53,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		downloaded:        0,
 		uploaded:          0,
 		left:              meta.Length,
+		pieces:            bitset.New(uint(meta.PieceCount)),
 		outgoing:          []*handshaker.OutgoingHandshaker{},
 		newConns:          make(chan net.Conn),
 		peerMessages:      make(chan peer.PeerMessage),
