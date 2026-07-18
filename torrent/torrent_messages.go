@@ -34,7 +34,6 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			if pe.Pieces == nil {
 				pe.Pieces = bitset.MustNew(uint(t.meta.PieceCount))
 			}
-
 			if mess.Idx > uint32(t.meta.PieceCount-1) {
 				t.logger.Info("torrent -> invalid HAVE message", "PeerID", string(pe.ID[:]), "Error", "Piece index out of bounds")
 				pe.Stop()
@@ -45,20 +44,20 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Bitfield:
 		{
-			if pe.Pieces == nil {
-				minimumBits := ((t.meta.PieceCount + 7) / 8) * 8
-				if len(mess.Pieces)*8 != int(minimumBits) {
-					t.logger.Info("torrent -> invalid BITFIELD message", "PeerID", string(pe.ID[:]), "Error", "Invalid length")
-					pe.Stop()
-					return
-				}
-				data := make([]byte, minimumBits/8)
-				copy(data, mess.Pieces)
-				pe.Pieces = bitset.FromWithLength(uint(t.meta.PieceCount), util.BytesToUint64s(data))
-				t.logger.Info("torrent -> received BITFIELD message", "PeerID", string(pe.ID[:]))
+			if pe.Pieces != nil {
+				pe.Stop()
 				return
 			}
-			pe.Stop()
+			minimumBits := ((t.meta.PieceCount + 7) / 8) * 8
+			if len(mess.Pieces)*8 != int(minimumBits) {
+				t.logger.Info("torrent -> invalid BITFIELD message", "PeerID", string(pe.ID[:]), "Error", "Invalid length")
+				pe.Stop()
+				return
+			}
+			data := make([]byte, minimumBits/8)
+			copy(data, mess.Pieces)
+			pe.Pieces = bitset.FromWithLength(uint(t.meta.PieceCount), util.BytesToUint64s(data))
+			t.logger.Info("torrent -> received BITFIELD message", "PeerID", string(pe.ID[:]))
 		}
 	case peerprotocol.Request:
 		t.logger.Info("torrent -> received REQUEST message", "PeerID", string(pe.ID[:]), "Idx", mess.Idx, "Begin", mess.Begin, "Length", mess.Length)
