@@ -6,6 +6,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"time"
 
 	"github.com/lmittmann/tint"
 )
@@ -20,6 +21,7 @@ func main() {
 	}
 
 	go http.ListenAndServe(":6060", nil)
+	time.Sleep(time.Second * 10)
 
 	c := make(chan any)
 	<-c

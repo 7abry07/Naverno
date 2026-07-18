@@ -29,7 +29,7 @@ type Session struct {
 	incomingConns   chan net.Conn
 	incomingResults chan *handshaker.IncomingHandshaker
 
-	listenErr chan error
+	listenErr chan struct{}
 	closeC    chan struct{}
 	doneC     chan struct{}
 }
@@ -65,7 +65,7 @@ func StartSession(logger *slog.Logger) *Session {
 		newTorrent:      make(chan *Torrent),
 		removeTorrent:   make(chan *Torrent),
 		incomingResults: make(chan *handshaker.IncomingHandshaker),
-		listenErr:       make(chan error),
+		listenErr:       make(chan struct{}),
 		closeC:          make(chan struct{}),
 		doneC:           make(chan struct{}),
 	}
@@ -88,8 +88,7 @@ func (s *Session) Run() {
 			s.stopHandshakes()
 			s.logger.Info("session stopped")
 			return
-		case err := <-s.listenErr:
-			s.logger.Error("session -> error while listening for connection", "error", err.Error())
+		case <-s.listenErr:
 			close(s.closeC)
 		case t := <-s.newTorrent:
 			s.handleNewTorrent(t)

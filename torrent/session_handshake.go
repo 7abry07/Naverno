@@ -43,7 +43,8 @@ func (s *Session) listen() {
 	if err != nil {
 		select {
 		case <-s.closeC:
-		case s.listenErr <- err:
+		default:
+			close(s.listenErr)
 		}
 		return
 	}
