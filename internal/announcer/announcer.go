@@ -106,6 +106,7 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent Torrent, event tracker.TrackerEvent) (*tracker.AnnounceResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
+
 	req := tracker.AnnounceRequest{
 		Infohash:   torrent.InfoHash,
 		PeerID:     torrent.PeerID,

@@ -60,6 +60,10 @@ func New(logger *slog.Logger, conn net.Conn, ID [20]byte, extensions [8]byte) *P
 	}
 }
 
+func (p *Peer) GetPieces() *bitset.BitSet {
+	return p.Pieces
+}
+
 func (p *Peer) HasPiece(idx uint32) bool {
 	return p.Pieces.Test(uint(idx))
 }
