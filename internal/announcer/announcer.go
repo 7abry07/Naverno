@@ -61,12 +61,6 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 	for {
 		select {
 		case <-a.closeC:
-			torrent := <-torrentC
-			for _, tier := range a.trackers {
-				for _, tr := range tier {
-					a.announce(ctx, tr, torrent, tracker.TRACKER_STOPPED)
-				}
-			}
 			return
 		case <-a.announceTimer.C:
 			torrentC <- Torrent{}
@@ -131,9 +125,21 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 	return tr.Announce(ctx, req)
 }
 
-func (a *Announcer) Close(t Torrent, tC chan Torrent) {
+func (a *Announcer) Close(t Torrent) {
 	close(a.closeC)
 	a.announceTimer.Stop()
-	tC <- t
+	select {
+	case <-a.announceTimer.C:
+	default:
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for _, tier := range a.trackers {
+		for _, tr := range tier {
+			a.announce(ctx, tr, t, tracker.TRACKER_STOPPED)
+		}
+	}
+
 	<-a.doneC
 }

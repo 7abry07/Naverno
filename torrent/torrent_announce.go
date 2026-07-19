@@ -20,5 +20,5 @@ func (t *Torrent) closeAnnouncer() {
 			Downloaded: t.downloaded,
 			Uploaded:   t.uploaded,
 			Left:       t.left,
-		}, t.torrentAnnounce)
+		})
 }
