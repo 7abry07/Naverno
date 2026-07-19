@@ -35,9 +35,9 @@ type Torrent struct {
 	disconnectedPeers chan *peer.Peer
 	peerMessages      chan peer.PeerMessage
 	torrentAnnounce   chan announcer.Torrent
-	peersC            chan []netip.AddrPort
 	incomingResults   chan *handshaker.IncomingHandshaker
 	outgoingResults   chan *handshaker.OutgoingHandshaker
+	peersC            chan []netip.AddrPort
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -99,7 +99,6 @@ func (t *Torrent) run() {
 			t.closePeers()
 			t.closeHandshakes()
 			t.closeAnnouncer()
-			t.logger.Info("torrent -> stopped")
 			return
 		case conn := <-t.newConns:
 			t.handleNewConn(conn)
@@ -122,4 +121,5 @@ func (t *Torrent) run() {
 func (t *Torrent) Stop() {
 	close(t.closeC)
 	<-t.doneC
+	t.logger.Info("torrent -> stopped")
 }
