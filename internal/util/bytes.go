@@ -8,7 +8,7 @@ import (
 )
 
 func BytesToBitset(data []byte, bits uint) (*bitset.BitSet, error) {
-	minimumBits := ((bits + 7) / 8) * 8
+	minimumBits := Align(uint64(bits), 8)
 	if len(data)*8 != int(minimumBits) {
 		return nil, fmt.Errorf("invalid length")
 	}
@@ -21,6 +21,10 @@ func BitsetToBytes(bs *bitset.BitSet) []byte {
 	minimumStorage := ((bs.Len() + 7) / 8)
 	b := Uint64sToBytes(bs.Words(), int(minimumStorage))
 	return b
+}
+
+func Align(n, alignment uint64) uint64 {
+	return (n + alignment - 1) / alignment * alignment
 }
 
 func BytesToUint64s(data []byte) []uint64 {
