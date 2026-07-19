@@ -1,4 +1,4 @@
-package sequential
+package sequentialpicker
 
 import "Naverno/internal/picker"
 

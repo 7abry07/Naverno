@@ -1,15 +1,15 @@
-package sequential_test
+package sequentialpicker_test
 
 import (
 	"Naverno/internal/picker/pickertest"
-	"Naverno/internal/picker/sequential"
+	"Naverno/internal/picker/sequentialpicker"
 	"testing"
 
 	"github.com/bits-and-blooms/bitset"
 )
 
 func TestPicker(t *testing.T) {
-	picker := sequential.NewSequentialPicker(20)
+	picker := sequentialpicker.NewSequentialPicker(20)
 
 	peerPieces := bitset.MustNew(20)
 	peerPieces.Set(1).Set(10)
@@ -34,7 +34,7 @@ func TestPicker(t *testing.T) {
 }
 
 func TestPickerFail(t *testing.T) {
-	picker := sequential.NewSequentialPicker(20)
+	picker := sequentialpicker.NewSequentialPicker(20)
 	picker.OnPieceCompleted(1)
 	picker.OnPieceCompleted(10)
 	picker.OnPieceCompleted(19)

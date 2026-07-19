@@ -18,6 +18,12 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		{
 			t.logger.Info("torrent -> received UNCHOKE", "PeerID", string(pe.ID[:]))
 			pe.AmChoked = false
+			picked, ok := t.picker.Pick(pe)
+			if !ok {
+				t.logger.Info("torrent -> couldn't pick piece for peer", "PeerID", string(pe.ID[:]))
+				return
+			}
+			t.logger.Info("torrent -> picked piece for peer", "PeerID", string(pe.ID[:]), "Piece", picked)
 		}
 	case peerprotocol.Interested:
 		{
@@ -40,6 +46,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 			pe.Pieces.Set(uint(mess.Idx))
+			t.picker.OnPeerHave(mess.Idx)
 			t.logger.Info("torrent -> received HAVE", "PeerID", string(pe.ID[:]), "Idx", mess.Idx)
 		}
 	case peerprotocol.Bitfield:
@@ -62,6 +69,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			pe.Pieces = data
+			t.picker.OnPeerBitfield(pe)
 			t.logger.Info("torrent -> received BITFIELD", "PeerID", string(pe.ID[:]), "Pieces", pe.Pieces.Count())
 		}
 	case peerprotocol.Request:
