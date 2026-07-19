@@ -62,7 +62,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			pe.Pieces = data
-			t.logger.Info("torrent -> received BITFIELD", "PeerID", string(pe.ID[:]))
+			t.logger.Info("torrent -> received BITFIELD", "PeerID", string(pe.ID[:]), "Pieces", pe.Pieces.Count())
 		}
 	case peerprotocol.Request:
 		t.logger.Info("torrent -> received REQUEST", "PeerID", string(pe.ID[:]), "Idx", mess.Idx, "Begin", mess.Begin, "Length", mess.Length)
