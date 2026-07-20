@@ -18,6 +18,7 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 		downloader.OnPeerDisconnected()
 		delete(t.downloaders, p)
 		t.stalledDownloaders[downloader.Piece] = downloader
+		t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece)
 	}
 	p.Stop()
 }

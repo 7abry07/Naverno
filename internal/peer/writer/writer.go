@@ -56,6 +56,6 @@ func (w *Writer) Error() <-chan error {
 func (w *Writer) Write(mess peerprotocol.Message) {
 	select {
 	case w.messages <- mess:
-	default:
+	case <-w.closeC:
 	}
 }
