@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Session) handleIncomingConn(conn net.Conn) {
-	s.logger.Info("session -> started handshaker for connection", "Address", conn.RemoteAddr().String())
+	s.logger.Debug("session -> started handshaker for connection", "Address", conn.RemoteAddr().String())
 	hs := handshaker.NewIncomingHandshaker(conn)
 	s.incoming = append(s.incoming, hs)
 	go hs.Run(s.incomingResults, s.checkInfoHash, s.pid, s.extensions, time.Second*5)

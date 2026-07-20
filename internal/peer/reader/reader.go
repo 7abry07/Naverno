@@ -28,6 +28,7 @@ func New(conn net.Conn) *Reader {
 
 func (r *Reader) Run() {
 	defer close(r.doneC)
+	defer close(r.messages)
 	for {
 		lengthBytes := make([]byte, 4)
 		_, err := io.ReadFull(r.conn, lengthBytes)
@@ -42,6 +43,13 @@ func (r *Reader) Run() {
 
 		messBytes := make([]byte, length)
 		_, err = io.ReadFull(r.conn, messBytes)
+		if err != nil {
+			select {
+			case <-r.closeC:
+			case r.fatal <- err:
+			}
+			return
+		}
 
 		fullMess := []byte{}
 		fullMess = append(fullMess, lengthBytes...)

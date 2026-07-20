@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	logger := slog.New(tint.NewHandler(os.Stdout, nil))
+	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{Level: slog.LevelInfo}))
 
 	sess := torrent.StartSession(logger)
 	_, err := sess.NewTorrentFromFile("internal/metadata/testdata/debian.torrent")

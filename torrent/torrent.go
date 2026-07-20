@@ -22,14 +22,15 @@ type Torrent struct {
 	port       uint16
 	extensions [8]byte
 
-	session     *Session
-	picker      picker.Picker
-	logger      *slog.Logger
-	meta        *metadata.Metadata
-	announcer   *announcer.Announcer
-	outgoing    []*handshaker.OutgoingHandshaker
-	peers       []*peer.Peer
-	downloaders map[*peer.Peer]*piecedownloader.PieceDownloader
+	session            *Session
+	picker             picker.Picker
+	logger             *slog.Logger
+	meta               *metadata.Metadata
+	announcer          *announcer.Announcer
+	outgoing           []*handshaker.OutgoingHandshaker
+	peers              []*peer.Peer
+	downloaders        map[*peer.Peer]*piecedownloader.PieceDownloader
+	stalledDownloaders map[uint32]*piecedownloader.PieceDownloader
 
 	downloaded int64
 	uploaded   int64
@@ -50,30 +51,31 @@ type Torrent struct {
 
 func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (*Torrent, error) {
 	t := Torrent{
-		session:           sess,
-		meta:              meta,
-		logger:            sess.logger.With("TorrentID", id),
-		peers:             []*peer.Peer{},
-		downloaders:       map[*peer.Peer]*piecedownloader.PieceDownloader{},
-		port:              sess.port,
-		downloaded:        0,
-		uploaded:          0,
-		left:              meta.Length,
-		picker:            sequentialpicker.NewSequentialPicker(uint32(meta.PieceCount)),
-		pieces:            bitset.New(uint(meta.PieceCount)),
-		outgoing:          []*handshaker.OutgoingHandshaker{},
-		newConns:          make(chan net.Conn),
-		peerMessages:      make(chan peer.PeerMessage),
-		disconnectedPeers: make(chan *peer.Peer),
-		torrentAnnounce:   make(chan announcer.Torrent),
-		peersC:            make(chan []netip.AddrPort),
-		outgoingResults:   make(chan *handshaker.OutgoingHandshaker),
-		incomingResults:   make(chan *handshaker.IncomingHandshaker),
-		closeC:            make(chan struct{}),
-		doneC:             make(chan struct{}),
-		pid:               sess.pid,
-		id:                id,
-		extensions:        sess.extensions,
+		session:            sess,
+		meta:               meta,
+		logger:             sess.logger.With("TorrentID", id),
+		peers:              []*peer.Peer{},
+		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
+		stalledDownloaders: make(map[uint32]*piecedownloader.PieceDownloader),
+		port:               sess.port,
+		downloaded:         0,
+		uploaded:           0,
+		left:               meta.Length,
+		picker:             sequentialpicker.NewSequentialPicker(uint32(meta.PieceCount)),
+		pieces:             bitset.New(uint(meta.PieceCount)),
+		outgoing:           []*handshaker.OutgoingHandshaker{},
+		newConns:           make(chan net.Conn),
+		peerMessages:       make(chan peer.PeerMessage),
+		disconnectedPeers:  make(chan *peer.Peer),
+		torrentAnnounce:    make(chan announcer.Torrent),
+		peersC:             make(chan []netip.AddrPort),
+		outgoingResults:    make(chan *handshaker.OutgoingHandshaker),
+		incomingResults:    make(chan *handshaker.IncomingHandshaker),
+		closeC:             make(chan struct{}),
+		doneC:              make(chan struct{}),
+		pid:                sess.pid,
+		id:                 id,
+		extensions:         sess.extensions,
 	}
 
 	trackers := [][]tracker.Tracker{}

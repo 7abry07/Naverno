@@ -107,27 +107,30 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 		case <-selfTimeout.C:
 			p.out.Write(peerprotocol.KeepAlive{})
 		case <-peerTimeout.C:
-			p.logger.Warn("peer -> timeout")
+			p.logger.Debug("peer -> timeout")
 			select {
 			case disconnected <- p:
 			case <-p.closeC:
 			}
 			return
 		case err := <-p.in.Error():
+			p.logger.Debug("peer -> read error", "Error", err.Error())
 			select {
 			case disconnected <- p:
-				p.logger.Warn("peer -> read error", "Error", err.Error())
 			case <-p.closeC:
 			}
 			return
 		case err := <-p.out.Error():
+			p.logger.Debug("peer -> write error", "error", err.Error())
 			select {
 			case disconnected <- p:
-				p.logger.Warn("peer -> write error", "error", err.Error())
 			case <-p.closeC:
 			}
 			return
-		case mess := <-p.in.Messages():
+		case mess, ok := <-p.in.Messages():
+			if !ok {
+				continue
+			}
 			peerTimeout = time.NewTimer(time.Minute * 3)
 			if mess.ID() == peerprotocol.KeepAliveID {
 				continue

@@ -15,7 +15,9 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 	t.picker.OnPeerDisconnected(p)
 	downloader, ok := t.downloaders[p]
 	if ok {
-		downloader.CancelPending()
+		downloader.OnPeerDisconnected()
+		delete(t.downloaders, p)
+		t.stalledDownloaders[downloader.Piece] = downloader
 	}
 	p.Stop()
 }
@@ -24,7 +26,7 @@ func (t *Torrent) handleNewConn(conn net.Conn) {
 	hs := handshaker.NewOutgoingHandshaker(conn)
 	t.outgoing = append(t.outgoing, hs)
 	go hs.Run(t.outgoingResults, t.pid, t.meta.Infohash, t.extensions, time.Second*2)
-	t.logger.Info("torrent -> started handshaker for connection", "Address", conn.RemoteAddr().String())
+	t.logger.Debug("torrent -> started handshaker for connection", "Address", conn.RemoteAddr().String())
 }
 
 func (t *Torrent) Dial(peers []netip.AddrPort) {
@@ -32,7 +34,7 @@ func (t *Torrent) Dial(peers []netip.AddrPort) {
 		go func() {
 			conn, err := net.DialTimeout("tcp", a.String(), time.Second*5)
 			if err != nil {
-				t.logger.Warn("torrent -> error in connecting to remote peer", "Address", a.Addr().String(), "Error", err.Error())
+				t.logger.Debug("torrent -> error in connecting to remote peer", "Address", a.Addr().String(), "Error", err.Error())
 				return
 			}
 			t.newConns <- conn
