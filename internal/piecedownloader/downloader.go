@@ -43,7 +43,7 @@ func (d *PieceDownloader) Set(p Peer) {
 	d.peer = p
 }
 
-func (d *PieceDownloader) RequestBlocks(queueSize uint32) bool {
+func (d *PieceDownloader) RequestBlocks(queueSize uint32) {
 
 	if d.peer == nil {
 		panic("nil peer in downloader")
@@ -56,11 +56,10 @@ func (d *PieceDownloader) RequestBlocks(queueSize uint32) bool {
 		delete(d.remaining, begin)
 
 		if i == int(queueSize)-1 {
-			return true
+			return
 		}
 		i++
 	}
-	return false
 }
 
 func (d *PieceDownloader) CancelPending() {
@@ -69,6 +68,7 @@ func (d *PieceDownloader) CancelPending() {
 	}
 	for pending := range d.pending {
 		d.peer.Cancel(pending.Idx, pending.Begin, pending.Length)
+		d.remaining[pending.Begin] = pending.Length
 	}
 	d.pending = make(map[peerprotocol.Request]struct{})
 }
@@ -78,14 +78,6 @@ func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) error {
 	if !ok {
 		return fmt.Errorf("received piece that was not requested")
 	}
-	remainingLength, ok := d.remaining[begin]
-	if !ok {
-		return fmt.Errorf("piece already received")
-	}
-	if remainingLength != length {
-		return fmt.Errorf("piece length is not what expected, length -> %v", length)
-	}
-
 	delete(d.pending, peerprotocol.Request{Idx: d.piece, Begin: begin, Length: length})
 
 	return nil

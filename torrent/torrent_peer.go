@@ -11,8 +11,12 @@ import (
 
 func (t *Torrent) handleDisconnected(p *peer.Peer) {
 	t.peers = util.Remove(t.peers, p, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
-	t.logger.Info("torrent -> peer disconnected", "Peer", string(p.ID[:]), "Peer Count", len(t.peers))
+	t.logger.Info("torrent -> peer disconnected", "Address", p.Addr().String(), "Peer", string(p.ID[:]), "Peer Count", len(t.peers))
 	t.picker.OnPeerDisconnected(p)
+	downloader, ok := t.downloaders[p]
+	if ok {
+		downloader.CancelPending()
+	}
 	p.Stop()
 }
 

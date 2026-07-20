@@ -34,7 +34,10 @@ func (w *Writer) Run() {
 		case mess := <-w.messages:
 			err := util.WriteFull(w.conn, mess.Marshal())
 			if err != nil {
-				w.fatal <- err
+				select {
+				case <-w.closeC:
+				case w.fatal <- err:
+				}
 				return
 			}
 		}

@@ -60,6 +60,10 @@ func New(logger *slog.Logger, conn net.Conn, ID [20]byte, extensions [8]byte) *P
 	}
 }
 
+func (p *Peer) Addr() net.Addr {
+	return p.conn.RemoteAddr()
+}
+
 func (p *Peer) GetPieces() *bitset.BitSet {
 	return p.Pieces
 }

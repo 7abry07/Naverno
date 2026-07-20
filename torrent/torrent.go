@@ -7,6 +7,7 @@ import (
 	"Naverno/internal/peer"
 	"Naverno/internal/picker"
 	"Naverno/internal/picker/sequentialpicker"
+	"Naverno/internal/piecedownloader"
 	"Naverno/internal/tracker"
 	"log/slog"
 	"net"
@@ -21,13 +22,14 @@ type Torrent struct {
 	port       uint16
 	extensions [8]byte
 
-	session   *Session
-	picker    picker.Picker
-	logger    *slog.Logger
-	meta      *metadata.Metadata
-	announcer *announcer.Announcer
-	outgoing  []*handshaker.OutgoingHandshaker
-	peers     []*peer.Peer
+	session     *Session
+	picker      picker.Picker
+	logger      *slog.Logger
+	meta        *metadata.Metadata
+	announcer   *announcer.Announcer
+	outgoing    []*handshaker.OutgoingHandshaker
+	peers       []*peer.Peer
+	downloaders map[*peer.Peer]*piecedownloader.PieceDownloader
 
 	downloaded int64
 	uploaded   int64
@@ -52,6 +54,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		meta:              meta,
 		logger:            sess.logger.With("TorrentID", id),
 		peers:             []*peer.Peer{},
+		downloaders:       map[*peer.Peer]*piecedownloader.PieceDownloader{},
 		port:              sess.port,
 		downloaded:        0,
 		uploaded:          0,
