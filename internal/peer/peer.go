@@ -94,6 +94,7 @@ func (p *Peer) Interested() bool {
 
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 	defer close(p.doneC)
+
 	go p.in.Run()
 	go p.out.Run()
 

@@ -65,9 +65,6 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 		if len(d.pending) >= queueSize {
 			break
 		}
-		// if d.Piece == 0 {
-		// 	fmt.Printf("requested -> (%v, %#v, %#v)\n", d.Piece, begin, length)
-		// }
 
 		d.peer.Request(d.Piece, begin, length)
 		temp = append(temp, begin)
@@ -79,10 +76,6 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 	for _, begin := range temp {
 		delete(d.remaining, begin)
 	}
-
-	// if d.Piece == 0 {
-	// 	fmt.Printf("blocks requested -> %v, queuelen -> %v, remaining -> %v\n", len(temp), len(d.pending), len(d.remaining))
-	// }
 
 	d.logger.Debug("downloader -> all blocks requested", "Piece", d.Piece, "Pending", len(d.pending))
 }
@@ -99,9 +92,6 @@ func (d *PieceDownloader) CancelPending() {
 }
 
 func (d *PieceDownloader) Completed() bool {
-	// if d.Piece == 0 {
-	// 	fmt.Printf("remaining -> %v, pending -> %v\n", len(d.remaining), len(d.pending))
-	// }
 	return len(d.remaining) == 0 && len(d.pending) == 0
 }
 

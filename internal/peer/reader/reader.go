@@ -29,6 +29,7 @@ func New(conn net.Conn) *Reader {
 func (r *Reader) Run() {
 	defer close(r.doneC)
 	defer close(r.messages)
+	defer close(r.fatal)
 	for {
 		lengthBytes := make([]byte, 4)
 		_, err := io.ReadFull(r.conn, lengthBytes)

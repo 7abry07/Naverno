@@ -166,10 +166,6 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 		downloader.RequestBlocks(10)
 
-		// if mess.Idx == 0 {
-		// 	fmt.Printf("piece -> %v\n", mess.Begin)
-		// }
-
 		if !downloader.Completed() {
 			return
 		}

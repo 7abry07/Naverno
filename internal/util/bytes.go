@@ -14,11 +14,12 @@ func BytesToBitset(data []byte, bits uint) (*bitset.BitSet, error) {
 	}
 	buf := make([]byte, minimumBits/8)
 	copy(buf, data)
+
 	return bitset.FromWithLength(bits, BytesToUint64s(buf)), nil
 }
 
 func BitsetToBytes(bs *bitset.BitSet) []byte {
-	minimumStorage := ((bs.Len() + 7) / 8)
+	minimumStorage := Align(uint64(bs.Len()), 8) / 8
 	b := Uint64sToBytes(bs.Words(), int(minimumStorage))
 	return b
 }
@@ -28,12 +29,12 @@ func Align(n, alignment uint64) uint64 {
 }
 
 func BytesToUint64s(data []byte) []uint64 {
-	padded := make([]byte, (len(data)+7)&^7)
+	padded := make([]byte, Align(uint64(len(data)), 64))
 	copy(padded, data)
 
 	out := make([]uint64, len(padded)/8)
 	for i := range out {
-		out[i] = binary.BigEndian.Uint64(padded[i*8:])
+		out[i] = binary.LittleEndian.Uint64(padded[i*8:])
 	}
 
 	return out
@@ -45,7 +46,7 @@ func Uint64sToBytes(data []uint64, datalen int) []byte {
 
 	for _, w := range data {
 		b := make([]byte, 8)
-		binary.BigEndian.PutUint64(b, w)
+		binary.LittleEndian.PutUint64(b, w)
 		buf = append(buf, b...)
 	}
 
