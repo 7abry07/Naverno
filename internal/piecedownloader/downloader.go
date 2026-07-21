@@ -25,17 +25,13 @@ func NewPieceDownloader(logger *slog.Logger, piece uint32, pieceSize uint32) *Pi
 		panic("passed nil logger to piece downloader")
 	}
 	alignedPieceSize := util.Align(uint64(pieceSize), DefaultBlockSize)
-	lastBlockSize := alignedPieceSize - uint64(pieceSize)
-	if lastBlockSize == 0 {
-		lastBlockSize = DefaultBlockSize
-	}
 	blocksPerPiece := alignedPieceSize / DefaultBlockSize
 	blocks := make(map[uint32]uint32)
 
 	for i := range blocksPerPiece {
-		size := DefaultBlockSize
+		size := uint64(DefaultBlockSize)
 		if i == blocksPerPiece-1 {
-			size = int(lastBlockSize)
+			size -= alignedPieceSize - uint64(pieceSize)
 		}
 		blocks[uint32(i*DefaultBlockSize)] = uint32(size)
 	}
