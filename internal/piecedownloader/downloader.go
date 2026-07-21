@@ -2,6 +2,7 @@ package piecedownloader
 
 import (
 	"Naverno/internal/util"
+	"fmt"
 	"log/slog"
 	"maps"
 )
@@ -68,6 +69,7 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 		d.peer.Request(d.Piece, begin, length)
 		temp = append(temp, begin)
 		d.pending[begin] = length
+		d.logger.Debug("downloader -> block requested", "Piece", d.Piece, "Block", fmt.Sprintf("(%v, %v)", begin, length))
 
 		i++
 	}
@@ -76,7 +78,6 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 		delete(d.remaining, begin)
 	}
 
-	d.logger.Debug("downloader -> all blocks requested", "Piece", d.Piece, "Pending", len(d.pending))
 }
 
 func (d *PieceDownloader) Completed() bool {
