@@ -2,7 +2,6 @@ package piecedownloader
 
 import (
 	"Naverno/internal/util"
-	"fmt"
 	"log/slog"
 	"maps"
 )
@@ -17,7 +16,6 @@ type PieceDownloader struct {
 	PieceSize uint32
 	peer      Peer
 	remaining map[uint32]uint32
-	canceled  map[uint32]uint32
 	pending   map[uint32]uint32
 }
 
@@ -47,7 +45,6 @@ func NewPieceDownloader(logger *slog.Logger, piece uint32, pieceSize uint32) *Pi
 		logger:    logger,
 		peer:      nil,
 		remaining: blocks,
-		canceled:  make(map[uint32]uint32),
 		pending:   make(map[uint32]uint32),
 	}
 
@@ -88,34 +85,18 @@ func (d *PieceDownloader) Completed() bool {
 
 func (d *PieceDownloader) OnPeerDisconnected() {
 	maps.Copy(d.remaining, d.pending)
-	maps.Copy(d.remaining, d.canceled)
 	d.pending = make(map[uint32]uint32)
 }
 
 func (d *PieceDownloader) OnPeerChoke() {
 	maps.Copy(d.remaining, d.pending)
-	maps.Copy(d.canceled, d.pending)
 	d.pending = make(map[uint32]uint32)
 }
 
-func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) error {
+func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) {
 	_, pending := d.pending[begin]
-	_, canceled := d.canceled[begin]
-	_, remaining := d.remaining[begin]
-
-	if remaining && !canceled {
-		return fmt.Errorf("received block that was not requested (%v, %v)", begin, length)
+	if pending {
+		delete(d.pending, begin)
 	}
-
-	if !pending && !canceled && !remaining {
-		return fmt.Errorf("received block a second time (%v, %v)", begin, length)
-	}
-
-	if canceled {
-		delete(d.canceled, begin)
-		return nil
-	}
-
-	delete(d.pending, begin)
-	return nil
+	delete(d.remaining, begin)
 }

@@ -21,10 +21,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			if !ok {
 				return
 			}
-			downloader.OnPeerChoke()
 			delete(t.downloaders, pe.Peer)
 			t.stalledDownloaders[downloader.Piece] = downloader
 			t.picker.OnPieceStalled(downloader.Piece)
+			downloader.OnPeerChoke()
 			t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece)
 		}
 	case peerprotocol.Unchoke:
@@ -35,32 +35,37 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			if pe.Pieces == nil {
 				return
 			}
+
+			downloader, ok := t.downloaders[pe.Peer]
+			if ok {
+				downloader.RequestBlocks(10)
+				return
+			}
+
 			picked, ok := t.picker.Pick(pe)
 			if !ok {
 				pe.IsInteresting = false
 				return
 			}
-
-			downloader, ok := t.downloaders[pe.Peer]
-			if !ok {
-				downloader, ok = t.stalledDownloaders[picked]
-				if !ok {
-					pieceSize := t.meta.PieceLength
-					if picked == uint32(t.meta.PieceCount)-1 {
-						pieceSize = (t.meta.PieceLength * t.meta.PieceCount) - t.meta.Length
-					}
-					t.downloaders[pe.Peer] = piecedownloader.NewPieceDownloader(t.logger, picked, uint32(pieceSize))
-					downloader = t.downloaders[pe.Peer]
-					downloader.Set(pe)
-					t.logger.Debug("torrent -> started downloader for piece", "Piece", picked, "PeerID", string(pe.ID[:]))
-				} else {
-					delete(t.stalledDownloaders, downloader.Piece)
-					downloader.Set(pe)
-					t.downloaders[pe.Peer] = downloader
-					t.logger.Info("torrent -> restarted stalled downloader for piece", "Piece", downloader.Piece, "PeerID", string(pe.ID[:]))
-				}
+			downloader, ok = t.stalledDownloaders[picked]
+			if ok {
+				delete(t.stalledDownloaders, downloader.Piece)
+				downloader.Set(pe)
+				t.downloaders[pe.Peer] = downloader
+				t.logger.Info("torrent -> restarted stalled downloader for piece", "Piece", downloader.Piece, "PeerID", string(pe.ID[:]))
+				downloader.RequestBlocks(10)
+				return
 			}
+
+			pieceSize := t.meta.PieceLength
+			if picked == uint32(t.meta.PieceCount)-1 {
+				pieceSize = (t.meta.PieceLength * t.meta.PieceCount) - t.meta.Length
+			}
+			t.downloaders[pe.Peer] = piecedownloader.NewPieceDownloader(t.logger, picked, uint32(pieceSize))
+			downloader = t.downloaders[pe.Peer]
+			downloader.Set(pe)
 			downloader.RequestBlocks(10)
+			t.logger.Debug("torrent -> started downloader for piece", "Piece", picked, "PeerID", string(pe.ID[:]))
 		}
 	case peerprotocol.Interested:
 		{
@@ -98,30 +103,34 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			downloader, ok := t.downloaders[pe.Peer]
-			if !ok {
-				downloader, ok = t.stalledDownloaders[mess.Idx]
-				if !ok {
-					pieceSize := t.meta.PieceLength
-					if mess.Idx == uint32(t.meta.PieceCount)-1 {
-						pieceSize = (t.meta.PieceLength * t.meta.PieceCount) - t.meta.Length
-					}
-					t.downloaders[pe.Peer] = piecedownloader.NewPieceDownloader(t.logger, mess.Idx, uint32(pieceSize))
-					downloader = t.downloaders[pe.Peer]
-					downloader.Set(pe)
-					t.logger.Debug("torrent -> started downloader for piece", "Piece", mess.Idx, "PeerID", string(pe.ID[:]))
-				} else {
-					delete(t.stalledDownloaders, downloader.Piece)
-					downloader.Set(pe)
-					t.downloaders[pe.Peer] = downloader
-					t.logger.Info("torrent -> restarted stalled downloader for piece", "Piece", downloader.Piece, "PeerID", string(pe.ID[:]))
-				}
+			if ok {
+				downloader.RequestBlocks(10)
+				return
 			}
+
+			downloader, ok = t.stalledDownloaders[mess.Idx]
+			if ok {
+				delete(t.stalledDownloaders, downloader.Piece)
+				downloader.Set(pe)
+				t.downloaders[pe.Peer] = downloader
+				t.logger.Info("torrent -> restarted stalled downloader for piece", "Piece", downloader.Piece, "PeerID", string(pe.ID[:]))
+				downloader.RequestBlocks(10)
+				return
+			}
+
+			pieceSize := t.meta.PieceLength
+			if mess.Idx == uint32(t.meta.PieceCount)-1 {
+				pieceSize = (t.meta.PieceLength * t.meta.PieceCount) - t.meta.Length
+			}
+			t.downloaders[pe.Peer] = piecedownloader.NewPieceDownloader(t.logger, mess.Idx, uint32(pieceSize))
+			downloader = t.downloaders[pe.Peer]
+			downloader.Set(pe)
 			downloader.RequestBlocks(10)
+			t.logger.Debug("torrent -> started downloader for piece", "Piece", mess.Idx, "PeerID", string(pe.ID[:]))
 		}
 	case peerprotocol.Bitfield:
 		{
 			if pe.Pieces != nil {
-				delete(t.downloaders, pe.Peer)
 				util.Remove(t.peers, pe.Peer, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
 				pe.Stop()
 				return
@@ -135,7 +144,6 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			data, err := util.BytesToBitset(mess.Pieces, uint(t.meta.PieceCount))
 			if err != nil {
 				t.logger.Info("torrent -> invalid BITFIELD", "PeerID", string(pe.ID[:]), "Error", err)
-				delete(t.downloaders, pe.Peer)
 				util.Remove(t.peers, pe.Peer, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
 				pe.Stop()
 				return
@@ -155,43 +163,44 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Request:
 		t.logger.Debug("torrent -> received REQUEST", "PeerID", string(pe.ID[:]), "Request", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, mess.Length))
 	case peerprotocol.Piece:
-		t.logger.Debug("torrent -> received PIECE", "PeerID", string(pe.ID[:]), "Block", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, len(mess.Data)))
-		if pe.AmChoked {
-			return
-		}
-		downloader, ok := t.downloaders[pe.Peer]
-		if !ok {
-			return
-		}
-		err := downloader.OnBlockReceived(mess.Begin, uint32(len(mess.Data)))
+		{
+			t.logger.Debug("torrent -> received PIECE", "PeerID", string(pe.ID[:]), "Block", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, len(mess.Data)))
+			if pe.AmChoked {
+				return
+			}
+			downloader, ok := t.downloaders[pe.Peer]
+			if !ok {
+				return
+			}
+			downloader.OnBlockReceived(mess.Begin, uint32(len(mess.Data)))
+			downloader.RequestBlocks(10)
 
-		if err != nil {
-			t.logger.Warn("torrent -> downloader error", "Piece", mess.Idx, "Error", err)
+			if !downloader.Completed() {
+				return
+			}
+
+			t.downloaded += int64(downloader.PieceSize)
+			t.left = t.meta.Length - t.downloaded
+			t.pieces.Set(uint(downloader.Piece))
+			t.picker.OnPieceCompleted(downloader.Piece)
+			t.logger.Info("torrent -> piece completed", "Piece", mess.Idx, "Pieces Completed", t.pieces.Count())
 			delete(t.downloaders, pe.Peer)
-			util.Remove(t.peers, pe.Peer, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
-			pe.Stop()
-			return
-		}
-		downloader.RequestBlocks(10)
 
-		if !downloader.Completed() {
-			return
-		}
+			picked, ok := t.picker.Pick(pe)
+			if !ok {
+				pe.IsInteresting = false
+				return
+			}
 
-		t.downloaded += int64(downloader.PieceSize)
-		t.left = t.meta.Length - t.downloaded
-		t.pieces.Set(uint(downloader.Piece))
-		t.logger.Info("torrent -> piece completed", "Piece", mess.Idx, "Pieces Completed", t.pieces.Count())
-		delete(t.downloaders, pe.Peer)
-
-		picked, ok := t.picker.Pick(pe)
-		if !ok {
-			pe.IsInteresting = false
-			return
-		}
-
-		downloader, ok = t.stalledDownloaders[picked]
-		if !ok {
+			downloader, ok = t.stalledDownloaders[picked]
+			if ok {
+				delete(t.stalledDownloaders, downloader.Piece)
+				downloader.Set(pe)
+				t.downloaders[pe.Peer] = downloader
+				t.logger.Info("torrent -> restarted downloader for piece", "Piece", downloader.Piece, "PeerID", string(pe.ID[:]))
+				downloader.RequestBlocks(10)
+				return
+			}
 			pieceSize := t.meta.PieceLength
 			if picked == uint32(t.meta.PieceCount)-1 {
 				pieceSize = (t.meta.PieceLength * t.meta.PieceCount) - t.meta.Length
@@ -199,14 +208,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			t.downloaders[pe.Peer] = piecedownloader.NewPieceDownloader(t.logger, picked, uint32(pieceSize))
 			downloader = t.downloaders[pe.Peer]
 			downloader.Set(pe)
+			downloader.RequestBlocks(10)
 			t.logger.Debug("torrent -> started downloader for piece", "Piece", picked, "PeerID", string(pe.ID[:]))
-		} else {
-			delete(t.stalledDownloaders, downloader.Piece)
-			downloader.Set(pe)
-			t.downloaders[pe.Peer] = downloader
-			t.logger.Info("torrent -> restarted downloader for piece", "Piece", downloader.Piece, "PeerID", string(pe.ID[:]))
+
 		}
-		downloader.RequestBlocks(10)
 	case peerprotocol.Cancel:
 		t.logger.Info("torrent -> received CANCEL", "PeerID", string(pe.ID[:]), "Idx", mess.Idx, "Begin", mess.Begin, "Length", mess.Length)
 	}

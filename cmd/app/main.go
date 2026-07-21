@@ -21,7 +21,7 @@ func main() {
 	}
 
 	go http.ListenAndServe(":6060", nil)
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Minute * 2)
 	t.Stop()
 
 	<-make(chan any)

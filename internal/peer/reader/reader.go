@@ -64,7 +64,10 @@ func (r *Reader) Run() {
 			}
 			return
 		}
-		r.messages <- mess
+		select {
+		case r.messages <- mess:
+		case <-r.closeC:
+		}
 	}
 }
 

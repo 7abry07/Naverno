@@ -15,14 +15,14 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 	t.picker.OnPeerDisconnected(p)
 	downloader, ok := t.downloaders[p]
 	if ok {
-		downloader.OnPeerDisconnected()
-		delete(t.downloaders, p)
 		t.stalledDownloaders[downloader.Piece] = downloader
 		t.picker.OnPieceStalled(downloader.Piece)
+		downloader.OnPeerDisconnected()
 		t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece)
+		delete(t.downloaders, p)
 	}
-	p.Stop()
 	util.Remove(t.peers, p, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
+	p.Stop()
 }
 
 func (t *Torrent) handleNewConn(conn net.Conn) {

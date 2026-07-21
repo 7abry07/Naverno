@@ -105,9 +105,8 @@ func (t *Torrent) run() {
 	for {
 		select {
 		case <-t.closeC:
-			// t.logger.Error("", "", t.pieces.DumpAsBits())
-			// t.logger.Error("", "", t.downloaders)
-			// t.logger.Error("", "", t.stalledDownloaders)
+			t.logger.Error("", "", t.pieces.DumpAsBits())
+			t.logger.Error("", "", t.pieces.String())
 			t.closePeers()
 			t.closeHandshakes()
 			t.closeAnnouncer()
