@@ -1,10 +1,10 @@
 package piecedownloader
 
 import (
-	"Naverno/internal/peerprotocol"
 	"Naverno/internal/util"
 	"fmt"
 	"log/slog"
+	"maps"
 )
 
 const (
@@ -17,7 +17,8 @@ type PieceDownloader struct {
 	PieceSize uint32
 	peer      Peer
 	remaining map[uint32]uint32
-	pending   map[peerprotocol.Request]struct{}
+	canceled  map[uint32]uint32
+	pending   map[uint32]uint32
 }
 
 func NewPieceDownloader(logger *slog.Logger, piece uint32, pieceSize uint32) *PieceDownloader {
@@ -46,7 +47,8 @@ func NewPieceDownloader(logger *slog.Logger, piece uint32, pieceSize uint32) *Pi
 		logger:    logger,
 		peer:      nil,
 		remaining: blocks,
-		pending:   make(map[peerprotocol.Request]struct{}),
+		canceled:  make(map[uint32]uint32),
+		pending:   make(map[uint32]uint32),
 	}
 
 }
@@ -68,7 +70,7 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 
 		d.peer.Request(d.Piece, begin, length)
 		temp = append(temp, begin)
-		d.pending[peerprotocol.Request{Idx: d.Piece, Begin: begin, Length: length}] = struct{}{}
+		d.pending[begin] = length
 
 		i++
 	}
@@ -80,34 +82,40 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 	d.logger.Debug("downloader -> all blocks requested", "Piece", d.Piece, "Pending", len(d.pending))
 }
 
-func (d *PieceDownloader) CancelPending() {
-	if d.peer == nil {
-		panic("nil peer in downloader")
-	}
-	for pending := range d.pending {
-		d.peer.Cancel(pending.Idx, pending.Begin, pending.Length)
-		d.remaining[pending.Begin] = pending.Length
-	}
-	d.pending = make(map[peerprotocol.Request]struct{})
-}
-
 func (d *PieceDownloader) Completed() bool {
 	return len(d.remaining) == 0 && len(d.pending) == 0
 }
 
 func (d *PieceDownloader) OnPeerDisconnected() {
-	for pending := range d.pending {
-		d.remaining[pending.Begin] = pending.Length
-	}
-	d.pending = make(map[peerprotocol.Request]struct{})
+	maps.Copy(d.remaining, d.pending)
+	maps.Copy(d.remaining, d.canceled)
+	d.pending = make(map[uint32]uint32)
+}
+
+func (d *PieceDownloader) OnPeerChoke() {
+	maps.Copy(d.remaining, d.pending)
+	maps.Copy(d.canceled, d.pending)
+	d.pending = make(map[uint32]uint32)
 }
 
 func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) error {
-	_, ok := d.pending[peerprotocol.Request{Idx: d.Piece, Begin: begin, Length: length}]
-	if !ok {
-		return fmt.Errorf("received piece that was not requested (%v, %v)", begin, length)
-	}
-	delete(d.pending, peerprotocol.Request{Idx: d.Piece, Begin: begin, Length: length})
+	_, pending := d.pending[begin]
+	_, canceled := d.canceled[begin]
+	_, remaining := d.remaining[begin]
 
+	if remaining && !canceled {
+		return fmt.Errorf("received block that was not requested (%v, %v)", begin, length)
+	}
+
+	if !pending && !canceled && !remaining {
+		return fmt.Errorf("received block a second time (%v, %v)", begin, length)
+	}
+
+	if canceled {
+		delete(d.canceled, begin)
+		return nil
+	}
+
+	delete(d.pending, begin)
 	return nil
 }

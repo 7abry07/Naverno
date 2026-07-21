@@ -50,14 +50,4 @@ func TestDownloader(t *testing.T) {
 			t.Errorf("unexpected error -> %v", err)
 		}
 	}
-
-	d = piecedownloader.NewPieceDownloader(slog.New(slog.NewTextHandler(io.Discard, nil)), 1, piecedownloader.DefaultBlockSize*5)
-	d.Set(pe)
-
-	d.RequestBlocks(3)
-	d.CancelPending()
-	pieces = pe.GetPieces()
-	if len(pieces) != 0 {
-		t.Errorf("pending requests weren't canceled on CancelPending()")
-	}
 }

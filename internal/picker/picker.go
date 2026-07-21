@@ -5,5 +5,6 @@ type Picker interface {
 	OnPeerHave(idx uint32)
 	OnPeerBitfield(pe Peer)
 	OnPeerDisconnected(pe Peer)
+	OnPieceStalled(idx uint32)
 	OnPieceCompleted(idx uint32)
 }
