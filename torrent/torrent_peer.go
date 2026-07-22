@@ -10,8 +10,6 @@ import (
 )
 
 func (t *Torrent) handleDisconnected(p *peer.Peer) {
-	t.peers = util.Remove(t.peers, p, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
-	t.logger.Info("torrent -> peer disconnected", "Address", p.Addr().String(), "Peer", string(p.ID[:]), "Peer Count", len(t.peers))
 	t.picker.OnPeerDisconnected(p)
 	downloader, ok := t.downloaders[p]
 	if ok {
@@ -19,10 +17,9 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 		t.picker.OnPieceStalled(downloader.Piece)
 		downloader.OnPeerDisconnected()
 		t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece)
-		delete(t.downloaders, p)
 	}
-	util.Remove(t.peers, p, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
-	p.Stop()
+	t.closePeer(p)
+	t.logger.Info("torrent -> peer disconnected", "Address", p.Addr().String(), "Peer", string(p.ID[:]))
 }
 
 func (t *Torrent) handleNewConn(conn net.Conn) {
@@ -48,8 +45,7 @@ func (t *Torrent) dial(peers []netip.AddrPort) {
 func (t *Torrent) closePeer(p *peer.Peer) {
 	delete(t.downloaders, p)
 	p.Stop()
-	util.Remove(t.peers, p, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
-
+	t.peers = util.Remove(t.peers, p, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
 }
 
 func (t *Torrent) closePeers() {
