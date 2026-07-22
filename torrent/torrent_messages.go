@@ -14,15 +14,13 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			t.logger.Debug("torrent -> received CHOKE", "PeerID", string(pe.ID[:]))
 			pe.AmChoked = true
 
-			downloader, ok := t.downloaders[pe.Peer]
-			if !ok {
-				return
+			if d, ok := t.downloaders[pe.Peer]; ok {
+				delete(t.downloaders, pe.Peer)
+				t.stalledDownloaders[d.Piece] = d
+				t.picker.OnPieceStalled(d.Piece)
+				d.OnPeerChoke()
+				t.logger.Info("torrent -> downloader stalled", "Piece", d.Piece)
 			}
-			delete(t.downloaders, pe.Peer)
-			t.stalledDownloaders[downloader.Piece] = downloader
-			t.picker.OnPieceStalled(downloader.Piece)
-			downloader.OnPeerChoke()
-			t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece)
 		}
 	case peerprotocol.Unchoke:
 		{
@@ -44,6 +42,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Have:
 		{
+			t.logger.Debug("torrent -> received HAVE", "PeerID", string(pe.ID[:]), "Idx", mess.Idx)
 			if pe.Pieces == nil {
 				pe.Pieces = bitfield.New(uint32(t.meta.PieceCount))
 			}
@@ -59,7 +58,6 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				pe.IsInteresting = true
 			}
 
-			t.logger.Debug("torrent -> received HAVE", "PeerID", string(pe.ID[:]), "Idx", mess.Idx)
 			if !pe.AmChoked {
 				t.download(pe.Peer)
 			}
@@ -70,12 +68,6 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			if pe.Pieces != nil {
 				t.closePeer(pe.Peer)
 				return
-			}
-			spareBits := len(mess.Pieces)*8 - int(t.meta.PieceCount)
-			for i := range spareBits {
-				if mess.Pieces[len(mess.Pieces)-1]&1<<i != 0 {
-					t.logger.Info("torrent -> invalid BITFIELD", "PeerID", string(pe.ID[:]), "Error", "spare bits are set")
-				}
 			}
 			data, err := bitfield.From(mess.Pieces, uint32(t.meta.PieceCount))
 			if err != nil {
@@ -92,8 +84,8 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			pe.Pieces = data
-			t.picker.OnPeerBitfield(pe)
 			t.logger.Debug("torrent -> received BITFIELD", "PeerID", string(pe.ID[:]), "Pieces", pe.Pieces.Count())
+			t.picker.OnPeerBitfield(pe)
 		}
 	case peerprotocol.Request:
 		t.logger.Debug("torrent -> received REQUEST", "PeerID", string(pe.ID[:]), "Request", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, mess.Length))

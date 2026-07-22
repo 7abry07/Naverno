@@ -41,6 +41,6 @@ func (t *Torrent) closePeer(p *peer.Peer) {
 
 func (t *Torrent) closePeers() {
 	for p := range t.peers {
-		p.Stop()
+		t.closePeer(p)
 	}
 }

@@ -19,6 +19,13 @@ func New(length uint32) *Bitfield {
 }
 
 func From(data []byte, length uint32) (*Bitfield, error) {
+	spareBits := uint32(len(data)*8) - length
+	for i := range spareBits {
+		if data[len(data)-1]&1<<i != 0 {
+			return nil, fmt.Errorf("spare bits are set")
+		}
+	}
+
 	minimumBits := util.Align(uint64(length), 8)
 	if len(data)*8 != int(minimumBits) {
 		return nil, fmt.Errorf("invalid length")
