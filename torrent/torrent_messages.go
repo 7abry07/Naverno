@@ -31,23 +31,9 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		{
 			t.logger.Debug("torrent -> received UNCHOKE", "PeerID", string(pe.ID[:]))
 			pe.AmChoked = false
-
-			if pe.Pieces == nil {
-				return
+			if pe.Pieces != nil {
+				t.download(pe.Peer)
 			}
-
-			downloader, ok := t.downloaders[pe.Peer]
-			if ok {
-				downloader.RequestBlocks(10)
-				return
-			}
-
-			picked, ok := t.picker.Pick(pe)
-			if !ok {
-				pe.IsInteresting = false
-				return
-			}
-			t.download(pe.Peer, picked)
 		}
 	case peerprotocol.Interested:
 		{
@@ -77,18 +63,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			t.logger.Debug("torrent -> received HAVE", "PeerID", string(pe.ID[:]), "Idx", mess.Idx)
-
-			if pe.AmChoked {
-				return
+			if !pe.AmChoked {
+				t.download(pe.Peer)
 			}
 
-			downloader, ok := t.downloaders[pe.Peer]
-			if ok {
-				downloader.RequestBlocks(10)
-				return
-			}
-
-			t.download(pe.Peer, mess.Idx)
 		}
 	case peerprotocol.Bitfield:
 		{
@@ -125,28 +103,14 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Piece:
 		{
 			t.logger.Debug("torrent -> received PIECE", "PeerID", string(pe.ID[:]), "Block", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, len(mess.Data)))
-			if pe.AmChoked {
-				return
-			}
 			downloader, ok := t.downloaders[pe.Peer]
 			if !ok {
 				return
 			}
+
 			downloader.OnBlockReceived(mess.Begin, uint32(len(mess.Data)))
-			downloader.RequestBlocks(10)
-			if !downloader.Completed() {
-				return
-			}
-
-			t.downloaded += int64(downloader.PieceSize)
-			t.left = t.meta.Length - t.downloaded
-			t.pieces.Set(uint(downloader.Piece))
-			t.picker.OnPieceCompleted(downloader.Piece)
-			t.logger.Info("torrent -> piece completed", "Piece", mess.Idx, "Pieces Completed", t.pieces.Count())
-			delete(t.downloaders, pe.Peer)
-
-			for _, p := range t.peers {
-				p.Have(downloader.Piece)
+			if downloader.Completed() {
+				t.pieceCompleted(downloader, pe.Peer)
 			}
 
 			if t.pieces.All() {
@@ -155,12 +119,9 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
-			picked, ok := t.picker.Pick(pe)
-			if !ok {
-				pe.IsInteresting = false
-				return
+			if !pe.AmChoked {
+				t.download(pe.Peer)
 			}
-			t.download(pe.Peer, picked)
 		}
 	case peerprotocol.Cancel:
 		t.logger.Info("torrent -> received CANCEL", "PeerID", string(pe.ID[:]), "Idx", mess.Idx, "Begin", mess.Begin, "Length", mess.Length)

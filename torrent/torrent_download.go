@@ -5,8 +5,33 @@ import (
 	"Naverno/internal/piecedownloader"
 )
 
-func (t *Torrent) download(pe *peer.Peer, piece uint32) {
-	downloader, ok := t.stalledDownloaders[piece]
+func (t *Torrent) pieceCompleted(downloader *piecedownloader.PieceDownloader, p *peer.Peer) {
+	t.downloaded += int64(downloader.PieceSize)
+	t.left = t.meta.Length - t.downloaded
+	t.pieces.Set(uint(downloader.Piece))
+	t.picker.OnPieceCompleted(downloader.Piece)
+	t.logger.Info("torrent -> piece completed", "Piece", downloader.Piece, "Pieces Completed", t.pieces.Count())
+	delete(t.downloaders, p)
+
+	for _, p := range t.peers {
+		p.Have(downloader.Piece)
+	}
+}
+
+func (t *Torrent) download(pe *peer.Peer) {
+	downloader, ok := t.downloaders[pe]
+	if ok {
+		downloader.RequestBlocks(10)
+		return
+	}
+
+	piece, ok := t.picker.Pick(pe)
+	if !ok {
+		pe.IsInteresting = false
+		return
+	}
+
+	downloader, ok = t.stalledDownloaders[piece]
 	if ok {
 		delete(t.stalledDownloaders, downloader.Piece)
 		downloader.Set(pe)
