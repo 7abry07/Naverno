@@ -20,10 +20,7 @@ func TestDownloader(t *testing.T) {
 		t.Errorf("requested blocks aren'tequal to queue size, pieces -> %v | queue size -> %v", len(pieces), 3)
 	}
 	for _, block := range pieces {
-		err := d.OnBlockReceived(block.Begin, uint32(len(block.Data)))
-		if err != nil {
-			t.Errorf("unexpected error -> %v", err)
-		}
+		d.OnBlockReceived(block.Begin, uint32(len(block.Data)))
 	}
 
 	d.RequestBlocks(2)
@@ -33,10 +30,7 @@ func TestDownloader(t *testing.T) {
 	}
 
 	for _, block := range pieces {
-		err := d.OnBlockReceived(block.Begin, uint32(len(block.Data)))
-		if err != nil {
-			t.Errorf("unexpected error -> %v", err)
-		}
+		d.OnBlockReceived(block.Begin, uint32(len(block.Data)))
 	}
 
 	d.RequestBlocks(1)
@@ -45,9 +39,6 @@ func TestDownloader(t *testing.T) {
 		t.Errorf("requested blocks on completed piece")
 	}
 	for _, block := range pieces {
-		err := d.OnBlockReceived(block.Begin, uint32(len(block.Data)))
-		if err != nil {
-			t.Errorf("unexpected error -> %v", err)
-		}
+		d.OnBlockReceived(block.Begin, uint32(len(block.Data)))
 	}
 }
