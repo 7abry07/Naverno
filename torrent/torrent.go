@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"Naverno/internal/announcer"
+	"Naverno/internal/bitfield"
 	"Naverno/internal/handshaker"
 	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
@@ -12,8 +13,6 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
-
-	"github.com/bits-and-blooms/bitset"
 )
 
 type Torrent struct {
@@ -35,7 +34,7 @@ type Torrent struct {
 	downloaded int64
 	uploaded   int64
 	left       int64
-	pieces     *bitset.BitSet
+	pieces     *bitfield.Bitfield
 
 	newConns          chan net.Conn
 	disconnectedPeers chan *peer.Peer
@@ -62,7 +61,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		uploaded:           0,
 		left:               meta.Length,
 		picker:             sequentialpicker.NewSequentialPicker(uint32(meta.PieceCount)),
-		pieces:             bitset.New(uint(meta.PieceCount)),
+		pieces:             bitfield.New(uint32(meta.PieceCount)),
 		outgoing:           []*handshaker.OutgoingHandshaker{},
 		newConns:           make(chan net.Conn),
 		peerMessages:       make(chan peer.PeerMessage),

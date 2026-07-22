@@ -1,14 +1,13 @@
 package peer
 
 import (
+	"Naverno/internal/bitfield"
 	"Naverno/internal/peer/reader"
 	"Naverno/internal/peer/writer"
 	"Naverno/internal/peerprotocol"
 	"log/slog"
 	"net"
 	"time"
-
-	"github.com/bits-and-blooms/bitset"
 )
 
 type Peer struct {
@@ -20,7 +19,7 @@ type Peer struct {
 	IsInteresting bool
 	AmChoked      bool
 	AmInteresting bool
-	Pieces        *bitset.BitSet
+	Pieces        *bitfield.Bitfield
 
 	conn net.Conn
 	out  *writer.Writer
@@ -64,16 +63,16 @@ func (p *Peer) Addr() net.Addr {
 	return p.conn.RemoteAddr()
 }
 
-func (p *Peer) GetPieces() *bitset.BitSet {
+func (p *Peer) GetPieces() *bitfield.Bitfield {
 	return p.Pieces
 }
 
 func (p *Peer) HasPiece(idx uint32) bool {
-	return p.Pieces.Test(uint(idx))
+	return p.Pieces.Test(idx)
 }
 
 func (p *Peer) SetPiece(idx uint32) {
-	p.Pieces.Set(uint(idx))
+	p.Pieces.Set(idx)
 }
 
 func (p *Peer) IsChoking() bool {

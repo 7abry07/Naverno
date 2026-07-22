@@ -1,13 +1,10 @@
 package torrent
 
 import (
+	"Naverno/internal/bitfield"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
-	// "Naverno/internal/piecedownloader"
-	"Naverno/internal/util"
 	"fmt"
-
-	"github.com/bits-and-blooms/bitset"
 )
 
 func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
@@ -48,7 +45,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Have:
 		{
 			if pe.Pieces == nil {
-				pe.Pieces = bitset.MustNew(uint(t.meta.PieceCount))
+				pe.Pieces = bitfield.New(uint32(t.meta.PieceCount))
 			}
 			if mess.Idx > uint32(t.meta.PieceCount-1) {
 				t.logger.Info("torrent -> invalid HAVE", "PeerID", string(pe.ID[:]), "Error", "Piece index out of bounds")
@@ -56,9 +53,9 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
-			pe.Pieces.Set(uint(mess.Idx))
+			pe.Pieces.Set(mess.Idx)
 			t.picker.OnPeerHave(mess.Idx)
-			if !t.pieces.Test(uint(mess.Idx)) {
+			if !t.pieces.Test(mess.Idx) {
 				pe.IsInteresting = true
 			}
 
@@ -80,15 +77,15 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 					t.logger.Info("torrent -> invalid BITFIELD", "PeerID", string(pe.ID[:]), "Error", "spare bits are set")
 				}
 			}
-			data, err := util.BytesToBitset(mess.Pieces, uint(t.meta.PieceCount))
+			data, err := bitfield.From(mess.Pieces, uint32(t.meta.PieceCount))
 			if err != nil {
 				t.logger.Info("torrent -> invalid BITFIELD", "PeerID", string(pe.ID[:]), "Error", err)
 				t.closePeer(pe.Peer)
 				return
 			}
 
-			for i := range data.EachSet() {
-				if !t.pieces.Test(i) {
+			for i := range data.SetBits() {
+				if !t.pieces.Test(uint32(i)) {
 					pe.IsInteresting = true
 					break
 				}

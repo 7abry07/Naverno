@@ -8,7 +8,7 @@ import (
 func (t *Torrent) pieceCompleted(downloader *piecedownloader.PieceDownloader, p *peer.Peer) {
 	t.downloaded += int64(downloader.PieceSize)
 	t.left = t.meta.Length - t.downloaded
-	t.pieces.Set(uint(downloader.Piece))
+	t.pieces.Set(downloader.Piece)
 	t.picker.OnPieceCompleted(downloader.Piece)
 	t.logger.Info("torrent -> piece completed", "Piece", downloader.Piece, "Pieces Completed", t.pieces.Count())
 	delete(t.downloaders, p)

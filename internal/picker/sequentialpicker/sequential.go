@@ -17,7 +17,7 @@ func NewSequentialPicker(pieceCount uint32) *SequentialPicker {
 }
 
 func (p *SequentialPicker) Pick(pe picker.Peer) (uint32, bool) {
-	for i := range pe.GetPieces().EachSet() {
+	for i := range pe.GetPieces().SetBits() {
 		if p.pieces[uint32(i)] == picker.PIECE_FREE ||
 			p.pieces[uint32(i)] == picker.PIECE_STALLED {
 			p.pieces[uint32(i)] = picker.PIECE_DOWNLOADING

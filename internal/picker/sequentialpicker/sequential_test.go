@@ -1,17 +1,16 @@
 package sequentialpicker_test
 
 import (
+	"Naverno/internal/bitfield"
 	"Naverno/internal/picker/pickertest"
 	"Naverno/internal/picker/sequentialpicker"
 	"testing"
-
-	"github.com/bits-and-blooms/bitset"
 )
 
 func TestPicker(t *testing.T) {
 	picker := sequentialpicker.NewSequentialPicker(20)
 
-	peerPieces := bitset.MustNew(20)
+	peerPieces := bitfield.New(20)
 	peerPieces.Set(1).Set(10)
 
 	pe := pickertest.NewMockPeer(peerPieces)
@@ -39,7 +38,7 @@ func TestPickerFail(t *testing.T) {
 	picker.OnPieceCompleted(10)
 	picker.OnPieceCompleted(19)
 
-	peerPieces := bitset.MustNew(20)
+	peerPieces := bitfield.New(20)
 	peerPieces.Set(1).Set(10).Set(19)
 
 	pe := pickertest.NewMockPeer(peerPieces)

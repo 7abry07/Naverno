@@ -1,7 +1,9 @@
 package picker
 
-import "github.com/bits-and-blooms/bitset"
+import (
+	"Naverno/internal/bitfield"
+)
 
 type Peer interface {
-	GetPieces() *bitset.BitSet
+	GetPieces() *bitfield.Bitfield
 }
