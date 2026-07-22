@@ -114,7 +114,7 @@ func (t *Torrent) run() {
 		case p := <-t.disconnectedPeers:
 			t.handleDisconnected(p)
 		case peers := <-t.peersC:
-			t.Dial(peers)
+			t.dial(peers)
 		case <-t.torrentAnnounce:
 			t.handleAnnounce()
 		case res := <-t.outgoingResults:

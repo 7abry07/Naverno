@@ -190,6 +190,11 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				p.Have(downloader.Piece)
 			}
 
+			if t.pieces.All() {
+				t.logger.Info("torrent -> completed")
+				return
+			}
+
 			picked, ok := t.picker.Pick(pe)
 			if !ok {
 				pe.IsInteresting = false

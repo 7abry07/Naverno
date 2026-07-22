@@ -32,7 +32,7 @@ func (t *Torrent) handleNewConn(conn net.Conn) {
 	t.logger.Debug("torrent -> started handshaker for connection", "Address", conn.RemoteAddr().String())
 }
 
-func (t *Torrent) Dial(peers []netip.AddrPort) {
+func (t *Torrent) dial(peers []netip.AddrPort) {
 	for _, a := range peers {
 		go func() {
 			conn, err := net.DialTimeout("tcp", a.String(), time.Second*5)

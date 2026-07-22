@@ -15,7 +15,7 @@ func main() {
 	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{Level: slog.LevelInfo}))
 
 	sess := torrent.StartSession(logger)
-	_, err := sess.NewTorrentFromFile("internal/metadata/testdata/fedora.torrent")
+	_, err := sess.NewTorrentFromFile("internal/metadata/testdata/debian.torrent")
 	if err != nil {
 		panic(err)
 	}

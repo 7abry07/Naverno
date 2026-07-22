@@ -91,9 +91,6 @@ func (d *PieceDownloader) OnPeerChoke() {
 }
 
 func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) {
-	_, pending := d.pending[begin]
-	if pending {
-		delete(d.pending, begin)
-	}
+	delete(d.pending, begin)
 	delete(d.remaining, begin)
 }
