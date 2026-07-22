@@ -88,6 +88,14 @@ func (b *Bitfield) All() bool {
 	return b.set.All()
 }
 
+func (b *Bitfield) None() bool {
+	return b.set.None()
+}
+
+func (b *Bitfield) Any() bool {
+	return b.set.Any()
+}
+
 func (b *Bitfield) Set(i uint32) *Bitfield {
 	b.set.Set(uint(i))
 	return b
@@ -100,4 +108,9 @@ func (b *Bitfield) Clear(i uint32) *Bitfield {
 
 func (b *Bitfield) Test(i uint32) bool {
 	return b.set.Test(uint(i))
+}
+
+func (b *Bitfield) Difference(cmp *Bitfield) *Bitfield {
+	diff := b.set.Difference(&cmp.set)
+	return &Bitfield{*diff}
 }

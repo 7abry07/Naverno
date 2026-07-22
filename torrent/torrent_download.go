@@ -19,6 +19,10 @@ func (t *Torrent) pieceCompleted(downloader *piecedownloader.PieceDownloader, p 
 }
 
 func (t *Torrent) download(pe *peer.Peer) {
+	if pe.Pieces == nil || pe.AmChoked {
+		return
+	}
+
 	downloader, ok := t.downloaders[pe]
 	if ok {
 		downloader.RequestBlocks(10)

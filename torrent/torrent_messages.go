@@ -13,7 +13,6 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		{
 			t.logger.Debug("torrent -> received CHOKE", "PeerID", string(pe.ID[:]))
 			pe.AmChoked = true
-
 			if d, ok := t.downloaders[pe.Peer]; ok {
 				delete(t.downloaders, pe.Peer)
 				t.stalledDownloaders[d.Piece] = d
@@ -26,9 +25,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		{
 			t.logger.Debug("torrent -> received UNCHOKE", "PeerID", string(pe.ID[:]))
 			pe.AmChoked = false
-			if pe.Pieces != nil {
-				t.download(pe.Peer)
-			}
+			t.download(pe.Peer)
 		}
 	case peerprotocol.Interested:
 		{
@@ -52,16 +49,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
-			pe.Pieces.Set(mess.Idx)
 			t.picker.OnPeerHave(mess.Idx)
-			if !t.pieces.Test(mess.Idx) {
-				pe.IsInteresting = true
-			}
-
-			if !pe.AmChoked {
-				t.download(pe.Peer)
-			}
-
+			pe.Pieces.Set(mess.Idx)
+			pe.IsInteresting = pe.Pieces.Difference(t.pieces).Any()
+			t.download(pe.Peer)
 		}
 	case peerprotocol.Bitfield:
 		{
@@ -76,16 +67,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
-			for i := range data.SetBits() {
-				if !t.pieces.Test(uint32(i)) {
-					pe.IsInteresting = true
-					break
-				}
-			}
-
 			pe.Pieces = data
-			t.logger.Debug("torrent -> received BITFIELD", "PeerID", string(pe.ID[:]), "Pieces", pe.Pieces.Count())
+			pe.IsInteresting = data.Difference(t.pieces).Any()
 			t.picker.OnPeerBitfield(pe)
+			t.logger.Debug("torrent -> received BITFIELD", "PeerID", string(pe.ID[:]), "Pieces", data.Count())
 		}
 	case peerprotocol.Request:
 		t.logger.Debug("torrent -> received REQUEST", "PeerID", string(pe.ID[:]), "Request", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, mess.Length))
@@ -108,9 +93,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
-			if !pe.AmChoked {
-				t.download(pe.Peer)
-			}
+			t.download(pe.Peer)
 		}
 	case peerprotocol.Cancel:
 		t.logger.Info("torrent -> received CANCEL", "PeerID", string(pe.ID[:]), "Idx", mess.Idx, "Begin", mess.Begin, "Length", mess.Length)
