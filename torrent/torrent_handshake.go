@@ -23,7 +23,7 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 	pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe] = struct{}{}
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
-	pe.Bitfield(t.pieces.Bytes())
+	pe.Bitfield(t.bitset.Bytes())
 }
 
 func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
@@ -36,7 +36,7 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe] = struct{}{}
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
-	pe.Bitfield(t.pieces.Bytes())
+	pe.Bitfield(t.bitset.Bytes())
 }
 
 func (t *Torrent) closeHandshakes() {

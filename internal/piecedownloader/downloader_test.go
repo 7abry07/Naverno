@@ -1,6 +1,7 @@
 package piecedownloader_test
 
 import (
+	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"Naverno/internal/piecedownloader/downloadertest"
 	"io"
@@ -9,7 +10,9 @@ import (
 )
 
 func TestDownloader(t *testing.T) {
-	d := piecedownloader.NewPieceDownloader(slog.New(slog.NewTextHandler(io.Discard, nil)), 5, piecedownloader.DefaultBlockSize*5)
+	p := piece.NewPiece(5, piece.BlockSize*5, [20]byte{})
+
+	d := piecedownloader.NewPieceDownloader(slog.New(slog.NewTextHandler(io.Discard, nil)), p)
 	pe := downloadertest.NewMockPeer()
 
 	d.Set(pe)

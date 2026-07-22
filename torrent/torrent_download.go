@@ -2,19 +2,19 @@ package torrent
 
 import (
 	"Naverno/internal/peer"
+	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 )
 
-func (t *Torrent) pieceCompleted(downloader *piecedownloader.PieceDownloader, p *peer.Peer) {
-	t.downloaded += int64(downloader.PieceSize)
+func (t *Torrent) pieceCompleted(p *piece.Piece) {
+	t.downloaded += int64(p.Size)
 	t.left = t.meta.Length - t.downloaded
-	t.pieces.Set(downloader.Piece)
-	t.picker.OnPieceCompleted(downloader.Piece)
-	t.logger.Info("torrent -> piece completed", "Piece", downloader.Piece, "Pieces Completed", t.pieces.Count())
-	delete(t.downloaders, p)
+	t.bitset.Set(p.Idx)
+	t.picker.OnPieceCompleted(p.Idx)
+	t.logger.Info("torrent -> piece completed", "Piece", p.Idx, "Pieces Completed", t.bitset.Count())
 
-	for p := range t.peers {
-		p.Have(downloader.Piece)
+	for pe := range t.peers {
+		pe.Have(p.Idx)
 	}
 }
 
@@ -29,28 +29,25 @@ func (t *Torrent) download(pe *peer.Peer) {
 		return
 	}
 
-	piece, ok := t.picker.Pick(pe)
+	idx, ok := t.picker.Pick(pe)
 	if !ok {
 		pe.IsInteresting = false
 		return
 	}
+	picked := t.pieces[idx]
 
-	downloader, ok = t.stalledDownloaders[piece]
+	downloader, ok = t.stalledDownloaders[picked]
 	if ok {
 		delete(t.stalledDownloaders, downloader.Piece)
 		downloader.Set(pe)
 		t.downloaders[pe] = downloader
-		t.logger.Info("torrent -> restarted downloader for piece", "Piece", downloader.Piece, "PeerID", string(pe.ID[:]))
+		t.logger.Info("torrent -> restarted downloader for piece", "Piece", downloader.Piece.Idx, "PeerID", string(pe.ID[:]))
 		downloader.RequestBlocks(10)
 		return
 	}
-	pieceSize := t.meta.PieceLength
-	if piece == uint32(t.meta.PieceCount)-1 {
-		pieceSize -= (t.meta.PieceLength * t.meta.PieceCount) - t.meta.Length
-	}
-	t.downloaders[pe] = piecedownloader.NewPieceDownloader(t.logger, piece, uint32(pieceSize))
+	t.downloaders[pe] = piecedownloader.NewPieceDownloader(t.logger, picked)
 	downloader = t.downloaders[pe]
 	downloader.Set(pe)
 	downloader.RequestBlocks(10)
-	t.logger.Debug("torrent -> started downloader for piece", "Piece", piece, "PeerID", string(pe.ID[:]))
+	t.logger.Debug("torrent -> started downloader for piece", "Piece", picked.Idx, "PeerID", string(pe.ID[:]))
 }

@@ -1,50 +1,32 @@
 package piecedownloader
 
 import (
-	"Naverno/internal/util"
+	"Naverno/internal/piece"
 	"fmt"
 	"log/slog"
 	"maps"
 )
 
-const (
-	DefaultBlockSize = 1024 * 16
-)
-
 type PieceDownloader struct {
-	logger    *slog.Logger
-	Piece     uint32
-	PieceSize uint32
+	*piece.Piece
 	peer      Peer
+	logger    *slog.Logger
 	remaining map[uint32]uint32
 	pending   map[uint32]uint32
 }
 
-func NewPieceDownloader(logger *slog.Logger, piece uint32, pieceSize uint32) *PieceDownloader {
+func NewPieceDownloader(logger *slog.Logger, p *piece.Piece) *PieceDownloader {
 	if logger == nil {
 		panic("passed nil logger to piece downloader")
 	}
-	alignedPieceSize := util.Align(uint64(pieceSize), DefaultBlockSize)
-	blocksPerPiece := alignedPieceSize / DefaultBlockSize
-	blocks := make(map[uint32]uint32)
-
-	for i := range blocksPerPiece {
-		size := uint64(DefaultBlockSize)
-		if i == blocksPerPiece-1 {
-			size -= alignedPieceSize - uint64(pieceSize)
-		}
-		blocks[uint32(i*DefaultBlockSize)] = uint32(size)
-	}
 
 	return &PieceDownloader{
-		Piece:     piece,
-		PieceSize: pieceSize,
+		Piece:     p,
 		logger:    logger,
 		peer:      nil,
-		remaining: blocks,
+		remaining: maps.Collect(p.Blocks()),
 		pending:   make(map[uint32]uint32),
 	}
-
 }
 
 func (d *PieceDownloader) Set(p Peer) {
@@ -62,7 +44,7 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 			break
 		}
 
-		d.peer.Request(d.Piece, begin, length)
+		d.peer.Request(d.Piece.Idx, begin, length)
 		temp = append(temp, begin)
 		d.pending[begin] = length
 		d.logger.Debug("downloader -> block requested", "Piece", d.Piece, "Block", fmt.Sprintf("(%v, %v)", begin, length))
