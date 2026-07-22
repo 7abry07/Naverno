@@ -19,6 +19,8 @@ type Announcer struct {
 	numwant       uint32
 	port          uint16
 
+	completed chan Torrent
+
 	closeC chan struct{}
 	doneC  chan struct{}
 }
@@ -35,6 +37,7 @@ func New(logger *slog.Logger, trackers [][]tracker.Tracker, port uint16) *Announ
 		announceTimer: nil,
 		numwant:       200,
 		port:          port,
+		completed:     make(chan Torrent),
 
 		closeC: make(chan struct{}),
 		doneC:  make(chan struct{}),
@@ -62,16 +65,28 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 		select {
 		case <-a.closeC:
 			return
+		case torrent := <-a.completed:
+			{
+				for _, tier := range a.trackers {
+					res, ok := a.announceTierCompleted(ctx, tier, torrent)
+					if ok {
+						peers <- res
+						break
+					}
+				}
+			}
 		case <-a.announceTimer.C:
-			torrentC <- Torrent{}
-			torrent := <-torrentC
+			{
+				torrentC <- Torrent{}
+				torrent := <-torrentC
 
-			for i, tier := range a.trackers {
-				res, ok := a.announceTier(ctx, tier, torrent)
-				if ok {
-					a.trackers[i] = tier
-					peers <- res
-					break
+				for i, tier := range a.trackers {
+					res, ok := a.announceTier(ctx, tier, torrent)
+					if ok {
+						a.trackers[i] = tier
+						peers <- res
+						break
+					}
 				}
 			}
 		}
@@ -103,6 +118,23 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 	return []netip.AddrPort{}, false
 }
 
+func (a *Announcer) announceTierCompleted(ctx context.Context, tier []tracker.Tracker, torrent Torrent) ([]netip.AddrPort, bool) {
+	peers := []netip.AddrPort{}
+	for _, tr := range tier {
+		res, err := a.announce(ctx, tr, torrent, tracker.TRACKER_COMPLETED)
+		if err != nil {
+			a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
+			continue
+		}
+		peers = append(peers, res.Peers...)
+	}
+	if len(peers) == 0 {
+		return peers, false
+	} else {
+		return peers, true
+	}
+}
+
 func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent Torrent, event tracker.TrackerEvent) (*tracker.AnnounceResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
@@ -124,6 +156,10 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 
 	a.logger.Info("announcer -> announcing to tracker", "Tracker URL", tr.URL(), "Event", event.String())
 	return tr.Announce(ctx, req)
+}
+
+func (a *Announcer) Completed(t Torrent) {
+	a.completed <- t
 }
 
 func (a *Announcer) Close(t Torrent) {

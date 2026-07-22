@@ -12,6 +12,17 @@ func (t *Torrent) handleAnnounce() {
 	}
 }
 
+func (t *Torrent) announceCompleted() {
+	t.announcer.Completed(
+		announcer.Torrent{
+			InfoHash:   t.meta.Infohash,
+			PeerID:     t.pid,
+			Downloaded: t.downloaded,
+			Uploaded:   t.uploaded,
+			Left:       t.left,
+		})
+}
+
 func (t *Torrent) closeAnnouncer() {
 	t.announcer.Close(
 		announcer.Torrent{

@@ -121,6 +121,8 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) url.URL {
 	query.WriteString(url.QueryEscape(string(r.PeerID[:])))
 	query.WriteString("&port=")
 	query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Port))))
+	query.WriteString("&downloaded=")
+	query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Downloaded))))
 	query.WriteString("&uploaded=")
 	query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Uploaded))))
 	query.WriteString("&left=")
@@ -131,15 +133,11 @@ func (t *HTTPTracker) serialize(r tracker.AnnounceRequest) url.URL {
 	query.WriteString("&compact=1")
 	query.WriteString("&no_peer_id=1")
 
-	if r.Event != tracker.TRACKER_NONE {
-		query.WriteString("&event=")
-		query.WriteString(url.QueryEscape(r.Event.String()))
-	}
+	query.WriteString("&event=")
+	query.WriteString(url.QueryEscape(r.Event.String()))
 
-	if r.Numwant != 0 {
-		query.WriteString("&numwant=")
-		query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Numwant))))
-	}
+	query.WriteString("&numwant=")
+	query.WriteString(url.QueryEscape(strconv.Itoa(int(r.Numwant))))
 
 	if (r.Ip != netip.Addr{}) {
 		query.WriteString("&ip=")
