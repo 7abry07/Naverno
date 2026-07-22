@@ -1,9 +1,7 @@
 package torrent
 
 import (
-	"Naverno/internal/handshaker"
 	"Naverno/internal/peer"
-	"Naverno/internal/util"
 	"net"
 	"net/netip"
 	"time"
@@ -22,13 +20,6 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 	t.logger.Info("torrent -> peer disconnected", "Address", p.Addr().String(), "Peer", string(p.ID[:]))
 }
 
-func (t *Torrent) handleNewConn(conn net.Conn) {
-	hs := handshaker.NewOutgoingHandshaker(conn)
-	t.outgoing = append(t.outgoing, hs)
-	go hs.Run(t.outgoingResults, t.pid, t.meta.Infohash, t.extensions, time.Second*2)
-	t.logger.Debug("torrent -> started handshaker for connection", "Address", conn.RemoteAddr().String())
-}
-
 func (t *Torrent) dial(peers []netip.AddrPort) {
 	for _, a := range peers {
 		go func() {
@@ -44,12 +35,12 @@ func (t *Torrent) dial(peers []netip.AddrPort) {
 
 func (t *Torrent) closePeer(p *peer.Peer) {
 	delete(t.downloaders, p)
+	delete(t.peers, p)
 	p.Stop()
-	t.peers = util.Remove(t.peers, p, func(e1, e2 *peer.Peer) bool { return e1 == e2 })
 }
 
 func (t *Torrent) closePeers() {
-	for _, p := range t.peers {
+	for p := range t.peers {
 		p.Stop()
 	}
 }

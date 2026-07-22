@@ -26,8 +26,8 @@ type Torrent struct {
 	logger             *slog.Logger
 	meta               *metadata.Metadata
 	announcer          *announcer.Announcer
-	outgoing           []*handshaker.OutgoingHandshaker
-	peers              []*peer.Peer
+	outgoing           map[*handshaker.OutgoingHandshaker]struct{}
+	peers              map[*peer.Peer]struct{}
 	downloaders        map[*peer.Peer]*piecedownloader.PieceDownloader
 	stalledDownloaders map[uint32]*piecedownloader.PieceDownloader
 
@@ -53,7 +53,8 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		session:            sess,
 		meta:               meta,
 		logger:             sess.logger.With("TorrentID", id),
-		peers:              []*peer.Peer{},
+		peers:              make(map[*peer.Peer]struct{}),
+		outgoing:           make(map[*handshaker.OutgoingHandshaker]struct{}),
 		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
 		stalledDownloaders: make(map[uint32]*piecedownloader.PieceDownloader),
 		port:               sess.port,
@@ -62,7 +63,6 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		left:               meta.Length,
 		picker:             sequentialpicker.NewSequentialPicker(uint32(meta.PieceCount)),
 		pieces:             bitfield.New(uint32(meta.PieceCount)),
-		outgoing:           []*handshaker.OutgoingHandshaker{},
 		newConns:           make(chan net.Conn),
 		peerMessages:       make(chan peer.PeerMessage),
 		disconnectedPeers:  make(chan *peer.Peer),

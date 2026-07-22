@@ -13,7 +13,7 @@ func (t *Torrent) pieceCompleted(downloader *piecedownloader.PieceDownloader, p 
 	t.logger.Info("torrent -> piece completed", "Piece", downloader.Piece, "Pieces Completed", t.pieces.Count())
 	delete(t.downloaders, p)
 
-	for _, p := range t.peers {
+	for p := range t.peers {
 		p.Have(downloader.Piece)
 	}
 }
