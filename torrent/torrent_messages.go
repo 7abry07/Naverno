@@ -88,6 +88,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			if t.pieces.All() {
+				t.closeSeeds()
 				t.announceCompleted()
 				t.logger.Info("torrent -> completed")
 				return

@@ -39,6 +39,14 @@ func (t *Torrent) closePeer(p *peer.Peer) {
 	p.Stop()
 }
 
+func (t *Torrent) closeSeeds() {
+	for p := range t.peers {
+		if p.Pieces.All() {
+			t.closePeer(p)
+		}
+	}
+}
+
 func (t *Torrent) closePeers() {
 	for p := range t.peers {
 		t.closePeer(p)
