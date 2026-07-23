@@ -9,25 +9,25 @@ import (
 	"slices"
 )
 
-type file struct {
+type File struct {
 	metadata.File
-	offset uint64
+	Offset uint64
 }
 
 type FileStorage struct {
-	files []file
+	files []File
 	path  string
 }
 
 func New(files []metadata.File, path string) *FileStorage {
-	offs := []file{}
+	offs := []File{}
 	off := uint64(0)
 	for _, f := range files {
-		offs = append(offs, file{File: f, offset: off})
+		offs = append(offs, File{File: f, Offset: off})
 		off += uint64(f.Length)
 	}
 
-	slices.SortFunc(offs, func(e1, e2 file) int { return cmp.Compare(e1.offset, e2.offset) })
+	slices.SortFunc(offs, func(e1, e2 File) int { return cmp.Compare(e1.Offset, e2.Offset) })
 	return &FileStorage{
 		files: offs,
 		path:  path,
@@ -39,8 +39,8 @@ func (s *FileStorage) Write(off uint64, data []byte) error {
 		if len(data) == 0 {
 			break
 		}
-		if off >= f.offset {
-			fileOff := off - f.offset
+		if off >= f.Offset {
+			fileOff := off - f.Offset
 			writeLen := min(len(data), int(f.Length))
 			handle, err := os.OpenFile(filepath.Join(s.path, f.Path), os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
@@ -68,8 +68,8 @@ func (s *FileStorage) Read(off uint64, length uint32) ([]byte, error) {
 		if length == 0 {
 			break
 		}
-		if off >= f.offset {
-			fileOff := off - f.offset
+		if off >= f.Offset {
+			fileOff := off - f.Offset
 			readLen := min(length, uint32(f.Length))
 			buf := make([]byte, readLen)
 			handle, err := os.OpenFile(filepath.Join(s.path, f.Path), os.O_CREATE|os.O_RDONLY, 0644)
