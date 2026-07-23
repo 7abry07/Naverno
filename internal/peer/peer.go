@@ -43,18 +43,19 @@ func New(logger *slog.Logger, conn net.Conn, ID [20]byte, extensions [8]byte) *P
 		panic("passed nil logger to Peer constructor")
 	}
 
+	plogger := logger.With("PeerID", string(ID[:]))
 	return &Peer{
 		ID:            ID,
 		Extensions:    extensions,
-		logger:        logger.With("PeerID", string(ID[:])),
+		logger:        plogger,
 		conn:          conn,
 		IsChoked:      true,
 		AmChoked:      true,
 		IsInteresting: false,
 		AmInteresting: false,
 		Pieces:        nil,
-		out:           writer.New(conn),
-		in:            reader.New(conn),
+		out:           writer.New(plogger, conn),
+		in:            reader.New(plogger, conn),
 		closeC:        make(chan struct{}),
 		doneC:         make(chan struct{}),
 	}

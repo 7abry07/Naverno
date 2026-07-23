@@ -28,8 +28,8 @@ func (c *MockConn) Write(b []byte) (int, error) {
 }
 
 func (c *MockConn) Close() error                       { return nil }
-func (c *MockConn) LocalAddr() net.Addr                { return nil }
-func (c *MockConn) RemoteAddr() net.Addr               { return nil }
+func (c *MockConn) LocalAddr() net.Addr                { return &net.TCPAddr{} }
+func (c *MockConn) RemoteAddr() net.Addr               { return &net.TCPAddr{} }
 func (c *MockConn) SetDeadline(t time.Time) error      { return nil }
 func (c *MockConn) SetReadDeadline(t time.Time) error  { return nil }
 func (c *MockConn) SetWriteDeadline(t time.Time) error { return nil }

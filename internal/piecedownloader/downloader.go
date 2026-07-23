@@ -47,7 +47,7 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 		d.peer.Request(d.Piece, begin, length)
 		temp = append(temp, begin)
 		d.pending[begin] = length
-		d.logger.Debug("downloader -> block requested", "Piece", d.Piece, "Block", fmt.Sprintf("(%v, %v)", begin, length))
+		d.logger.Debug("downloader -> block requested", "Piece", d.Piece.Idx, "Block", fmt.Sprintf("(%v, %v)", begin, length))
 
 		i++
 	}

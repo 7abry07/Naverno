@@ -4,10 +4,12 @@ import (
 	"Naverno/internal/peerprotocol"
 	"encoding/binary"
 	"io"
+	"log/slog"
 	"net"
 )
 
 type Reader struct {
+	logger   *slog.Logger
 	conn     net.Conn
 	messages chan peerprotocol.Message
 	fatal    chan error
@@ -16,8 +18,13 @@ type Reader struct {
 	doneC  chan struct{}
 }
 
-func New(conn net.Conn) *Reader {
+func New(logger *slog.Logger, conn net.Conn) *Reader {
+	if logger == nil {
+		panic("passed nil logger to peer writer")
+	}
+
 	return &Reader{
+		logger:   logger,
 		conn:     conn,
 		messages: make(chan peerprotocol.Message),
 		fatal:    make(chan error),
@@ -66,8 +73,10 @@ func (r *Reader) Run() {
 		}
 		select {
 		case r.messages <- mess:
+			r.logger.Debug("reader -> message read", "Remote", r.conn.RemoteAddr().String(), "Message", mess.ID().String())
 		case <-r.closeC:
 		}
+
 	}
 }
 

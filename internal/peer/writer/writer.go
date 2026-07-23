@@ -3,10 +3,12 @@ package writer
 import (
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/util"
+	"log/slog"
 	"net"
 )
 
 type Writer struct {
+	logger   *slog.Logger
 	conn     net.Conn
 	messages chan peerprotocol.Message
 	fatal    chan error
@@ -15,8 +17,13 @@ type Writer struct {
 	doneC  chan struct{}
 }
 
-func New(conn net.Conn) *Writer {
+func New(logger *slog.Logger, conn net.Conn) *Writer {
+	if logger == nil {
+		panic("passed nil logger to peer writer")
+	}
+
 	return &Writer{
+		logger:   logger,
 		conn:     conn,
 		messages: make(chan peerprotocol.Message),
 		fatal:    make(chan error),
@@ -40,6 +47,7 @@ func (w *Writer) Run() {
 				}
 				return
 			}
+			w.logger.Debug("writer -> wrote message", "Remote", w.conn.RemoteAddr().String(), "Message", mess.ID().String())
 		}
 	}
 }

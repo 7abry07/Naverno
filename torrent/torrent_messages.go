@@ -4,42 +4,36 @@ import (
 	"Naverno/internal/bitfield"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
-	"fmt"
 )
 
 func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	switch mess := pe.Message.(type) {
 	case peerprotocol.Choke:
 		{
-			t.logger.Debug("torrent -> received CHOKE", "PeerID", string(pe.ID[:]))
 			pe.AmChoked = true
 			if d, ok := t.downloaders[pe.Peer]; ok {
 				delete(t.downloaders, pe.Peer)
 				t.stalledDownloaders[d.Piece] = d
 				t.picker.SetFree(d.Piece)
 				d.OnPeerChoke()
-				t.logger.Info("torrent -> downloader stalled", "Piece", d.Piece)
+				t.logger.Info("torrent -> downloader stalled", "Piece", d.Piece.Idx)
 			}
 		}
 	case peerprotocol.Unchoke:
 		{
-			t.logger.Debug("torrent -> received UNCHOKE", "PeerID", string(pe.ID[:]))
 			pe.AmChoked = false
 			t.download(pe.Peer)
 		}
 	case peerprotocol.Interested:
 		{
-			t.logger.Debug("torrent -> received INTERESTED", "PeerID", string(pe.ID[:]))
 			pe.AmInteresting = true
 		}
 	case peerprotocol.Uninterested:
 		{
-			t.logger.Debug("torrent -> received UNINTERESTED", "PeerID", string(pe.ID[:]))
 			pe.AmInteresting = false
 		}
 	case peerprotocol.Have:
 		{
-			t.logger.Debug("torrent -> received HAVE", "PeerID", string(pe.ID[:]), "Idx", mess.Idx)
 			if pe.Pieces == nil {
 				pe.Pieces = bitfield.New(uint32(t.meta.PieceCount))
 			}
@@ -70,13 +64,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			pe.Pieces = data
 			pe.IsInteresting = data.Difference(t.bitset).Any()
 			t.picker.OnPeerBitfield(pe)
-			t.logger.Debug("torrent -> received BITFIELD", "PeerID", string(pe.ID[:]), "Pieces", data.Count())
 		}
 	case peerprotocol.Request:
-		t.logger.Debug("torrent -> received REQUEST", "PeerID", string(pe.ID[:]), "Request", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, mess.Length))
 	case peerprotocol.Piece:
 		{
-			t.logger.Debug("torrent -> received PIECE", "PeerID", string(pe.ID[:]), "Block", fmt.Sprintf("%v, %v, %v", mess.Idx, mess.Begin, len(mess.Data)))
 			downloader, ok := t.downloaders[pe.Peer]
 			if !ok {
 				return
@@ -98,6 +89,5 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			t.download(pe.Peer)
 		}
 	case peerprotocol.Cancel:
-		t.logger.Info("torrent -> received CANCEL", "PeerID", string(pe.ID[:]), "Idx", mess.Idx, "Begin", mess.Begin, "Length", mess.Length)
 	}
 }
