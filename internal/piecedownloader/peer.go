@@ -1,5 +1,7 @@
 package piecedownloader
 
+import "Naverno/internal/piece"
+
 type Peer interface {
-	Request(idx, begin, length uint32)
+	Request(pi *piece.Piece, begin, length uint32)
 }

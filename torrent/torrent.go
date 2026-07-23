@@ -51,6 +51,7 @@ type Torrent struct {
 }
 
 func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (*Torrent, error) {
+	pieces := piece.NewPieces(meta)
 	t := Torrent{
 		session:            sess,
 		meta:               meta,
@@ -63,8 +64,8 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		downloaded:         0,
 		uploaded:           0,
 		left:               meta.Length,
-		picker:             sequentialpicker.NewSequentialPicker(uint32(meta.PieceCount)),
-		pieces:             piece.NewPieces(meta),
+		picker:             sequentialpicker.NewSequentialPicker(pieces),
+		pieces:             pieces,
 		bitset:             bitfield.New(uint32(meta.PieceCount)),
 		newConns:           make(chan net.Conn),
 		peerMessages:       make(chan peer.PeerMessage),

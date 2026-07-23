@@ -2,36 +2,36 @@ package sequentialpicker
 
 import (
 	"Naverno/internal/picker"
+	"Naverno/internal/piece"
 )
 
 type SequentialPicker struct {
-	pieces map[uint32]picker.PieceState
+	pieces []picker.Piece
 }
 
-func NewSequentialPicker(pieceCount uint32) *SequentialPicker {
-	pieces := make(map[uint32]picker.PieceState)
-	for i := range pieceCount {
-		pieces[i] = picker.PIECE_FREE
+func NewSequentialPicker(pieces []*piece.Piece) *SequentialPicker {
+	pickerPieces := []picker.Piece{}
+	for _, p := range pieces {
+		pickerPieces = append(pickerPieces, picker.Piece{Piece: p, State: picker.PIECE_FREE})
 	}
-	return &SequentialPicker{pieces: pieces}
+	return &SequentialPicker{pieces: pickerPieces}
 }
 
-func (p *SequentialPicker) Pick(pe picker.Peer) (uint32, bool) {
+func (p *SequentialPicker) Pick(pe picker.Peer) *piece.Piece {
 	for i := range pe.GetPieces().SetBits() {
-		if p.pieces[uint32(i)] == picker.PIECE_FREE ||
-			p.pieces[uint32(i)] == picker.PIECE_STALLED {
-			p.pieces[uint32(i)] = picker.PIECE_DOWNLOADING
-			return uint32(i), true
+		if p.pieces[i].State == picker.PIECE_FREE {
+			p.pieces[i].State = picker.PIECE_DOWNLOADING
+			return p.pieces[i].Piece
 		}
 	}
-	return 0, false
+	return nil
 }
-func (p *SequentialPicker) OnPeerHave(idx uint32)             {}
+func (p *SequentialPicker) OnPeerHave(pi *piece.Piece)        {}
 func (p *SequentialPicker) OnPeerBitfield(pe picker.Peer)     {}
 func (p *SequentialPicker) OnPeerDisconnected(pe picker.Peer) {}
-func (p *SequentialPicker) OnPieceStalled(idx uint32) {
-	p.pieces[idx] = picker.PIECE_STALLED
+func (p *SequentialPicker) SetFree(pi *piece.Piece) {
+	p.pieces[pi.Idx].State = picker.PIECE_FREE
 }
-func (p *SequentialPicker) OnPieceCompleted(idx uint32) {
-	p.pieces[idx] = picker.PIECE_COMPLETED
+func (p *SequentialPicker) OnPieceCompleted(pi *piece.Piece) {
+	p.pieces[pi.Idx].State = picker.PIECE_COMPLETED
 }

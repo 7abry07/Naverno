@@ -10,11 +10,11 @@ func (t *Torrent) pieceCompleted(p *piece.Piece) {
 	t.downloaded += int64(p.Size)
 	t.left = t.meta.Length - t.downloaded
 	t.bitset.Set(p.Idx)
-	t.picker.OnPieceCompleted(p.Idx)
+	t.picker.OnPieceCompleted(p)
 	t.logger.Info("torrent -> piece completed", "Piece", p.Idx, "Pieces Completed", t.bitset.Count())
 
 	for pe := range t.peers {
-		pe.Have(p.Idx)
+		pe.Have(p)
 	}
 }
 
@@ -29,12 +29,11 @@ func (t *Torrent) download(pe *peer.Peer) {
 		return
 	}
 
-	idx, ok := t.picker.Pick(pe)
-	if !ok {
+	picked := t.picker.Pick(pe)
+	if picked == nil {
 		pe.IsInteresting = false
 		return
 	}
-	picked := t.pieces[idx]
 
 	downloader, ok = t.stalledDownloaders[picked]
 	if ok {
