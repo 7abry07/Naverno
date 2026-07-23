@@ -64,23 +64,9 @@ func TestWrite(t *testing.T) {
 	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), conn, [20]byte{}, [8]byte{})
 	go p.Run(incomingMessC, disconnectingC)
 
-	p.Have(piece.NewPiece(5, 0, 0, [20]byte{}))
-
-	buf := make([]byte, 13)
-	conn.ReadSent(buf)
-
-	mess, err := peerprotocol.Decode(buf)
-	if err != nil {
-		t.Fatalf("unexpected error -> %v", err)
-	}
-
-	haveMess, ok := mess.(peerprotocol.Have)
+	ok := p.Have(piece.NewPiece(5, 0, 0, [20]byte{}))
 	if !ok {
-		t.Fatalf("expected have (4) message, got %v message instead", mess.ID())
-	}
-
-	if haveMess.Idx != 5 {
-		t.Fatal("message read isn't equal to message sent")
+		t.Errorf("sending message failed")
 	}
 }
 

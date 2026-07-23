@@ -1,6 +1,8 @@
 package util
 
-import "io"
+import (
+	"io"
+)
 
 func WriteFull(w io.Writer, data []byte) error {
 	for len(data) > 0 {

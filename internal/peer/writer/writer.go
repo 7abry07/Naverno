@@ -5,13 +5,16 @@ import (
 	"Naverno/internal/util"
 	"log/slog"
 	"net"
+	"sync"
+	"time"
 )
 
 type Writer struct {
-	logger   *slog.Logger
-	conn     net.Conn
-	messages chan peerprotocol.Message
-	fatal    chan error
+	logger *slog.Logger
+	conn   net.Conn
+	cond   *sync.Cond
+	queue  []peerprotocol.Message
+	fatal  chan error
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -22,38 +25,50 @@ func New(logger *slog.Logger, conn net.Conn) *Writer {
 		panic("passed nil logger to peer writer")
 	}
 
-	return &Writer{
-		logger:   logger,
-		conn:     conn,
-		messages: make(chan peerprotocol.Message),
-		fatal:    make(chan error),
-		closeC:   make(chan struct{}),
-		doneC:    make(chan struct{}),
+	writer := &Writer{
+		logger: logger,
+		conn:   conn,
+		cond:   sync.NewCond(&sync.Mutex{}),
+		queue:  []peerprotocol.Message{},
+		fatal:  make(chan error),
+		closeC: make(chan struct{}),
+		doneC:  make(chan struct{}),
 	}
+	return writer
 }
 
 func (w *Writer) Run() {
+	w.cond.L.Lock()
 	defer close(w.doneC)
 	for {
+		if len(w.queue) == 0 {
+			w.cond.Wait()
+		}
 		select {
 		case <-w.closeC:
 			return
-		case mess := <-w.messages:
-			err := util.WriteFull(w.conn, mess.Marshal())
-			if err != nil {
-				select {
-				case <-w.closeC:
-				case w.fatal <- err:
-				}
-				return
-			}
-			w.logger.Debug("writer -> wrote message", "Remote", w.conn.RemoteAddr().String(), "Message", mess.ID().String())
+		default:
 		}
+
+		mess := w.queue[0]
+		w.queue = w.queue[1:]
+		w.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
+		err := util.WriteFull(w.conn, mess.Marshal())
+		w.conn.SetWriteDeadline(time.Time{})
+		if err != nil {
+			select {
+			case <-w.closeC:
+			case w.fatal <- err:
+			}
+			return
+		}
+		w.logger.Debug("writer -> wrote message", "Remote", w.conn.RemoteAddr().String(), "Message", mess.ID().String())
 	}
 }
 
 func (w *Writer) Close() {
 	close(w.closeC)
+	w.cond.Signal()
 	<-w.doneC
 }
 
@@ -61,9 +76,15 @@ func (w *Writer) Error() <-chan error {
 	return w.fatal
 }
 
-func (w *Writer) Write(mess peerprotocol.Message) {
+func (w *Writer) Write(mess peerprotocol.Message) bool {
 	select {
-	case w.messages <- mess:
 	case <-w.closeC:
+		return false
+	default:
 	}
+	w.cond.L.Lock()
+	w.queue = append(w.queue, mess)
+	w.cond.Signal()
+	w.cond.L.Unlock()
+	return true
 }

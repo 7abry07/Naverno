@@ -17,6 +17,7 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"path/filepath"
 )
 
 type Torrent struct {
@@ -62,7 +63,6 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		session:            sess,
 		meta:               meta,
 		logger:             sess.logger.With("TorrentID", id),
-		storage:            filestorage.New(meta.Files, sess.path),
 		peers:              make(map[*peer.Peer]struct{}),
 		outgoing:           make(map[*handshaker.OutgoingHandshaker]struct{}),
 		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
@@ -88,6 +88,12 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		pid:                sess.pid,
 		id:                 id,
 		extensions:         sess.extensions,
+	}
+
+	if len(meta.Files) > 1 {
+		t.storage = filestorage.New(meta.Files, filepath.Join(sess.path, meta.Name))
+	} else {
+		t.storage = filestorage.New(meta.Files, sess.path)
 	}
 
 	trackers := [][]tracker.Tracker{}
@@ -135,9 +141,8 @@ func (t *Torrent) run() {
 		case res := <-t.incomingResults:
 			t.handleIncomingResult(res)
 		case res := <-t.writerResults:
-			if res.Err != nil {
-				t.logger.Info("torrent -> error in piece writer", "Error", res.Err)
-			}
+			t.handleWriterResult(res)
+
 		case p := <-t.peerMessages:
 			t.handlePeerMessage(p)
 		}

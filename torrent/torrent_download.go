@@ -19,6 +19,12 @@ func (t *Torrent) pieceCompleted(p *piece.Piece) {
 	}
 }
 
+func (t *Torrent) handleWriterResult(res *piecewriter.PieceWriter) {
+	if res.Err != nil {
+		t.logger.Info("torrent -> error in piece writer", "Error", res.Err)
+	}
+}
+
 func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {
 	writer := piecewriter.New(p, begin, t.storage, data)
 	t.writers[p] = writer

@@ -72,6 +72,10 @@ func (d *PieceDownloader) OnPeerChoke() {
 	d.pending = make(map[uint32]uint32)
 }
 
+func (d *PieceDownloader) OnFailedWrite(begin, length uint32) {
+	d.remaining[begin] = length
+}
+
 func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) {
 	delete(d.pending, begin)
 	delete(d.remaining, begin)

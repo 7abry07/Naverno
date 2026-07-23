@@ -42,6 +42,10 @@ func (s *FileStorage) Write(off uint64, data []byte) error {
 		if off >= f.Offset {
 			fileOff := off - f.Offset
 			writeLen := min(len(data), int(f.Length))
+			err := os.MkdirAll(s.path, 0755)
+			if err != nil {
+				return err
+			}
 			handle, err := os.OpenFile(filepath.Join(s.path, f.Path), os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err
@@ -72,6 +76,10 @@ func (s *FileStorage) Read(off uint64, length uint32) ([]byte, error) {
 			fileOff := off - f.Offset
 			readLen := min(length, uint32(f.Length))
 			buf := make([]byte, readLen)
+			err := os.MkdirAll(s.path, 0755)
+			if err != nil {
+				return []byte{}, err
+			}
 			handle, err := os.OpenFile(filepath.Join(s.path, f.Path), os.O_CREATE|os.O_RDONLY, 0644)
 			if err != nil {
 				return []byte{}, err

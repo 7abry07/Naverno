@@ -3,7 +3,6 @@ package downloadertest
 import (
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/piece"
-	"Naverno/internal/util"
 )
 
 type MockPeer struct {
@@ -24,13 +23,7 @@ func (pe *MockPeer) GetPieces() []peerprotocol.Piece {
 	return res
 }
 
-func (pe *MockPeer) Request(pi *piece.Piece, begin, length uint32) {
+func (pe *MockPeer) Request(pi *piece.Piece, begin, length uint32) bool {
 	pe.requests = append(pe.requests, peerprotocol.Request{Idx: pi.Idx, Begin: begin, Length: length})
-}
-func (pe *MockPeer) Cancel(idx, begin, length uint32) {
-	pe.requests = util.Remove(
-		pe.requests,
-		peerprotocol.Request{Idx: idx, Begin: begin, Length: length},
-		func(e1, e2 peerprotocol.Request) bool { return e1 == e2 },
-	)
+	return true
 }
