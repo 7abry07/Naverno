@@ -16,7 +16,7 @@ type File struct {
 }
 
 type file struct {
-	Length int      `bencode:"length"`
+	Length int64    `bencode:"length"`
 	Path   []string `bencode:"path"`
 }
 
