@@ -10,6 +10,9 @@ import (
 	"Naverno/internal/picker/sequentialpicker"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
+	"Naverno/internal/piecewriter"
+	"Naverno/internal/storage"
+	"Naverno/internal/storage/filestorage"
 	"Naverno/internal/tracker"
 	"log/slog"
 	"net"
@@ -23,14 +26,16 @@ type Torrent struct {
 	extensions [8]byte
 
 	session            *Session
+	storage            storage.Storage
 	picker             picker.Picker
 	pieces             []*piece.Piece
 	bitset             *bitfield.Bitfield
 	logger             *slog.Logger
 	meta               *metadata.Metadata
 	announcer          *announcer.Announcer
-	outgoing           map[*handshaker.OutgoingHandshaker]struct{}
 	peers              map[*peer.Peer]struct{}
+	outgoing           map[*handshaker.OutgoingHandshaker]struct{}
+	writers            map[*piece.Piece]*piecewriter.PieceWriter
 	downloaders        map[*peer.Peer]*piecedownloader.PieceDownloader
 	stalledDownloaders map[*piece.Piece]*piecedownloader.PieceDownloader
 
@@ -42,6 +47,7 @@ type Torrent struct {
 	disconnectedPeers chan *peer.Peer
 	peerMessages      chan peer.PeerMessage
 	torrentAnnounce   chan announcer.Torrent
+	writerResults     chan *piecewriter.PieceWriter
 	incomingResults   chan *handshaker.IncomingHandshaker
 	outgoingResults   chan *handshaker.OutgoingHandshaker
 	peersC            chan []netip.AddrPort
@@ -56,10 +62,12 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		session:            sess,
 		meta:               meta,
 		logger:             sess.logger.With("TorrentID", id),
+		storage:            filestorage.New(meta.Files, sess.path),
 		peers:              make(map[*peer.Peer]struct{}),
 		outgoing:           make(map[*handshaker.OutgoingHandshaker]struct{}),
 		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
 		stalledDownloaders: make(map[*piece.Piece]*piecedownloader.PieceDownloader),
+		writers:            make(map[*piece.Piece]*piecewriter.PieceWriter),
 		port:               sess.port,
 		downloaded:         0,
 		uploaded:           0,
@@ -67,6 +75,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		picker:             sequentialpicker.NewSequentialPicker(pieces),
 		pieces:             pieces,
 		bitset:             bitfield.New(uint32(meta.PieceCount)),
+		writerResults:      make(chan *piecewriter.PieceWriter),
 		newConns:           make(chan net.Conn),
 		peerMessages:       make(chan peer.PeerMessage),
 		disconnectedPeers:  make(chan *peer.Peer),
@@ -111,6 +120,7 @@ func (t *Torrent) run() {
 			t.closePeers()
 			t.closeHandshakes()
 			t.closeAnnouncer()
+			t.closeWriters()
 			return
 		case conn := <-t.newConns:
 			t.handleNewConn(conn)
@@ -124,6 +134,10 @@ func (t *Torrent) run() {
 			t.handleOutgoingResult(res)
 		case res := <-t.incomingResults:
 			t.handleIncomingResult(res)
+		case res := <-t.writerResults:
+			if res.Err != nil {
+				t.logger.Info("torrent -> error in piece writer", "Error", res.Err)
+			}
 		case p := <-t.peerMessages:
 			t.handlePeerMessage(p)
 		}

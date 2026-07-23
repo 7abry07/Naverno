@@ -7,8 +7,8 @@ import (
 
 func TestPieces(t *testing.T) {
 	pieces := []*piece.Piece{}
-	pieces = append(pieces, piece.NewPiece(0, piece.BlockSize*6, [20]byte{}))
-	pieces = append(pieces, piece.NewPiece(1, (piece.BlockSize*5)+1, [20]byte{}))
+	pieces = append(pieces, piece.NewPiece(0, piece.BlockSize*6, 0, [20]byte{}))
+	pieces = append(pieces, piece.NewPiece(1, (piece.BlockSize*5)+1, 0, [20]byte{}))
 
 	if pieces[0].BlockCount != 6 {
 		t.Errorf("expected block count-> %v, got -> %v", 6, pieces[0].BlockCount)

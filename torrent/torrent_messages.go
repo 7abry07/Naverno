@@ -74,6 +74,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			downloader.OnBlockReceived(mess.Begin, uint32(len(mess.Data)))
+			t.writePiece(downloader.Piece, mess.Begin, mess.Data)
 			if downloader.Completed() {
 				t.pieceCompleted(downloader.Piece)
 				delete(t.downloaders, pe.Peer)

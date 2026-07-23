@@ -4,6 +4,7 @@ import (
 	"Naverno/internal/peer"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
+	"Naverno/internal/piecewriter"
 )
 
 func (t *Torrent) pieceCompleted(p *piece.Piece) {
@@ -16,6 +17,13 @@ func (t *Torrent) pieceCompleted(p *piece.Piece) {
 	for pe := range t.peers {
 		pe.Have(p)
 	}
+}
+
+func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {
+	writer := piecewriter.New(p, begin, t.storage, data)
+	t.writers[p] = writer
+	go writer.Run(t.writerResults)
+	t.logger.Debug("torrent -> started piece writer", "Piece", p.Idx, "Block", begin)
 }
 
 func (t *Torrent) download(pe *peer.Peer) {
@@ -49,4 +57,10 @@ func (t *Torrent) download(pe *peer.Peer) {
 	downloader.Set(pe)
 	downloader.RequestBlocks(10)
 	t.logger.Debug("torrent -> started downloader for piece", "Piece", picked.Idx, "PeerID", string(pe.ID[:]))
+}
+
+func (t *Torrent) closeWriters() {
+	for _, w := range t.writers {
+		w.Close()
+	}
 }

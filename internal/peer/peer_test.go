@@ -64,7 +64,7 @@ func TestWrite(t *testing.T) {
 	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), conn, [20]byte{}, [8]byte{})
 	go p.Run(incomingMessC, disconnectingC)
 
-	p.Have(piece.NewPiece(5, 0, [20]byte{}))
+	p.Have(piece.NewPiece(5, 0, 0, [20]byte{}))
 
 	buf := make([]byte, 13)
 	conn.ReadSent(buf)

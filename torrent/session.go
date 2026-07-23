@@ -20,6 +20,7 @@ type Session struct {
 	listener       net.Listener
 	trackerManager *trackermanager.TrackerManager
 	logger         *slog.Logger
+	path           string
 	torrents       map[[20]byte]*Torrent
 	torrentsMut    sync.Mutex
 	incoming       []*handshaker.IncomingHandshaker
@@ -34,7 +35,7 @@ type Session struct {
 	doneC     chan struct{}
 }
 
-func StartSession(logger *slog.Logger) *Session {
+func StartSession(logger *slog.Logger, downloadPath string) *Session {
 	if logger == nil {
 		panic("cannot pass nil logger to session")
 	}
@@ -53,6 +54,7 @@ func StartSession(logger *slog.Logger) *Session {
 
 	s := Session{
 		logger:          logger,
+		path:            downloadPath,
 		listener:        listener,
 		torrents:        make(map[[20]byte]*Torrent),
 		torrentsMut:     sync.Mutex{},

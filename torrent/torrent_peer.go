@@ -14,7 +14,7 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 		t.stalledDownloaders[downloader.Piece] = downloader
 		t.picker.SetFree(downloader.Piece)
 		downloader.OnPeerDisconnected()
-		t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece)
+		t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece.Idx)
 	}
 	t.closePeer(p)
 	t.logger.Info("torrent -> peer disconnected", "Address", p.Addr().String(), "Peer", string(p.ID[:]))

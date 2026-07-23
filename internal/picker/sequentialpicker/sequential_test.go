@@ -11,7 +11,7 @@ import (
 func TestPicker(t *testing.T) {
 	pieces := make([]*piece.Piece, 20)
 	for i := range len(pieces) {
-		pieces[i] = piece.NewPiece(uint32(i), 10, [20]byte{})
+		pieces[i] = piece.NewPiece(uint32(i), 10, 0, [20]byte{})
 	}
 	picker := sequentialpicker.NewSequentialPicker(pieces)
 
@@ -40,7 +40,7 @@ func TestPicker(t *testing.T) {
 func TestPickerFail(t *testing.T) {
 	pieces := make([]*piece.Piece, 20)
 	for i := range len(pieces) {
-		pieces[i] = piece.NewPiece(uint32(i), 10, [20]byte{})
+		pieces[i] = piece.NewPiece(uint32(i), 10, 0, [20]byte{})
 	}
 	picker := sequentialpicker.NewSequentialPicker(pieces)
 	picker.OnPieceCompleted(pieces[1])
