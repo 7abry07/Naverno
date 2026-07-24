@@ -29,6 +29,7 @@ func New(p *piece.Piece, begin uint32, s storage.Storage, data []byte) *PieceWri
 }
 
 func (w *PieceWriter) Run(result chan<- *PieceWriter) {
+	defer close(w.doneC)
 	defer func() {
 		select {
 		case <-w.closeC:
