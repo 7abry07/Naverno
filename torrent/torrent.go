@@ -142,7 +142,6 @@ func (t *Torrent) run() {
 			t.handleIncomingResult(res)
 		case res := <-t.writerResults:
 			t.handleWriterResult(res)
-
 		case p := <-t.peerMessages:
 			t.handlePeerMessage(p)
 		}

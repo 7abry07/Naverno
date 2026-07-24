@@ -8,9 +8,9 @@ import (
 type PieceWriter struct {
 	Piece   *piece.Piece
 	Begin   uint32
-	data    []byte
-	storage storage.Storage
+	Data    []byte
 	Err     error
+	storage storage.Storage
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -21,7 +21,7 @@ func New(p *piece.Piece, begin uint32, s storage.Storage, data []byte) *PieceWri
 		Piece:   p,
 		Begin:   begin,
 		storage: s,
-		data:    data,
+		Data:    data,
 
 		closeC: make(chan struct{}),
 		doneC:  make(chan struct{}),
@@ -36,9 +36,8 @@ func (w *PieceWriter) Run(result chan<- *PieceWriter) {
 		}
 	}()
 
-	err := w.storage.Write(w.Piece.Offset+uint64(w.Begin), w.data)
+	err := w.storage.Write(w.Piece.Offset+uint64(w.Begin), w.Data)
 	w.Err = err
-	result <- w
 }
 
 func (w *PieceWriter) Close() {
