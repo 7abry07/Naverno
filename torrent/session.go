@@ -57,7 +57,6 @@ func StartSession(logger *slog.Logger, downloadPath string) *Session {
 		path:            downloadPath,
 		listener:        listener,
 		torrents:        make(map[[20]byte]*Torrent),
-		torrentsMut:     sync.Mutex{},
 		port:            uint16(port),
 		currentTid:      0,
 		pid:             peer.GenerateRandomID(),

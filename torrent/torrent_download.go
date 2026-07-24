@@ -5,7 +5,6 @@ import (
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"Naverno/internal/piecewriter"
-	"fmt"
 )
 
 func (t *Torrent) pieceCompleted(p *piece.Piece) {
@@ -23,11 +22,9 @@ func (t *Torrent) pieceCompleted(p *piece.Piece) {
 func (t *Torrent) handleWriterResult(res *piecewriter.PieceWriter) {
 	if res.Err != nil {
 		t.logger.Info("torrent -> error in piece writer", "Error", res.Err)
-		// temp
-		panic(fmt.Errorf("piece writer error -> %v", res.Err))
-		//
+		t.session.RemoveTorrent(t)
+		return
 	}
-	// t.logger.Info("piece writer -> written block", "Block", fmt.Sprintf("(%v, %v, %v)", res.Piece.Idx, res.Begin, len(res.Data)))
 }
 
 func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {

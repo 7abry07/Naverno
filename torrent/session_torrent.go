@@ -6,6 +6,10 @@ import (
 	"os"
 )
 
+func (s *Session) RemoveTorrent(t *Torrent) {
+	s.removeTorrent <- t
+}
+
 func (s *Session) handleNewTorrent(t *Torrent) {
 	s.torrentsMut.Lock()
 	defer s.torrentsMut.Unlock()
