@@ -24,8 +24,12 @@ import (
 type Torrent struct {
 	id         uint32
 	pid        [20]byte
-	port       uint16
 	extensions [8]byte
+	port       uint16
+
+	downloaded int64
+	uploaded   int64
+	left       int64
 
 	session            *Session
 	storage            storage.Storage
@@ -41,10 +45,6 @@ type Torrent struct {
 	hashers            map[*piece.Piece]*hashchecker.HashChecker
 	downloaders        map[*peer.Peer]*piecedownloader.PieceDownloader
 	stalledDownloaders map[*piece.Piece]*piecedownloader.PieceDownloader
-
-	downloaded int64
-	uploaded   int64
-	left       int64
 
 	newConns          chan net.Conn
 	disconnectedPeers chan *peer.Peer

@@ -73,7 +73,9 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			pe.Pieces.Set(uint(mess.Idx))
-			pe.IsInteresting = pe.Pieces.Difference(t.bitset.BitSet).Any()
+			if pe.Pieces.Difference(t.bitset.BitSet).Any() && !pe.IsInteresting {
+				pe.Interested()
+			}
 			t.picker.OnPeerHave(t.pieces[mess.Idx])
 			t.download(pe.Peer)
 		}
@@ -91,7 +93,9 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			}
 
 			pe.Pieces = data
-			pe.IsInteresting = data.Difference(t.bitset.BitSet).Any()
+			if data.Difference(t.bitset.BitSet).Any() && !pe.IsInteresting {
+				pe.Interested()
+			}
 			t.picker.OnPeerBitfield(pe)
 		}
 	case peerprotocol.Request:
