@@ -5,7 +5,6 @@ import (
 	"Naverno/internal/peer/reader"
 	"Naverno/internal/peer/writer"
 	"Naverno/internal/peerprotocol"
-	"Naverno/internal/piece"
 	"log/slog"
 	"net"
 	"time"
@@ -150,54 +149,42 @@ func (p *Peer) Stop() {
 	<-p.doneC
 }
 
-func (p *Peer) Choke() bool {
-	ok := p.out.Write(peerprotocol.Choke{})
-	if ok {
-		p.IsChoked = true
-	}
-	return ok
+func (p *Peer) Choke() {
+	p.out.Write(peerprotocol.Choke{})
+	p.IsChoked = true
 }
 
-func (p *Peer) Unchoke() bool {
-	ok := p.out.Write(peerprotocol.Unchoke{})
-	if ok {
-		p.IsChoked = false
-	}
-	return ok
+func (p *Peer) Unchoke() {
+	p.out.Write(peerprotocol.Unchoke{})
+	p.IsChoked = false
 }
 
-func (p *Peer) Interesting() bool {
-	ok := p.out.Write(peerprotocol.Interested{})
-	if ok {
-		p.IsInteresting = true
-	}
-	return ok
+func (p *Peer) Interesting() {
+	p.out.Write(peerprotocol.Interested{})
+	p.IsInteresting = true
 }
 
-func (p *Peer) Uninteresting() bool {
-	ok := p.out.Write(peerprotocol.Uninterested{})
-	if ok {
-		p.IsInteresting = false
-	}
-	return ok
+func (p *Peer) Uninteresting() {
+	p.out.Write(peerprotocol.Uninterested{})
+	p.IsInteresting = false
 }
 
-func (p *Peer) Bitfield(pieces []byte) bool {
-	return p.out.Write(peerprotocol.Bitfield{Pieces: pieces})
+func (p *Peer) Bitfield(pieces []byte) {
+	p.out.Write(peerprotocol.Bitfield{Pieces: pieces})
 }
 
-func (p *Peer) Have(pi *piece.Piece) bool {
-	return p.out.Write(peerprotocol.Have{Idx: pi.Idx})
+func (p *Peer) Have(idx uint32) {
+	p.out.Write(peerprotocol.Have{Idx: idx})
 }
 
-func (p *Peer) Request(pi *piece.Piece, begin uint32, length uint32) bool {
-	return p.out.Write(peerprotocol.Request{Idx: pi.Idx, Begin: begin, Length: length})
+func (p *Peer) Request(idx, begin uint32, length uint32) {
+	p.out.Write(peerprotocol.Request{Idx: idx, Begin: begin, Length: length})
 }
 
-func (p *Peer) Piece(pi *piece.Piece, begin uint32, data []byte) bool {
-	return p.out.Write(peerprotocol.Piece{Idx: pi.Idx, Begin: begin, Data: data})
+func (p *Peer) Piece(idx, begin uint32, data []byte) {
+	p.out.Write(peerprotocol.Piece{Idx: idx, Begin: begin, Data: data})
 }
 
-func (p *Peer) Cancel(pi *piece.Piece, begin uint32, length uint32) bool {
-	return p.out.Write(peerprotocol.Cancel{Idx: pi.Idx, Begin: begin, Length: length})
+func (p *Peer) Cancel(idx, begin, length uint32) {
+	p.out.Write(peerprotocol.Cancel{Idx: idx, Begin: begin, Length: length})
 }

@@ -3,7 +3,6 @@ package peer_test
 import (
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
-	"Naverno/internal/piece"
 	"Naverno/internal/test"
 	"io"
 	"log/slog"
@@ -53,20 +52,6 @@ func TestRead(t *testing.T) {
 
 	if !reflect.DeepEqual(messagesExp, messagesRec) {
 		t.Fatal("messages read by peer are not equal to the messages that were actually sent")
-	}
-}
-
-func TestWrite(t *testing.T) {
-	incomingMessC := make(chan peer.PeerMessage)
-	disconnectingC := make(chan *peer.Peer)
-
-	conn := test.NewMockConn([]byte{})
-	p := peer.New(slog.New(slog.NewTextHandler(io.Discard, nil)), conn, [20]byte{}, [8]byte{})
-	go p.Run(incomingMessC, disconnectingC)
-
-	ok := p.Have(piece.NewPiece(5, 0, 0, [20]byte{}))
-	if !ok {
-		t.Errorf("sending message failed")
 	}
 }
 

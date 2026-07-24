@@ -76,15 +76,13 @@ func (w *Writer) Error() <-chan error {
 	return w.fatal
 }
 
-func (w *Writer) Write(mess peerprotocol.Message) bool {
+func (w *Writer) Write(mess peerprotocol.Message) {
 	select {
 	case <-w.closeC:
-		return false
 	default:
 	}
 	w.cond.L.Lock()
 	w.queue = append(w.queue, mess)
 	w.cond.Signal()
 	w.cond.L.Unlock()
-	return true
 }

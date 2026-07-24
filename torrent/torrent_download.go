@@ -15,7 +15,7 @@ func (t *Torrent) pieceCompleted(p *piece.Piece) {
 	t.logger.Info("torrent -> piece completed", "Piece", p.Idx, "Pieces Completed", t.bitset.Count())
 
 	for pe := range t.peers {
-		pe.Have(p)
+		pe.Have(p.Idx)
 	}
 }
 
