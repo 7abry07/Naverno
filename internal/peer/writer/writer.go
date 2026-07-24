@@ -38,10 +38,11 @@ func New(logger *slog.Logger, conn net.Conn) *Writer {
 }
 
 func (w *Writer) Run() {
-	w.cond.L.Lock()
+	defer w.cond.L.Unlock()
 	defer close(w.doneC)
 	for {
-		if len(w.queue) == 0 {
+		w.cond.L.Lock()
+		for len(w.queue) == 0 {
 			w.cond.Wait()
 		}
 		select {
@@ -82,7 +83,7 @@ func (w *Writer) Write(mess peerprotocol.Message) {
 	default:
 	}
 	w.cond.L.Lock()
+	defer w.cond.L.Unlock()
 	w.queue = append(w.queue, mess)
 	w.cond.Signal()
-	w.cond.L.Unlock()
 }
