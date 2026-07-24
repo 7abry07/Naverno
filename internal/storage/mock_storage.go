@@ -1,4 +1,4 @@
-package storagetest
+package storage
 
 type MockStorage struct{}
 

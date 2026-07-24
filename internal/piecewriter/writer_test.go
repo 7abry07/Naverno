@@ -3,13 +3,13 @@ package piecewriter_test
 import (
 	"Naverno/internal/piece"
 	"Naverno/internal/piecewriter"
-	"Naverno/internal/storage/storagetest"
+	"Naverno/internal/storage"
 	"testing"
 	"time"
 )
 
 func TestWriter(t *testing.T) {
-	s := storagetest.NewMockStorage()
+	s := storage.NewMockStorage()
 	p := piece.NewPiece(4, 10, 30, [20]byte{})
 	w := piecewriter.New(p, 10, s, make([]byte, 10))
 	res := make(chan *piecewriter.PieceWriter)

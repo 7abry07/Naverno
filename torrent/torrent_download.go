@@ -8,13 +8,6 @@ import (
 	"Naverno/internal/piecewriter"
 )
 
-func (t *Torrent) pieceCompleted(p *piece.Piece) {
-	hasher := hashchecker.New(t.storage, p)
-	t.hashers[p] = hasher
-	go hasher.Run(t.hashersResults)
-	t.logger.Debug("torrent -> started hash checker", "Piece", p.Idx)
-}
-
 func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
 	if res.Err != nil {
 		t.logger.Error("torrent -> error in piece writer", "Error", res.Err)
@@ -50,6 +43,13 @@ func (t *Torrent) handleWriterResult(res *piecewriter.PieceWriter) {
 		t.session.RemoveTorrent(t)
 		return
 	}
+}
+
+func (t *Torrent) pieceCompleted(p *piece.Piece) {
+	hasher := hashchecker.New(t.storage, p)
+	t.hashers[p] = hasher
+	go hasher.Run(t.hashersResults)
+	t.logger.Debug("torrent -> started hash checker", "Piece", p.Idx)
 }
 
 func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {

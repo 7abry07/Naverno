@@ -1,4 +1,4 @@
-package pickertest
+package picker
 
 import (
 	"Naverno/internal/bitfield"

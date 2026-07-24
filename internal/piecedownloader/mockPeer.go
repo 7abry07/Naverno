@@ -1,4 +1,4 @@
-package downloadertest
+package piecedownloader
 
 import (
 	"Naverno/internal/peerprotocol"

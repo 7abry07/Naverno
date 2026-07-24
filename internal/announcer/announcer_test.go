@@ -3,7 +3,6 @@ package announcer_test
 import (
 	"Naverno/internal/announcer"
 	"Naverno/internal/tracker"
-	"Naverno/internal/tracker/trackertest"
 	"io"
 	"log/slog"
 	"net/netip"
@@ -12,8 +11,8 @@ import (
 )
 
 func TestAnnouncer(t *testing.T) {
-	tier1 := []tracker.Tracker{trackertest.NewFailingMock(), trackertest.NewFailingMock(), trackertest.NewFailingMock()}
-	tier2 := []tracker.Tracker{trackertest.NewFailingMock(), trackertest.NewWorkingMock(), trackertest.NewFailingMock()}
+	tier1 := []tracker.Tracker{tracker.NewFailingMock(), tracker.NewFailingMock(), tracker.NewFailingMock()}
+	tier2 := []tracker.Tracker{tracker.NewFailingMock(), tracker.NewWorkingMock(), tracker.NewFailingMock()}
 	tiers := [][]tracker.Tracker{}
 	tiers = append(tiers, tier1)
 	tiers = append(tiers, tier2)
