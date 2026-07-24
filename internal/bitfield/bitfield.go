@@ -4,14 +4,13 @@ import (
 	"Naverno/internal/util"
 	"encoding/binary"
 	"fmt"
-	"iter"
 	"math/bits"
 
 	"github.com/bits-and-blooms/bitset"
 )
 
 type Bitfield struct {
-	set *bitset.BitSet
+	*bitset.BitSet
 }
 
 func New(length uint32) Bitfield {
@@ -49,12 +48,12 @@ func From(data []byte, length uint32) (Bitfield, error) {
 }
 
 func (b *Bitfield) Bytes() []byte {
-	minimumStorage := util.Align(uint64(b.set.Len()), 8) / 8
+	minimumStorage := util.Align(uint64(b.Len()), 8) / 8
 
 	out := make([]byte, minimumStorage)
 	buf := []byte{}
 
-	for _, w := range b.set.Words() {
+	for _, w := range b.Words() {
 		b := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b, w)
 		buf = append(buf, b...)
@@ -70,47 +69,4 @@ func (b *Bitfield) Bytes() []byte {
 
 	copy(out, buf[:minimumStorage])
 	return out
-}
-
-func (b Bitfield) SetBits() iter.Seq[uint] {
-	return b.set.EachSet()
-}
-
-func (b Bitfield) Count() uint32 {
-	return uint32(b.set.Count())
-}
-
-func (b Bitfield) Len() uint32 {
-	return uint32(b.set.Len())
-}
-
-func (b Bitfield) All() bool {
-	return b.set.All()
-}
-
-func (b Bitfield) None() bool {
-	return b.set.None()
-}
-
-func (b Bitfield) Any() bool {
-	return b.set.Any()
-}
-
-func (b Bitfield) Set(i uint32) Bitfield {
-	b.set.Set(uint(i))
-	return b
-}
-
-func (b Bitfield) Clear(i uint32) Bitfield {
-	b.set.Clear(uint(i))
-	return b
-}
-
-func (b Bitfield) Test(i uint32) bool {
-	return b.set.Test(uint(i))
-}
-
-func (b Bitfield) Difference(cmp Bitfield) Bitfield {
-	diff := b.set.Difference(cmp.set)
-	return Bitfield{diff}
 }

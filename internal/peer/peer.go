@@ -69,11 +69,11 @@ func (p *Peer) GetPieces() bitfield.Bitfield {
 }
 
 func (p *Peer) HasPiece(idx uint32) bool {
-	return p.Pieces.Test(idx)
+	return p.Pieces.Test(uint(idx))
 }
 
 func (p *Peer) SetPiece(idx uint32) {
-	p.Pieces.Set(idx)
+	p.Pieces.Set(uint(idx))
 }
 
 func (p *Peer) IsChoking() bool {

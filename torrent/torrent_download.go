@@ -23,7 +23,7 @@ func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
 
 	t.downloaded += int64(res.Piece.Size)
 	t.left = t.meta.Length - t.downloaded
-	t.bitset.Set(res.Piece.Idx)
+	t.bitset.Set(uint(res.Piece.Idx))
 	t.picker.OnPieceCompleted(res.Piece)
 	for pe := range t.peers {
 		pe.Have(res.Piece.Idx)

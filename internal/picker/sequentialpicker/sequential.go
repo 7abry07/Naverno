@@ -18,7 +18,7 @@ func NewSequentialPicker(pieces []*piece.Piece) *SequentialPicker {
 }
 
 func (p *SequentialPicker) Pick(pe picker.Peer) *piece.Piece {
-	for i := range pe.GetPieces().SetBits() {
+	for i := range pe.GetPieces().EachSet() {
 		if p.pieces[i].State == picker.PIECE_FREE {
 			p.pieces[i].State = picker.PIECE_DOWNLOADING
 			return p.pieces[i].Piece
