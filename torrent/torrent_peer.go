@@ -63,7 +63,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Have:
 		{
-			if pe.Pieces == nil {
+			if (pe.Pieces == bitfield.Bitfield{}) {
 				pe.Pieces = bitfield.New(uint32(t.meta.PieceCount))
 			}
 			if mess.Idx > uint32(t.meta.PieceCount-1) {
@@ -79,7 +79,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Bitfield:
 		{
-			if pe.Pieces != nil {
+			if (pe.Pieces != bitfield.Bitfield{}) {
 				t.closePeer(pe.Peer)
 				return
 			}

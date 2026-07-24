@@ -11,24 +11,24 @@ import (
 )
 
 type Bitfield struct {
-	set bitset.BitSet
+	set *bitset.BitSet
 }
 
-func New(length uint32) *Bitfield {
-	return &Bitfield{*bitset.MustNew(uint(length))}
+func New(length uint32) Bitfield {
+	return Bitfield{bitset.MustNew(uint(length))}
 }
 
-func From(data []byte, length uint32) (*Bitfield, error) {
+func From(data []byte, length uint32) (Bitfield, error) {
 	spareBits := uint32(len(data)*8) - length
 	for i := range spareBits {
 		if data[len(data)-1]&1<<i != 0 {
-			return nil, fmt.Errorf("spare bits are set")
+			return Bitfield{}, fmt.Errorf("spare bits are set")
 		}
 	}
 
 	minimumBits := util.Align(uint64(length), 8)
 	if len(data)*8 != int(minimumBits) {
-		return nil, fmt.Errorf("invalid length")
+		return Bitfield{}, fmt.Errorf("invalid length")
 	}
 	buf := make([]byte, minimumBits/8)
 	copy(buf, data)
@@ -45,7 +45,7 @@ func From(data []byte, length uint32) (*Bitfield, error) {
 		words[i] = binary.LittleEndian.Uint64(padded[i*8:])
 	}
 
-	return &Bitfield{*bitset.FromWithLength(uint(length), words)}, nil
+	return Bitfield{bitset.FromWithLength(uint(length), words)}, nil
 }
 
 func (b *Bitfield) Bytes() []byte {
@@ -72,45 +72,45 @@ func (b *Bitfield) Bytes() []byte {
 	return out
 }
 
-func (b *Bitfield) SetBits() iter.Seq[uint] {
+func (b Bitfield) SetBits() iter.Seq[uint] {
 	return b.set.EachSet()
 }
 
-func (b *Bitfield) Count() uint32 {
+func (b Bitfield) Count() uint32 {
 	return uint32(b.set.Count())
 }
 
-func (b *Bitfield) Len() uint32 {
+func (b Bitfield) Len() uint32 {
 	return uint32(b.set.Len())
 }
 
-func (b *Bitfield) All() bool {
+func (b Bitfield) All() bool {
 	return b.set.All()
 }
 
-func (b *Bitfield) None() bool {
+func (b Bitfield) None() bool {
 	return b.set.None()
 }
 
-func (b *Bitfield) Any() bool {
+func (b Bitfield) Any() bool {
 	return b.set.Any()
 }
 
-func (b *Bitfield) Set(i uint32) *Bitfield {
+func (b Bitfield) Set(i uint32) Bitfield {
 	b.set.Set(uint(i))
 	return b
 }
 
-func (b *Bitfield) Clear(i uint32) *Bitfield {
+func (b Bitfield) Clear(i uint32) Bitfield {
 	b.set.Clear(uint(i))
 	return b
 }
 
-func (b *Bitfield) Test(i uint32) bool {
+func (b Bitfield) Test(i uint32) bool {
 	return b.set.Test(uint(i))
 }
 
-func (b *Bitfield) Difference(cmp *Bitfield) *Bitfield {
-	diff := b.set.Difference(&cmp.set)
-	return &Bitfield{*diff}
+func (b Bitfield) Difference(cmp Bitfield) Bitfield {
+	diff := b.set.Difference(cmp.set)
+	return Bitfield{diff}
 }

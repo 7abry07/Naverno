@@ -5,5 +5,5 @@ import (
 )
 
 type Peer interface {
-	GetPieces() *bitfield.Bitfield
+	GetPieces() bitfield.Bitfield
 }

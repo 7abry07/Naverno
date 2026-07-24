@@ -1,0 +1,749 @@
+[33mcommit d6b668d2b702946cdc3c0e07765950483cc1e038[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 17:47:18 2026 +0200
+
+    minor changes
+
+[33mcommit 51dfdcced8b2745b46d7f1de6a7c67edc7d08728[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 17:33:55 2026 +0200
+
+    minor changes
+
+[33mcommit 1b65709d442aa798fdff45eaa345df1e1e758ab6[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 16:58:44 2026 +0200
+
+    on piece completion creating and running hash checker
+
+[33mcommit 06c41756fb720632d0f691f7f9e8fc270674b306[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 16:32:29 2026 +0200
+
+    created hash checker that checks the hash of a given piece
+
+[33mcommit 9361ae2ea19edc27f127d9a423e40b14409b05b0[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 16:19:55 2026 +0200
+
+    minor changes
+
+[33mcommit b57a02f17a857d578dd2bae2b049c025d6d6e649[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 16:08:39 2026 +0200
+
+    created blocking queue that blocks on Pop() call
+
+[33mcommit 758ac49b8ed7fcb3ba953d56c1882d831914b759[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 15:25:08 2026 +0200
+
+    fixed little problem with offset calculation in file storage (little problem with peer writer)
+
+[33mcommit 26061fc1706e1502c9e2d84f13aec9e33288d3ec[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 13:30:45 2026 +0200
+
+    minor fixes
+
+[33mcommit 53e19472e0ba24c71da001d0505e9e931fcaa218[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 13:18:50 2026 +0200
+
+    minor changes
+
+[33mcommit b79a70485a48a6ffabc27884b53f5b4442ba48bc[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 24 00:28:42 2026 +0200
+
+    replaced channel with blocking queue in peer writer, writing pieces to disk (a lot of issues)
+
+[33mcommit 931e027c3ea26a065b2d0e0d994b6f5950f531cc[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 23 21:56:06 2026 +0200
+
+    created piece writer that writes a piece to disk using a Storage
+
+[33mcommit b0d110cae16d474f81c06ae762c1197161c724c6[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 23 20:52:19 2026 +0200
+
+    minor changes
+
+[33mcommit 8f47e939a1f70feb52e0f45d9299994710c323b6[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 23 20:51:10 2026 +0200
+
+    created storage interface and file storage that writes and reads to files
+
+[33mcommit ccb02eef4861277e6f3880ceaa9af267fde4f255[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 23 18:17:31 2026 +0200
+
+    fixed/added logging
+
+[33mcommit 25a584a69a6465494319ac0d8c3d2b0f3556596b[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 23 17:02:52 2026 +0200
+
+    converted piece indexes with piece pointer
+
+[33mcommit c464a7d3d3b886be5a0ada1eeb57ef37876c0775[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 23 15:51:53 2026 +0200
+
+    created test for Piece
+
+[33mcommit 80b79ffedc2ae2de6013ac231d657797ae47c185[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 16:48:16 2026 +0200
+
+    created piece struct that stores information about a piece
+
+[33mcommit 5a229b15840d92e902244c4cf09976dbebba3860[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 14:56:53 2026 +0200
+
+    disconnecting from seeders on torrent completion
+
+[33mcommit 67edbc32e3799d8a33fc4cc059a12994c5aca8d6[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 14:48:09 2026 +0200
+
+    minor changes
+
+[33mcommit bcba38e330b0fe837a23a1b7cc749a7ef1d11cb7[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 14:35:35 2026 +0200
+
+    minor changes/fixes
+
+[33mcommit 3e42a311e0a36550745f3077afa3d2719fc03eb1[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 14:03:16 2026 +0200
+
+    changed slices to maps(sets)
+
+[33mcommit 13110b7b94cd08fe49daaed81efe11e82c797a56[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 13:44:43 2026 +0200
+
+    minor fixes
+
+[33mcommit 9fd18b43d335fb724da928f56f58f46b0bf61714[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 13:03:17 2026 +0200
+
+    wrapping bits-and-blooms bitset in bitfield package
+
+[33mcommit 2bd7315142fcf47eaf7847c6475e9d3fe06c25d8[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 12:27:50 2026 +0200
+
+    refactoring
+
+[33mcommit e672e5e5809f5d0db3b0b2d2bdcecbe475dc8a58[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 12:12:56 2026 +0200
+
+    fixed tests, minor changes
+
+[33mcommit e9d90d68ce347b911f21d1699b625e477501abda[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 11:58:38 2026 +0200
+
+    announcing completed to trackers
+
+[33mcommit 322913d33af1ef628cb6af05b6a9cfc41552130a[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 22 11:35:40 2026 +0200
+
+    minor changes
+
+[33mcommit 2314eafc51a4b55e3b3904d723014a970908a7e2[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 21 22:56:16 2026 +0200
+
+    fixed issue with last block in last piece, the calculation for the size was plain wrong
+
+[33mcommit 18cbf596f62a00986e1709f308d0fd51daeb78e6[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 21 22:23:37 2026 +0200
+
+    fixed issue with last piece, the calculation for the size was plain wrong
+
+[33mcommit b6c0b45378edd6a32e61c89f39ec5a7c8de8dbcc[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 21 18:59:15 2026 +0200
+
+    fixed issue with downloader, i was picking pieces before checking for stalled downloaders, leading to pieces who were never gonna be downloaded
+
+[33mcommit f027894e1adb4e489dbe29079f6e7d7577c91966[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 21 13:00:17 2026 +0200
+
+    didn't remove peers from slice when stopping them, leading to double channel close on torrent/session stop
+
+[33mcommit ffe61d8f8c9063fc57c8287792101cc8232018fa[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 21 11:12:14 2026 +0200
+
+    fixed conversion from bytes to bitset, the problem was bit ordering
+
+[33mcommit c519b365e85bcac489e51dfa5d51bd5317921e86[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 21 00:56:38 2026 +0200
+
+    fixing issues with bitfield
+
+[33mcommit 97c58512c0ca9f785256b19f236e7fdcc235f917[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 20 21:50:13 2026 +0200
+
+    fixed issue with peer writer
+
+[33mcommit e1543c1df1781ce8457b92ac52e7399708a1f3a7[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 20 20:51:48 2026 +0200
+
+    fixed some issues with downloader and channel deadlocks
+
+[33mcommit adad16e79a85298f567beda6418458344872f4e1[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 20 14:03:18 2026 +0200
+
+    downloading pieces from peers, not storing them (peers disconnect after some time)
+
+[33mcommit b78b1f88453a0eea299387618db8458d06a3b9b1[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 19 23:20:33 2026 +0200
+
+    created piece downloader that requests all the blocks of a piece from a peer
+
+[33mcommit d3e5a2b107aa7e18cc8d050b5a26d61420c8d9b5[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 19 13:33:37 2026 +0200
+
+    picking pieces for peers
+
+[33mcommit 8dfb739ca4357c96a473ce55816e29239481b3ed[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 19 13:24:07 2026 +0200
+
+    created sequential piece picker that picks piece sequentially from a peer
+
+[33mcommit 67ed5ebd20b2ccff20a5afbd38875c71180ff2ca[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 19 12:30:23 2026 +0200
+
+    minor changes
+
+[33mcommit 76dc617b5e0d96176527cdf657b6408356fb3b0b[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 19 12:24:07 2026 +0200
+
+    minor changes
+
+[33mcommit 7091ec851d5bd946283e2184c4b2a0527c058801[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 19 12:17:40 2026 +0200
+
+    improved announcer closing
+
+[33mcommit 6d97867efd31a0968f857f49823cb3f3e908aa75[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 19 12:13:30 2026 +0200
+
+    minor change
+
+[33mcommit c51ebcef7f6d0a12df9d0b1933331f5f6f66bf8c[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 22:30:29 2026 +0200
+
+    added check for spare bits in peer bitfield
+
+[33mcommit 289915d6bb4e911fb8b2dc4d1d8d539701910d0b[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 21:59:02 2026 +0200
+
+    minor change
+
+[33mcommit 3921eea9065c97c76b7e6958b64f7068729b0794[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 21:56:53 2026 +0200
+
+    sending bitfield to peer on handshake complete
+
+[33mcommit 9f5b0d2f105992ba4015cd7a8bf371a1c6186cbd[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 21:54:38 2026 +0200
+
+    added bitset/bytes conversion in util package
+
+[33mcommit fae3eb7d5e6a67d0ecea4cae6832b24e566d109a[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 21:18:25 2026 +0200
+
+    created tests in util package
+
+[33mcommit eff6d4ba434a5e94de9c8a446de172db75e57a12[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 17:43:49 2026 +0200
+
+    added message handling
+
+[33mcommit d4c318ba43d6416ab85a9dfb9c41bdd6d16792d0[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 15:28:26 2026 +0200
+
+    fixed big issue with announcer closing
+
+[33mcommit 1ccaa35d53ff499e248fbcf55b64ecbae7db532e[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 15:09:04 2026 +0200
+
+    minor fixes
+
+[33mcommit 9f15f7c9535f6e9c37748ea375f8bf3fa9c7320a[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 14:59:30 2026 +0200
+
+    created announcer test
+
+[33mcommit 702a4fbb6fbbc79fbae7be78055d382e5379c21c[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 13:51:27 2026 +0200
+
+    created announce tiers
+
+[33mcommit 23bc6e508c0d49bf951f5edff243da6f30e9456f[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 18 13:18:24 2026 +0200
+
+    minor changes
+
+[33mcommit d9a6043bc307c2ac7d2d883a14e5ce6158e1fe28[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 22:54:45 2026 +0200
+
+    removed logger from tracker manager
+
+[33mcommit e2b8eb165f714c96fe8ae77ef74246c5892dd95c[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 22:52:38 2026 +0200
+
+    minor changes
+
+[33mcommit 06f3df1274322380ba05b2d463c15bdd4f450781[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 22:23:42 2026 +0200
+
+    refactoring
+
+[33mcommit 00fefaf024a1890d2215e320c1e9e885f588e561[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 22:19:08 2026 +0200
+
+    refactoring
+
+[33mcommit 41886436ce615c6f0503c748f377d88cbaf56a4b[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 22:05:22 2026 +0200
+
+    minor changes
+
+[33mcommit cf7a596fe55fd288fc2d79d215ea53d2e54c3629[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 21:59:52 2026 +0200
+
+    refactoring
+
+[33mcommit cfeb4524794a1d50cd0ae4aca225c100043b5eb4[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 21:44:06 2026 +0200
+
+    minor announcer fix
+
+[33mcommit 0ebafecb4a50dad2ec41e32fa9bf140ff861b4be[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 21:36:20 2026 +0200
+
+    'fixed' announcer issue, added timeout for announce requests
+
+[33mcommit e53e766485f3340e7f5e473c39ba48a253c03722[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 21:12:26 2026 +0200
+
+    removed context where it's not needed
+
+[33mcommit bf67db35e7101b1b53f8a8b5f61289b2d3c69c76[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 20:28:59 2026 +0200
+
+    minor changes
+
+[33mcommit 78ea2ccc5349408b16e21d61cc5f716766cea592[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 20:25:26 2026 +0200
+
+    minor fixes
+
+[33mcommit 74c6820be013de38864666f3cd156e99a4646a65[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 20:12:32 2026 +0200
+
+    created announcer that announces (dont care about tiers for now)
+
+[33mcommit 4d31374053fd434b0d13db2be611931feea9d0a4[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 18:51:02 2026 +0200
+
+    minor changes
+
+[33mcommit 98da32299da9821d0e76ef0086a2af9fbf363003[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 15:27:47 2026 +0200
+
+    minor changes
+
+[33mcommit 6d8aeef9d3cb0b9cd3ae523e1fa5cc8b50a7aa18[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 15:11:20 2026 +0200
+
+    added context in session and torrent
+
+[33mcommit db33a8d625fe17bd615ede5dbfffd6418e173d46[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 14:36:27 2026 +0200
+
+    created identifier for single torrent
+
+[33mcommit d59adcb5d3c0ba47406d71b0b3d6c4bdd9f6d798[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 12:00:03 2026 +0200
+
+    passed extension bytes to peer constructor, store client extensions in session
+
+[33mcommit 9740d04d8f37b84bc0e3834f1666c1c343411eb9[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 17 11:53:12 2026 +0200
+
+    minor changes
+
+[33mcommit 7c3af8c9c54f00fefe28942527b227a634b12537[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 16 19:18:25 2026 +0200
+
+    created torrent and session loop, fixed and added some things
+
+[33mcommit 008134816cdd98cd8e05fb9f4be2ee46b8d46448[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 14 18:26:28 2026 +0200
+
+    didnt put close methods on peer reader/writer
+
+[33mcommit fa6de438f14bcf6f6674443c746cd5410e666810[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 14 14:28:46 2026 +0200
+
+    created util package and added WriteFull utility
+
+[33mcommit ed3df33c2c666c55358bd059a58aa0a86886ad82[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 14 14:10:03 2026 +0200
+
+    created incoming handshaker
+
+[33mcommit 3338228274f84e62c58e41ba3904104a7db86b31[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jul 14 08:48:35 2026 +0200
+
+    refactoring
+
+[33mcommit 5464bcb29b463998acf1a5deab64234c8b14de53[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 13 14:19:54 2026 +0200
+
+    fixed small things
+
+[33mcommit 814267e4e0dfda41fe0d83af659d4dd1787ba305[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 13 14:15:54 2026 +0200
+
+    refactoring
+
+[33mcommit 256ccaf1c8d5441c2eb67461090cdc20067036d1[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 13 13:31:23 2026 +0200
+
+    fixed some issue with the outgoing handshaker
+
+[33mcommit 02ac2e9567fd294ab512ab8fb567296404172dbe[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 12 08:28:13 2026 +0200
+
+    wrote tests for outgoing handshaker
+
+[33mcommit dad447d06fcdf66be65ea8f56739471670b1773e[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 12 08:05:08 2026 +0200
+
+    moved mock connection out of peer package into test package
+
+[33mcommit b4c4536ae47cffa6319018c0f19db912761f6327[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 12 07:59:27 2026 +0200
+
+    created outgoing handshaker
+
+[33mcommit 58251dd35f606278fd2144348a6fbcca5a75423e[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 12 06:33:51 2026 +0200
+
+    added peer timeout handling
+
+[33mcommit 3b5ed65a943a8219bcef1b782637c61c4bbad0ce[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sun Jul 12 06:22:22 2026 +0200
+
+    refactoring
+
+[33mcommit 939621ce12e22b4c6730509e1d9c12a109055200[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 11 18:50:28 2026 +0200
+
+    added more tests in peer
+
+[33mcommit 55e6c7e36f784cdf1bd2ce652e7ef41544392c45[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 11 18:16:54 2026 +0200
+
+    removed keep alive handling in peer
+
+[33mcommit 07b467dbc0919794428f3015b2ab8176ef048fe0[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 11 18:03:25 2026 +0200
+
+    wrote some tests for peer
+
+[33mcommit 4a75715605f1af42710773da6605cbec3ca860c4[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 11 17:05:10 2026 +0200
+
+    replaced []byte with bits and blooms bitset
+
+[33mcommit 574262af3854c77c58e63323ef95a48255065444[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 11 16:47:17 2026 +0200
+
+    refactoring
+
+[33mcommit d5e4cac2eddcee66eacb04314f81e81590ec2c51[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 11 11:08:39 2026 +0200
+
+    added timeout handling with keepalive within the Peer struct
+
+[33mcommit 3df034424ed901d7a34313e22c120721e2de909c[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 11 09:45:42 2026 +0200
+
+    created Peer struct that communicates with peers and keeps it's state
+
+[33mcommit eaa4f8b934137118d4b238f124ccebcd2d6c3209[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 10 17:32:47 2026 +0200
+
+    created tests for peer messages marshaling/unmarshaling (fixed little error in piece/cancel marshaling)
+
+[33mcommit 96eefae44207a3ae578396a0d2a4b6d6c4ec44ae[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 10 16:25:03 2026 +0200
+
+    created peerprotocol package to handle peer wire protocol message marshaling/unmarshaling
+
+[33mcommit 357877e24a2444cdaadb3b86174c61be7dcca407[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 10 15:19:46 2026 +0200
+
+    made tracker server return stop function
+
+[33mcommit 564710334c6be37646ee8c1ca23d918dd3082573[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 10 15:17:58 2026 +0200
+
+    wrote tests for http tracker
+
+[33mcommit cf4772b3c1032aac4ee49c5cab14f6ef548eeccb[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 10 13:15:07 2026 +0200
+
+    removed temporary 'peer' struct in tracker server
+
+[33mcommit 233443d7bb18d51b62c7f0249441e1739244c852[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 10 13:06:07 2026 +0200
+
+    removed logger from tracker server
+
+[33mcommit 9e71f324aa5c1e1b2474141403acd7e807201650[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 10 12:46:30 2026 +0200
+
+    created simple tracker server for testing purposes
+
+[33mcommit 87e02bb73d71373cda31600a5ac9b266c601bf00[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 6 02:40:51 2026 +0200
+
+    added logging for announce special events ('started', 'completed', 'stopped')
+
+[33mcommit b643ec6429794f956cb9f9562abd16f6bcb8bb32[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 6 02:33:15 2026 +0200
+
+    removed pre-written errors for clearer errors with fmt.Errorf() for metadata
+
+[33mcommit 0f1fd71c78c9e45c5f9374c50d683a83772278e7[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jul 6 02:24:51 2026 +0200
+
+    removed pre-written errors for clearer errors with fmt.Errorf() for trackers
+
+[33mcommit 6f7b2ea5bd4618c90365017182fd84ea1fd67079[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 4 08:51:15 2026 +0200
+
+    removed old bencode code
+
+[33mcommit 40f31b14334e4514b960ed2f3c78e36a3a84fc11[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 4 08:50:34 2026 +0200
+
+    ported http tracker code to new bencode library
+
+[33mcommit 190f31259165b38ee0227710f0e22d41139bce94[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Sat Jul 4 07:59:23 2026 +0200
+
+    migration to zeebo bencode library, rewrote metadata package
+
+[33mcommit f1acd6d1084a37a05ffc326438795913e8a6b97b[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 3 10:24:46 2026 +0200
+
+    removed leftover files
+
+[33mcommit c9b14838ebaa3e5ebdc099866edc96145d028584[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 3 10:20:36 2026 +0200
+
+    rewrote bencode code with "any"
+
+[33mcommit c0f5e9ee5cb1531b82777d9a214acccd294a7aba[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 3 01:03:24 2026 +0200
+
+    added some logging in tracker
+
+[33mcommit 85cd03eb31616de4f0fd1ed5692734529d0fcf91[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Fri Jul 3 00:38:10 2026 +0200
+
+    moved compact peer marshaling/unmarshaling into its own struct
+
+[33mcommit 620fa3252fb97327ae7be45d7808141ac50d0b7a[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 23:39:42 2026 +0200
+
+    replaced tracker's peer struct with netip.AddrPort
+
+[33mcommit 4d857600ff97016dce68d2ddc3807091fce8b767[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 17:56:48 2026 +0200
+
+    moved some files
+
+[33mcommit d63cb17361b9746ff585f1f41d0a10cafc6def4d[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 10:48:51 2026 +0200
+
+    created tracker manager to handle http transport and tracker implementation
+
+[33mcommit d04d0acde2d288c861128861b5802f2370f68386[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 10:22:10 2026 +0200
+
+    massive refactoring of tracker code, deleted tests will rewrite later
+
+[33mcommit 02582bf5c9d3b556de929c9f27bdfaf49b570c7d[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 05:38:37 2026 +0200
+
+    wrote test for http tracker and fixed a couple of things
+
+[33mcommit 955065a0efa9963bbb61db74a3703b58a5dfdadf[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 04:33:05 2026 +0200
+
+    fixed module name from "GoBit" to "Naverno", added context cancellation to http tracker announce
+
+[33mcommit 55a7b6570ded47a4ba63cb2a7601691fb40c5c08[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 01:49:44 2026 +0200
+
+    small tracker code tweaks
+
+[33mcommit 12c8b34a717da4318e005a69e3e3fa87d0b79c91[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Thu Jul 2 01:44:30 2026 +0200
+
+    implemented http trackers
+
+[33mcommit dfa2647f17034488a770c27d9c9dcfecafd3abac[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 1 23:42:01 2026 +0200
+
+    created tracker interface and de/serialization for http trackers
+
+[33mcommit 0f7199a37f7ae49606c93f217422b9153bc211df[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 1 19:06:27 2026 +0200
+
+    created template for session/torrent
+
+[33mcommit b3c11ec0dabfdda9eea8e3cbb86fe7bd2c91dc94[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 1 18:31:15 2026 +0200
+
+    abstracted single/multifile torrents behind File slice
+
+[33mcommit 6c04758f005dc2c7736b58e86bc1f5c0e972a8ae[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 1 05:40:54 2026 +0200
+
+    tested infohash correctness
+
+[33mcommit f4f3235e7f35e2d4d7ec35bbb078a32842dab3a7[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 1 02:41:07 2026 +0200
+
+    fixed small bug for multi file torrents and added tests
+
+[33mcommit d54af209ef64c95eea1497ce90b4c726d6526ab6[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Wed Jul 1 02:24:16 2026 +0200
+
+    added torrent parsing and tests (only for single file torrents)
+
+[33mcommit 0f6472923fecb1b7352e57bf2608838c5d2eced8[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Tue Jun 30 07:22:14 2026 +0200
+
+    created structures for metadata parsing
+
+[33mcommit 7d7e8fe9f4523a1bff50448dab64535e56dc903b[m
+Author: Fabry <larosaf87@gmail.com>
+Date:   Mon Jun 29 23:37:19 2026 +0200
+
+    first commit

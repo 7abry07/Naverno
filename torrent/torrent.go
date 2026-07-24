@@ -31,7 +31,7 @@ type Torrent struct {
 	storage            storage.Storage
 	picker             picker.Picker
 	pieces             []*piece.Piece
-	bitset             *bitfield.Bitfield
+	bitset             bitfield.Bitfield
 	logger             *slog.Logger
 	meta               *metadata.Metadata
 	announcer          *announcer.Announcer

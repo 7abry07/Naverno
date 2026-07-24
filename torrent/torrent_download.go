@@ -1,6 +1,7 @@
 package torrent
 
 import (
+	"Naverno/internal/bitfield"
 	"Naverno/internal/hashchecker"
 	"Naverno/internal/peer"
 	"Naverno/internal/piece"
@@ -60,7 +61,7 @@ func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {
 }
 
 func (t *Torrent) download(pe *peer.Peer) {
-	if pe.Pieces == nil || pe.AmChoked {
+	if (pe.Pieces == bitfield.Bitfield{} || pe.AmChoked) {
 		return
 	}
 
