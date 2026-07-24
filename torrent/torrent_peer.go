@@ -109,13 +109,6 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				delete(t.downloaders, pe.Peer)
 			}
 
-			if t.bitset.All() {
-				t.closeSeeds()
-				t.announceCompleted()
-				t.logger.Info("torrent -> completed")
-				return
-			}
-
 			t.download(pe.Peer)
 		}
 	case peerprotocol.Cancel:

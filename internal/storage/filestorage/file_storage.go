@@ -33,10 +33,6 @@ func New(logger *slog.Logger, files []metadata.File, path string) *FileStorage {
 		off += uint64(f.Length)
 	}
 
-	for _, f := range offs {
-		logger.Info("file", "file", f)
-	}
-
 	slices.SortFunc(offs, func(e1, e2 File) int { return cmp.Compare(e1.Offset, e2.Offset) })
 	return &FileStorage{
 		logger: logger,

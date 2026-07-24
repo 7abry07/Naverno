@@ -4,6 +4,8 @@ import (
 	"Naverno/internal/metadata"
 	"Naverno/internal/storage/filestorage"
 	"bytes"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -21,7 +23,7 @@ func TestWrite(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, files[1].Path), make([]byte, 5), 0644)
 	os.WriteFile(filepath.Join(dir, files[2].Path), make([]byte, 5), 0644)
 
-	s := filestorage.New(files, dir)
+	s := filestorage.New(slog.New(slog.NewTextHandler(io.Discard, nil)), files, dir)
 
 	writeData := make([]byte, 7)
 	copy(writeData, []byte("melodye"))
