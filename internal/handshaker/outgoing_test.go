@@ -32,6 +32,12 @@ func TestValidHandshake(t *testing.T) {
 	outgoing := handshaker.NewOutgoingHandshaker(conn)
 	go outgoing.Run(result, pid, ih, ext, time.Second*5)
 
+	buf := make([]byte, 68)
+	ok := conn.ReadSent(buf, time.Second*2)
+	if !ok {
+		t.Fatal("test time exceeded")
+	}
+
 	handshakedConn := <-result
 	if handshakedConn.Error != nil {
 		t.Fatalf("unexpected error -> %v", handshakedConn.Error)
@@ -41,12 +47,6 @@ func TestValidHandshake(t *testing.T) {
 	}
 	if handshakedConn.Extensions != remoteExt {
 		t.Errorf("expected extension bytes -> %#v | got -> %#v", remoteExt, handshakedConn.Extensions)
-	}
-
-	buf := make([]byte, 68)
-	_, err := conn.ReadSent(buf)
-	if err != nil {
-		t.Fatalf("unexpected error -> %v", err)
 	}
 
 	if buf[0] != 19 {

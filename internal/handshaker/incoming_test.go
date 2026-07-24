@@ -18,7 +18,13 @@ func TestValidIncomingHandshake(t *testing.T) {
 	incoming := NewIncomingHandshaker(remote)
 	go incoming.Run(result, func(b [20]byte) bool { return true }, [20]byte{1}, [8]byte{1}, time.Second*3)
 
-	testTimer := time.NewTimer(time.Second * 3)
+	buf := make([]byte, 68)
+	ok := remote.ReadSent(buf, time.Second*2)
+	if !ok {
+		t.Fatal("test time exceeded")
+	}
+
+	testTimer := time.NewTimer(time.Second * 2)
 	select {
 	case <-testTimer.C:
 		t.Fatal("test time exceeded")
@@ -28,14 +34,8 @@ func TestValidIncomingHandshake(t *testing.T) {
 		}
 	}
 
-	buf := make([]byte, 68)
-	_, err := remote.ReadSent(buf)
-	if err != nil {
-		t.Fatalf("unexpected error -> %v", err)
-	}
-
 	hs := Handshake{}
-	err = hs.Unmarshal(bytes.NewBuffer(buf))
+	err := hs.Unmarshal(bytes.NewBuffer(buf))
 	if err != nil {
 		t.Fatalf("unexpected error -> %v", err)
 	}
