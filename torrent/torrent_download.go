@@ -10,6 +10,7 @@ import (
 )
 
 func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
+	delete(t.hashers, res.Piece)
 	if res.Err != nil {
 		t.logger.Error("torrent -> error in piece writer", "Error", res.Err)
 		t.session.RemoveTorrent(t)
@@ -39,6 +40,7 @@ func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
 }
 
 func (t *Torrent) handleWriterResult(res *piecewriter.PieceWriter) {
+	delete(t.writers, res.Piece)
 	if res.Err != nil {
 		t.logger.Error("torrent -> error in piece writer", "Error", res.Err)
 		t.session.RemoveTorrent(t)
