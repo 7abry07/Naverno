@@ -4,6 +4,7 @@ import (
 	"Naverno/internal/announcer"
 	"Naverno/internal/bitfield"
 	"Naverno/internal/handshaker"
+	"Naverno/internal/hashchecker"
 	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
 	"Naverno/internal/picker"
@@ -37,6 +38,7 @@ type Torrent struct {
 	peers              map[*peer.Peer]struct{}
 	outgoing           map[*handshaker.OutgoingHandshaker]struct{}
 	writers            map[*piece.Piece]*piecewriter.PieceWriter
+	hashers            map[*piece.Piece]*hashchecker.HashChecker
 	downloaders        map[*peer.Peer]*piecedownloader.PieceDownloader
 	stalledDownloaders map[*piece.Piece]*piecedownloader.PieceDownloader
 
@@ -48,7 +50,8 @@ type Torrent struct {
 	disconnectedPeers chan *peer.Peer
 	peerMessages      chan peer.PeerMessage
 	torrentAnnounce   chan announcer.Torrent
-	writerResults     chan *piecewriter.PieceWriter
+	writersResults    chan *piecewriter.PieceWriter
+	hashersResults    chan *hashchecker.HashChecker
 	incomingResults   chan *handshaker.IncomingHandshaker
 	outgoingResults   chan *handshaker.OutgoingHandshaker
 	peersC            chan []netip.AddrPort
@@ -68,6 +71,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
 		stalledDownloaders: make(map[*piece.Piece]*piecedownloader.PieceDownloader),
 		writers:            make(map[*piece.Piece]*piecewriter.PieceWriter),
+		hashers:            map[*piece.Piece]*hashchecker.HashChecker{},
 		port:               sess.port,
 		downloaded:         0,
 		uploaded:           0,
@@ -75,7 +79,8 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		picker:             sequentialpicker.NewSequentialPicker(pieces),
 		pieces:             pieces,
 		bitset:             bitfield.New(uint32(meta.PieceCount)),
-		writerResults:      make(chan *piecewriter.PieceWriter),
+		writersResults:     make(chan *piecewriter.PieceWriter),
+		hashersResults:     make(chan *hashchecker.HashChecker),
 		newConns:           make(chan net.Conn),
 		peerMessages:       make(chan peer.PeerMessage),
 		disconnectedPeers:  make(chan *peer.Peer),
@@ -127,6 +132,7 @@ func (t *Torrent) run() {
 			t.closeHandshakes()
 			t.closeAnnouncer()
 			t.closeWriters()
+			t.closeHashers()
 			return
 		case conn := <-t.newConns:
 			t.handleNewConn(conn)
@@ -140,8 +146,10 @@ func (t *Torrent) run() {
 			t.handleOutgoingResult(res)
 		case res := <-t.incomingResults:
 			t.handleIncomingResult(res)
-		case res := <-t.writerResults:
+		case res := <-t.writersResults:
 			t.handleWriterResult(res)
+		case res := <-t.hashersResults:
+			t.handleHasherResult(res)
 		case p := <-t.peerMessages:
 			t.handlePeerMessage(p)
 		}

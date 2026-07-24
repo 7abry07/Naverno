@@ -22,6 +22,8 @@ func New(s storage.Storage, p *piece.Piece) *HashChecker {
 		Piece:   p,
 		Matches: false,
 		Err:     nil,
+		closeC:  make(chan struct{}),
+		doneC:   make(chan struct{}),
 	}
 }
 
