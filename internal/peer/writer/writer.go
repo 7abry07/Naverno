@@ -1,19 +1,18 @@
 package writer
 
 import (
+	"Naverno/internal/blockingqueue"
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/util"
 	"log/slog"
 	"net"
-	"sync"
 	"time"
 )
 
 type Writer struct {
 	logger *slog.Logger
 	conn   net.Conn
-	cond   *sync.Cond
-	queue  []peerprotocol.Message
+	queue  *blockingqueue.Queue[peerprotocol.Message]
 	fatal  chan error
 
 	closeC chan struct{}
@@ -28,8 +27,7 @@ func New(logger *slog.Logger, conn net.Conn) *Writer {
 	writer := &Writer{
 		logger: logger,
 		conn:   conn,
-		cond:   sync.NewCond(&sync.Mutex{}),
-		queue:  []peerprotocol.Message{},
+		queue:  blockingqueue.New([]peerprotocol.Message{}),
 		fatal:  make(chan error),
 		closeC: make(chan struct{}),
 		doneC:  make(chan struct{}),
@@ -38,12 +36,11 @@ func New(logger *slog.Logger, conn net.Conn) *Writer {
 }
 
 func (w *Writer) Run() {
-	defer w.cond.L.Unlock()
 	defer close(w.doneC)
 	for {
-		w.cond.L.Lock()
-		for len(w.queue) == 0 {
-			w.cond.Wait()
+		mess, ok := w.queue.Pop()
+		if !ok {
+			return
 		}
 		select {
 		case <-w.closeC:
@@ -51,8 +48,6 @@ func (w *Writer) Run() {
 		default:
 		}
 
-		mess := w.queue[0]
-		w.queue = w.queue[1:]
 		w.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
 		err := util.WriteFull(w.conn, mess.Marshal())
 		w.conn.SetWriteDeadline(time.Time{})
@@ -69,7 +64,7 @@ func (w *Writer) Run() {
 
 func (w *Writer) Close() {
 	close(w.closeC)
-	w.cond.Signal()
+	w.queue.Stop()
 	<-w.doneC
 }
 
@@ -82,8 +77,5 @@ func (w *Writer) Write(mess peerprotocol.Message) {
 	case <-w.closeC:
 	default:
 	}
-	w.cond.L.Lock()
-	defer w.cond.L.Unlock()
-	w.queue = append(w.queue, mess)
-	w.cond.Signal()
+	w.queue.Push(mess)
 }
