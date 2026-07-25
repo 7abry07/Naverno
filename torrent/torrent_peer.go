@@ -5,6 +5,7 @@ import (
 	"Naverno/internal/choker"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
+	"Naverno/internal/requesthandler"
 	"maps"
 	"net"
 	"net/netip"
@@ -41,7 +42,7 @@ func (t *Torrent) dial(peers []netip.AddrPort) {
 func (t *Torrent) handleChokerEvent(ev any) {
 	switch ev.(type) {
 	case choker.Unchoke:
-		peers := slices.Collect(maps.Keys(t.peers))
+		peers := slices.Collect(maps.Values(t.peers))
 		slice := make([]choker.Peer, len(peers))
 		for i, p := range peers {
 			slice[i] = choker.Peer(p)
@@ -61,7 +62,7 @@ func (t *Torrent) handleChokerEvent(ev any) {
 			p.Choke()
 		}
 	case choker.Optimistic:
-		peers := slices.Collect(maps.Keys(t.peers))
+		peers := slices.Collect(maps.Values(t.peers))
 		slice := make([]choker.Peer, len(peers))
 		for i, p := range peers {
 			slice[i] = choker.Peer(p)
@@ -140,6 +141,12 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			t.picker.OnPeerBitfield(pe)
 		}
 	case peerprotocol.Request:
+		{
+			handler := requesthandler.New(pe.ID, t.storage, t.pieces[mess.Idx], mess)
+			t.requestHandlers[mess] = handler
+			go handler.Run(t.requestHandlersResults)
+			t.logger.Info("torrent -> started request handler", "Peer", string(pe.ID[:]), "Piece", mess.Idx, "Block", mess.Begin)
+		}
 	case peerprotocol.Piece:
 		{
 			downloader, ok := t.downloaders[pe.Peer]
@@ -158,17 +165,21 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			t.download(pe.Peer)
 		}
 	case peerprotocol.Cancel:
+		{
+			delete(t.requestHandlers, peerprotocol.Request{Idx: mess.Idx, Begin: mess.Begin, Length: mess.Length})
+			t.logger.Info("torrent -> request canceled", "Peer", string(pe.ID[:]), "Piece", mess.Idx, "Block", mess.Begin)
+		}
 	}
 }
 
 func (t *Torrent) closePeer(p *peer.Peer) {
 	delete(t.downloaders, p)
-	delete(t.peers, p)
+	delete(t.peers, p.ID)
 	p.Stop()
 }
 
 func (t *Torrent) closeSeeds() {
-	for p := range t.peers {
+	for _, p := range t.peers {
 		if p.Pieces.All() {
 			t.closePeer(p)
 		}
@@ -176,7 +187,7 @@ func (t *Torrent) closeSeeds() {
 }
 
 func (t *Torrent) closePeers() {
-	for p := range t.peers {
+	for _, p := range t.peers {
 		t.closePeer(p)
 	}
 }

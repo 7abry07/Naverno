@@ -26,7 +26,7 @@ func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
 	t.left = t.meta.Length - t.downloaded
 	t.bitset.Set(uint(res.Piece.Idx))
 	t.picker.OnPieceCompleted(res.Piece)
-	for pe := range t.peers {
+	for _, pe := range t.peers {
 		pe.Have(res.Piece.Idx)
 	}
 	t.logger.Info("torrent -> piece completed", "Piece", res.Piece.Idx, "Pieces Completed", t.bitset.Count())
