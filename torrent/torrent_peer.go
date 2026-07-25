@@ -98,6 +98,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Interested:
 		{
 			pe.AmInteresting = true
+			replace := t.choker.OnInterested(pe)
+			if replace != nil {
+				replace.(*peer.Peer).Choke()
+			}
 		}
 	case peerprotocol.Uninterested:
 		{
