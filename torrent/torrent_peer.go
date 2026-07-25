@@ -56,13 +56,9 @@ func (t *Torrent) handleChokerEvent(ev any) {
 
 		for _, p := range peers {
 			if slices.Contains(picked, p) {
-				if p.IsChoked {
-					p.Unchoke()
-				}
+				p.Unchoke()
 			}
-			if !p.IsChoked {
-				p.Choke()
-			}
+			p.Choke()
 		}
 	case choker.Optimistic:
 		peers := slices.Collect(maps.Keys(t.peers))

@@ -34,6 +34,7 @@ func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
 	if t.bitset.All() {
 		t.closeSeeds()
 		t.announceCompleted()
+		t.choker.Seeding()
 		t.logger.Info("torrent -> completed")
 		return
 	}

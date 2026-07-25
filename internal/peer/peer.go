@@ -179,21 +179,33 @@ func (p *Peer) Stop() {
 }
 
 func (p *Peer) Choke() {
+	if p.IsChoked {
+		return
+	}
 	p.out.Write(peerprotocol.Choke{})
 	p.IsChoked = true
 }
 
 func (p *Peer) Unchoke() {
+	if !p.IsChoked {
+		return
+	}
 	p.out.Write(peerprotocol.Unchoke{})
 	p.IsChoked = false
 }
 
 func (p *Peer) Interesting() {
+	if p.IsInteresting {
+		return
+	}
 	p.out.Write(peerprotocol.Interested{})
 	p.IsInteresting = true
 }
 
 func (p *Peer) Uninteresting() {
+	if !p.IsInteresting {
+		return
+	}
 	p.out.Write(peerprotocol.Uninterested{})
 	p.IsInteresting = false
 }
