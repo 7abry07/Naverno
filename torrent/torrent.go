@@ -3,6 +3,7 @@ package torrent
 import (
 	"Naverno/internal/announcer"
 	"Naverno/internal/bitfield"
+	"Naverno/internal/choker"
 	"Naverno/internal/handshaker"
 	"Naverno/internal/hashchecker"
 	"Naverno/internal/metadata"
@@ -19,6 +20,7 @@ import (
 	"net"
 	"net/netip"
 	"path/filepath"
+	"time"
 )
 
 type Torrent struct {
@@ -34,6 +36,7 @@ type Torrent struct {
 	session            *Session
 	storage            storage.Storage
 	picker             picker.Picker
+	choker             *choker.Choker
 	pieces             []*piece.Piece
 	bitset             bitfield.Bitfield
 	logger             *slog.Logger
@@ -55,6 +58,7 @@ type Torrent struct {
 	incomingResults   chan *handshaker.IncomingHandshaker
 	outgoingResults   chan *handshaker.OutgoingHandshaker
 	peersC            chan []netip.AddrPort
+	chokerEvents      chan any
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -77,6 +81,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		uploaded:           0,
 		left:               meta.Length,
 		picker:             sequentialpicker.NewSequentialPicker(pieces),
+		choker:             choker.New(time.Second*10, time.Second*30),
 		pieces:             pieces,
 		bitset:             bitfield.New(uint32(meta.PieceCount)),
 		writersResults:     make(chan *piecewriter.PieceWriter),
@@ -86,6 +91,7 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		disconnectedPeers:  make(chan *peer.Peer),
 		torrentAnnounce:    make(chan announcer.Torrent),
 		peersC:             make(chan []netip.AddrPort),
+		chokerEvents:       make(chan any),
 		outgoingResults:    make(chan *handshaker.OutgoingHandshaker),
 		incomingResults:    make(chan *handshaker.IncomingHandshaker),
 		closeC:             make(chan struct{}),
@@ -124,6 +130,9 @@ func (t *Torrent) run() {
 	defer close(t.doneC)
 
 	go t.announcer.Run(t.torrentAnnounce, t.peersC)
+	go t.choker.Run(t.chokerEvents)
+
+	peerStatsTicker := time.NewTicker(time.Second)
 
 	for {
 		select {
@@ -131,9 +140,16 @@ func (t *Torrent) run() {
 			t.closePeers()
 			t.closeHandshakes()
 			t.closeAnnouncer()
+			t.choker.Close()
 			t.closeWriters()
 			t.closeHashers()
 			return
+		case <-peerStatsTicker.C:
+			for p := range t.peers {
+				p.CalculateStats()
+			}
+		case ev := <-t.chokerEvents:
+			t.handleChokerEvent(ev)
 		case conn := <-t.newConns:
 			t.handleNewConn(conn)
 		case p := <-t.disconnectedPeers:

@@ -2,10 +2,13 @@ package torrent
 
 import (
 	"Naverno/internal/bitfield"
+	"Naverno/internal/choker"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
+	"maps"
 	"net"
 	"net/netip"
+	"slices"
 	"time"
 )
 
@@ -32,6 +35,48 @@ func (t *Torrent) dial(peers []netip.AddrPort) {
 			}
 			t.newConns <- conn
 		}()
+	}
+}
+
+func (t *Torrent) handleChokerEvent(ev any) {
+	switch ev.(type) {
+	case choker.Unchoke:
+		peers := slices.Collect(maps.Keys(t.peers))
+		slice := make([]choker.Peer, len(peers))
+		for i, p := range peers {
+			slice[i] = choker.Peer(p)
+		}
+		pickedSlice := t.choker.PickPeers(slice)
+		picked := make([]*peer.Peer, len(pickedSlice))
+		for i, p := range pickedSlice {
+			picked[i] = p.(*peer.Peer)
+		}
+
+		t.logger.Info("choker -> unchoke event", "Peers", len(picked))
+
+		for _, p := range peers {
+			if slices.Contains(picked, p) {
+				if p.IsChoked {
+					p.Unchoke()
+				}
+			}
+			if !p.IsChoked {
+				p.Choke()
+			}
+		}
+	case choker.Optimistic:
+		peers := slices.Collect(maps.Keys(t.peers))
+		slice := make([]choker.Peer, len(peers))
+		for i, p := range peers {
+			slice[i] = choker.Peer(p)
+		}
+		optimistic := t.choker.PickOptimistic(slice)
+		if optimistic == nil {
+			return
+		}
+		p := optimistic.(*peer.Peer)
+		t.logger.Info("choker -> optimistic unchoke event", "Peer", string(p.ID[:]))
+		p.Unchoke()
 	}
 }
 
@@ -106,6 +151,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
+			pe.Uploaded += uint64(len(mess.Data))
 			downloader.OnBlockReceived(mess.Begin, uint32(len(mess.Data)))
 			t.writePiece(downloader.Piece, mess.Begin, mess.Data)
 			if downloader.Completed() {

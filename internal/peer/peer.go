@@ -21,6 +21,13 @@ type Peer struct {
 	AmInteresting bool
 	Pieces        bitfield.Bitfield
 
+	connectedAt     time.Time
+	lastRateUpdated time.Time
+	Downloaded      uint64
+	Uploaded        uint64
+	downloadRate    uint64
+	uploadRate      uint64
+
 	conn net.Conn
 	out  *writer.Writer
 	in   *reader.Reader
@@ -34,7 +41,7 @@ type PeerMessage struct {
 	Message peerprotocol.Message
 }
 
-func New(logger *slog.Logger, conn net.Conn, ID [20]byte, extensions [8]byte) *Peer {
+func New(logger *slog.Logger, connectedAt time.Time, conn net.Conn, ID [20]byte, extensions [8]byte) *Peer {
 	if conn == nil {
 		panic("passed nil connection to Peer constructor")
 	}
@@ -44,19 +51,21 @@ func New(logger *slog.Logger, conn net.Conn, ID [20]byte, extensions [8]byte) *P
 
 	plogger := logger.With("PeerID", string(ID[:]))
 	return &Peer{
-		ID:            ID,
-		Extensions:    extensions,
-		logger:        plogger,
-		conn:          conn,
-		IsChoked:      true,
-		AmChoked:      true,
-		IsInteresting: false,
-		AmInteresting: false,
-		Pieces:        bitfield.Bitfield{},
-		out:           writer.New(plogger, conn),
-		in:            reader.New(plogger, conn),
-		closeC:        make(chan struct{}),
-		doneC:         make(chan struct{}),
+		ID:              ID,
+		connectedAt:     connectedAt,
+		Extensions:      extensions,
+		logger:          plogger,
+		conn:            conn,
+		IsChoked:        true,
+		AmChoked:        true,
+		IsInteresting:   false,
+		AmInteresting:   false,
+		lastRateUpdated: time.Now(),
+		Pieces:          bitfield.Bitfield{},
+		out:             writer.New(plogger, conn),
+		in:              reader.New(plogger, conn),
+		closeC:          make(chan struct{}),
+		doneC:           make(chan struct{}),
 	}
 }
 
@@ -82,6 +91,18 @@ func (p *Peer) IsChoking() bool {
 
 func (p *Peer) IsInterested() bool {
 	return p.AmInteresting
+}
+
+func (p *Peer) ConnectedAt() time.Time {
+	return p.connectedAt
+}
+
+func (p *Peer) DownloadRate() uint64 {
+	return p.downloadRate
+}
+
+func (p *Peer) UploadRate() uint64 {
+	return p.uploadRate
 }
 
 func (p *Peer) Choking() bool {
@@ -139,6 +160,14 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			inbox <- PeerMessage{p, mess}
 		}
 	}
+}
+
+func (p *Peer) CalculateStats() {
+	p.uploadRate = p.Uploaded / uint64(time.Since(p.lastRateUpdated).Milliseconds())
+	p.downloadRate = p.Downloaded / uint64(time.Since(p.lastRateUpdated).Milliseconds())
+	p.lastRateUpdated = time.Now()
+	p.Downloaded = 0
+	p.Uploaded = 0
 }
 
 func (p *Peer) Stop() {

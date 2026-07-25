@@ -20,7 +20,7 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 		return
 	}
 	t.logger.Debug("torrent -> peer connected to us", "Peer", string(res.PeerID[:]), "Peer Count", len(t.peers))
-	pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
+	pe := peer.New(t.logger, time.Now(), res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe] = struct{}{}
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 	pe.Bitfield(t.bitset.Bytes())
@@ -33,7 +33,7 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 		return
 	}
 	t.logger.Debug("torrent -> connected to peer", "Peer", string(res.PeerID[:]), "Peer Count", len(t.peers))
-	pe := peer.New(t.logger, res.Conn, res.PeerID, res.Extensions)
+	pe := peer.New(t.logger, time.Now(), res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe] = struct{}{}
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 	pe.Bitfield(t.bitset.Bytes())

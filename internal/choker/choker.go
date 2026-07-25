@@ -123,6 +123,9 @@ func (c *Choker) Seeding() {
 }
 
 func (c *Choker) betterThanWorst(peers []Peer, p Peer) bool {
+	if len(peers) == 0 {
+		return true
+	}
 	if c.seeding.Load() {
 		if p.DownloadRate() > slices.MinFunc(peers, func(e1, e2 Peer) int { return c.compare(e1, e2) }).DownloadRate() {
 			return true
