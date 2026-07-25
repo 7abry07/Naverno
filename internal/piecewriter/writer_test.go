@@ -15,6 +15,7 @@ func TestWriter(t *testing.T) {
 	res := make(chan *piecewriter.PieceWriter)
 
 	go w.Run(res)
+	defer w.Close()
 
 	testTime := time.NewTimer(time.Second * 2)
 	select {
