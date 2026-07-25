@@ -50,18 +50,6 @@ func (c *Choker) Run(events chan any) {
 	}
 }
 
-func (c *Choker) Downloaders() []Peer {
-	return c.downloaders
-}
-
-func (c *Choker) Uninterested() []Peer {
-	return c.uninterested
-}
-
-func (c *Choker) Optimistic() Peer {
-	return c.optimistic
-}
-
 func (c *Choker) PickPeers(peers []Peer) []Peer {
 	peers_ := slices.Clone(peers)
 	result := []Peer{}
@@ -82,7 +70,7 @@ func (c *Choker) PickPeers(peers []Peer) []Peer {
 	result = append(result, interested[0:min(len(interested), 4)]...)
 	c.downloaders = append(c.downloaders, result...)
 	for _, p := range uninterested {
-		if c.betterThanWorst(uninterested, p) {
+		if c.betterThanWorst(c.downloaders, p) {
 			c.uninterested = append(c.uninterested, p)
 			result = append(result, p)
 		}
@@ -96,6 +84,7 @@ func (c *Choker) PickOptimistic(peers []Peer) Peer {
 	slices.SortFunc(peers_, func(e1, e2 Peer) int { return e1.ConnectedAt().Compare(e2.ConnectedAt()) })
 	for _, p := range peers_ {
 		if p == c.optimistic ||
+			!p.IsInterested() ||
 			slices.Contains(c.downloaders, p) ||
 			slices.Contains(c.uninterested, p) {
 			continue
@@ -106,20 +95,22 @@ func (c *Choker) PickOptimistic(peers []Peer) Peer {
 	return nil
 }
 
-func (c *Choker) OnInterested(p Peer) {
-	if slices.Contains(c.uninterested, p) {
-		idx := slices.Index(c.uninterested, p)
-		c.uninterested = slices.Delete(c.uninterested, idx, idx+1)
-
-		if len(c.downloaders) < 4 {
-			c.downloaders = append(c.downloaders, p)
-			return
-		}
-
-		worst := slices.MinFunc(c.downloaders, func(e1, e2 Peer) int { return c.compare(e1, e2) })
-		idx = slices.Index(c.downloaders, worst)
-		c.downloaders[idx] = p
+func (c *Choker) OnInterested(p Peer) Peer {
+	idx := slices.Index(c.uninterested, p)
+	if idx == -1 {
+		return nil
 	}
+
+	c.uninterested = slices.Delete(c.uninterested, idx, idx+1)
+	if len(c.downloaders) < 4 {
+		c.downloaders = append(c.downloaders, p)
+		return nil
+	}
+
+	worst := slices.MinFunc(c.downloaders, func(e1, e2 Peer) int { return c.compare(e2, e1) })
+	idx = slices.Index(c.downloaders, worst)
+	c.downloaders[idx] = p
+	return worst
 }
 
 func (c *Choker) Close() {
@@ -146,7 +137,7 @@ func (c *Choker) betterThanWorst(peers []Peer, p Peer) bool {
 
 func (c *Choker) compare(e1, e2 Peer) int {
 	if c.seeding.Load() {
-		return cmp.Compare(e1.DownloadRate(), e2.DownloadRate())
+		return cmp.Compare(e2.DownloadRate(), e1.DownloadRate())
 	}
-	return cmp.Compare(e1.UploadRate(), e2.UploadRate())
+	return cmp.Compare(e2.UploadRate(), e1.UploadRate())
 }
