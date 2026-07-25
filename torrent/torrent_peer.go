@@ -52,7 +52,7 @@ func (t *Torrent) handleChokerEvent(ev any) {
 			picked[i] = p.(*peer.Peer)
 		}
 
-		t.logger.Info("choker -> unchoke event", "Peers", len(picked))
+		t.logger.Debug("choker -> unchoke event", "Peers", len(picked))
 
 		for _, p := range peers {
 			if slices.Contains(picked, p) {
@@ -71,7 +71,7 @@ func (t *Torrent) handleChokerEvent(ev any) {
 			return
 		}
 		p := optimistic.(*peer.Peer)
-		t.logger.Info("choker -> optimistic unchoke event", "Peer", string(p.ID[:]))
+		t.logger.Debug("choker -> optimistic unchoke event", "Peer", string(p.ID[:]))
 		p.Unchoke()
 	}
 }
