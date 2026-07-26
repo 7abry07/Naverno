@@ -1,4 +1,4 @@
-package filestorage
+package defaultstorage
 
 import (
 	"Naverno/internal/metadata"
@@ -15,13 +15,13 @@ type File struct {
 	Offset uint64
 }
 
-type FileStorage struct {
+type DefaultStorage struct {
 	logger *slog.Logger
 	files  []File
 	path   string
 }
 
-func New(logger *slog.Logger, files []metadata.File, path string) *FileStorage {
+func New(logger *slog.Logger, files []metadata.File, path string) *DefaultStorage {
 	if logger == nil {
 		panic("passed nil logger to file storage")
 	}
@@ -34,14 +34,14 @@ func New(logger *slog.Logger, files []metadata.File, path string) *FileStorage {
 	}
 
 	slices.SortFunc(offs, func(e1, e2 File) int { return cmp.Compare(e1.Offset, e2.Offset) })
-	return &FileStorage{
+	return &DefaultStorage{
 		logger: logger,
 		files:  offs,
 		path:   path,
 	}
 }
 
-func (s *FileStorage) Write(off uint64, data []byte) error {
+func (s *DefaultStorage) Write(off uint64, data []byte) error {
 	for _, f := range s.files {
 		if len(data) == 0 {
 			break
@@ -76,7 +76,7 @@ func (s *FileStorage) Write(off uint64, data []byte) error {
 	return nil
 }
 
-func (s *FileStorage) Read(off uint64, length uint32) ([]byte, error) {
+func (s *DefaultStorage) Read(off uint64, length uint32) ([]byte, error) {
 	readData := []byte{}
 
 	for _, f := range s.files {

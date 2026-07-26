@@ -1,8 +1,8 @@
-package filestorage_test
+package defaultstorage_test
 
 import (
 	"Naverno/internal/metadata"
-	"Naverno/internal/storage/filestorage"
+	"Naverno/internal/storage/defaultstorage"
 	"bytes"
 	"io"
 	"log/slog"
@@ -23,7 +23,7 @@ func TestWrite(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, files[1].Path), make([]byte, 5), 0644)
 	os.WriteFile(filepath.Join(dir, files[2].Path), make([]byte, 5), 0644)
 
-	s := filestorage.New(slog.New(slog.NewTextHandler(io.Discard, nil)), files, dir)
+	s := defaultstorage.New(slog.New(slog.NewTextHandler(io.Discard, nil)), files, dir)
 
 	writeData := make([]byte, 7)
 	copy(writeData, []byte("melodye"))
