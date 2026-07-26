@@ -18,7 +18,7 @@ type RequestHandler struct {
 	doneC  chan struct{}
 }
 
-func New(requester [20]byte, storage storage.Storage, piece *piece.Piece, req peerprotocol.Request) *RequestHandler {
+func New(storage storage.Storage, requester [20]byte, piece *piece.Piece, req peerprotocol.Request) *RequestHandler {
 	return &RequestHandler{
 		Requester: requester,
 		Request:   req,

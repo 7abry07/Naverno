@@ -16,7 +16,7 @@ type PieceWriter struct {
 	doneC  chan struct{}
 }
 
-func New(p *piece.Piece, begin uint32, s storage.Storage, data []byte) *PieceWriter {
+func New(s storage.Storage, p *piece.Piece, begin uint32, data []byte) *PieceWriter {
 	return &PieceWriter{
 		Piece:   p,
 		Begin:   begin,

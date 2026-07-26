@@ -30,28 +30,26 @@ type Torrent struct {
 	pid        [20]byte
 	extensions [8]byte
 	port       uint16
-
 	downloaded int64
 	uploaded   int64
 	left       int64
 
-	session            *Session
-	storage            storage.Storage
-	picker             picker.Picker
-	choker             *choker.Choker
-	pieces             []*piece.Piece
-	bitset             bitfield.Bitfield
-	logger             *slog.Logger
-	meta               *metadata.Metadata
-	announcer          *announcer.Announcer
-	peers              map[[20]byte]*peer.Peer
-	outgoing           map[*handshaker.OutgoingHandshaker]struct{}
-	writers            map[*piece.Piece]*piecewriter.PieceWriter
-	hashers            map[*piece.Piece]*hashchecker.HashChecker
-	requestHandlers    map[peerprotocol.Request]*requesthandler.RequestHandler
-	downloaders        map[*peer.Peer]*piecedownloader.PieceDownloader
-	stalledDownloaders map[*piece.Piece]*piecedownloader.PieceDownloader
-
+	session                *Session
+	storage                storage.Storage
+	picker                 picker.Picker
+	choker                 *choker.Choker
+	pieces                 []*piece.Piece
+	bitset                 bitfield.Bitfield
+	logger                 *slog.Logger
+	meta                   *metadata.Metadata
+	announcer              *announcer.Announcer
+	peers                  map[[20]byte]*peer.Peer
+	outgoing               map[*handshaker.OutgoingHandshaker]struct{}
+	writers                map[*piece.Piece]*piecewriter.PieceWriter
+	hashers                map[*piece.Piece]*hashchecker.HashChecker
+	requestHandlers        map[peerprotocol.Request]*requesthandler.RequestHandler
+	downloaders            map[*peer.Peer]*piecedownloader.PieceDownloader
+	stalledDownloaders     map[*piece.Piece]*piecedownloader.PieceDownloader
 	newConns               chan net.Conn
 	disconnectedPeers      chan *peer.Peer
 	peerMessages           chan peer.PeerMessage
