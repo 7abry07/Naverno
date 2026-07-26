@@ -57,7 +57,7 @@ func (t *Torrent) pieceCompleted(p *piece.Piece) {
 }
 
 func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {
-	writer := piecewriter.New(p, begin, t.storage, data)
+	writer := piecewriter.New(t.storage, p, begin, data)
 	t.writers[p] = writer
 	go writer.Run(t.writersResults)
 	t.logger.Debug("torrent -> started piece writer", "Piece", p.Idx, "Block", begin)

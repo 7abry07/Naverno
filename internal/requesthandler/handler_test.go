@@ -12,7 +12,7 @@ import (
 func TestHandler(t *testing.T) {
 	s := storage.NewMockStorage()
 	p := piece.NewPiece(0, 10, 0, [20]byte{})
-	h := requesthandler.New([20]byte{1}, s, p, peerprotocol.Request{Idx: p.Idx, Begin: 0, Length: 5})
+	h := requesthandler.New(s, [20]byte{1}, p, peerprotocol.Request{Idx: p.Idx, Begin: 0, Length: 5})
 	res := make(chan *requesthandler.RequestHandler)
 
 	go h.Run(res)

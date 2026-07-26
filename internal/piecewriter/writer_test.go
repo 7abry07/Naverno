@@ -11,7 +11,7 @@ import (
 func TestWriter(t *testing.T) {
 	s := storage.NewMockStorage()
 	p := piece.NewPiece(4, 10, 30, [20]byte{})
-	w := piecewriter.New(p, 10, s, make([]byte, 10))
+	w := piecewriter.New(s, p, 10, make([]byte, 10))
 	res := make(chan *piecewriter.PieceWriter)
 
 	go w.Run(res)

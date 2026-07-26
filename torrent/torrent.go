@@ -38,11 +38,11 @@ type Torrent struct {
 	storage                storage.Storage
 	picker                 picker.Picker
 	choker                 *choker.Choker
-	pieces                 []*piece.Piece
 	bitset                 bitfield.Bitfield
 	logger                 *slog.Logger
 	meta                   *metadata.Metadata
 	announcer              *announcer.Announcer
+	pieces                 []*piece.Piece
 	peers                  map[[20]byte]*peer.Peer
 	outgoing               map[*handshaker.OutgoingHandshaker]struct{}
 	writers                map[*piece.Piece]*piecewriter.PieceWriter
