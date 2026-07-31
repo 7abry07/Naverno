@@ -36,7 +36,7 @@ func (c *HashChecker) Run(result chan<- *HashChecker) {
 		}
 	}()
 
-	data, err := c.storage.Read(c.Piece.Offset, c.Piece.Size)
+	data, err := c.storage.Read(c.Piece.Offset, uint64(c.Piece.Size))
 	if err != nil {
 		c.Err = err
 		return

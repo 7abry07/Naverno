@@ -9,6 +9,6 @@ func NewMockStorage() *MockStorage {
 func (s *MockStorage) Write(off uint64, data []byte) error {
 	return nil
 }
-func (s *MockStorage) Read(off uint64, length uint32) ([]byte, error) {
+func (s *MockStorage) Read(off uint64, length uint64) ([]byte, error) {
 	return make([]byte, length), nil
 }

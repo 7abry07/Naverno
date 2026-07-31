@@ -43,14 +43,12 @@ func New(logger *slog.Logger, files []metadata.File, path string) *DefaultStorag
 
 func (s *DefaultStorage) Write(off uint64, data []byte) error {
 	for _, f := range s.files {
-		if len(data) == 0 {
-			break
-		}
-		if off >= f.Offset {
+		fileEnd := f.Offset + uint64(f.Length)
+		if off >= f.Offset && off < fileEnd {
 			fileOff := off - f.Offset
 			writeLen := min(len(data), int(uint64(f.Length)-fileOff))
 			if writeLen == 0 {
-				continue
+				break
 			}
 			err := os.MkdirAll(s.path, 0755)
 			if err != nil {
@@ -76,18 +74,16 @@ func (s *DefaultStorage) Write(off uint64, data []byte) error {
 	return nil
 }
 
-func (s *DefaultStorage) Read(off uint64, length uint32) ([]byte, error) {
+func (s *DefaultStorage) Read(off uint64, length uint64) ([]byte, error) {
 	readData := []byte{}
 
 	for _, f := range s.files {
-		if length == 0 {
-			break
-		}
-		if off >= f.Offset {
+		fileEnd := f.Offset + uint64(f.Length)
+		if off >= f.Offset && off < fileEnd {
 			fileOff := off - f.Offset
-			readLen := min(length, uint32(uint64(f.Length)-fileOff))
+			readLen := min(length, uint64(f.Length)-fileOff)
 			if readLen == 0 {
-				continue
+				break
 			}
 			buf := make([]byte, readLen)
 			err := os.MkdirAll(s.path, 0755)

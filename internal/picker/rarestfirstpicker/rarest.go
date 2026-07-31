@@ -37,7 +37,7 @@ func (p *RarestFirstPicker) Pick(peerPieces *bitfield.Bitfield) (uint32, bool) {
 
 	slices.SortFunc(pickable, func(e1, e2 uint32) int { return cmp.Compare(p.availability[e1], p.availability[e2]) })
 
-	previusAvailabilty := p.availability[0]
+	previusAvailabilty := p.availability[pickable[0]]
 	for _, idx := range pickable {
 		if p.availability[idx] > previusAvailabilty {
 			break
