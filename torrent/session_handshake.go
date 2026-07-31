@@ -39,14 +39,17 @@ func (s *Session) stopHandshakes() {
 }
 
 func (s *Session) listen() {
-	conn, err := s.listener.Accept()
-	if err != nil {
-		select {
-		case <-s.closeC:
-		default:
-			close(s.listenErr)
+
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			select {
+			case <-s.closeC:
+			default:
+				close(s.listenErr)
+			}
+			return
 		}
-		return
+		s.incomingConns <- conn
 	}
-	s.incomingConns <- conn
 }

@@ -12,14 +12,9 @@ import (
 )
 
 func main() {
-	// logfile, err := os.OpenFile("/home/fabry/Downloads/logfile.txt", os.O_CREATE|os.O_RDWR, 0655)
-	// if err != nil {
-	// 	panic(err)
-	// }
 	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{Level: slog.LevelInfo}))
-
-	sess := torrent.StartSession(logger, "/home/fabry/Downloads")
-	_, err := sess.NewTorrentFromFile("/home/fabry/Downloads/drstone.torrent")
+	sess := torrent.StartSession(logger)
+	_, err := sess.AddTorrentFromFile("/home/fabry/Downloads/drstone.torrent", "/home/fabry/Downloads")
 	if err != nil {
 		panic(err)
 	}

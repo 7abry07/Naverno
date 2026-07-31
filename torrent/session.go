@@ -12,7 +12,6 @@ import (
 )
 
 type Session struct {
-	currentTid uint32
 	pid        [20]byte
 	port       uint16
 	extensions [8]byte
@@ -20,7 +19,6 @@ type Session struct {
 	listener       net.Listener
 	trackerManager *trackermanager.TrackerManager
 	logger         *slog.Logger
-	path           string
 	torrents       map[[20]byte]*Torrent
 	torrentsMut    sync.Mutex
 	incoming       []*handshaker.IncomingHandshaker
@@ -35,7 +33,7 @@ type Session struct {
 	doneC     chan struct{}
 }
 
-func StartSession(logger *slog.Logger, downloadPath string) *Session {
+func StartSession(logger *slog.Logger) *Session {
 	if logger == nil {
 		panic("cannot pass nil logger to session")
 	}
@@ -54,11 +52,9 @@ func StartSession(logger *slog.Logger, downloadPath string) *Session {
 
 	s := Session{
 		logger:          logger,
-		path:            downloadPath,
 		listener:        listener,
 		torrents:        make(map[[20]byte]*Torrent),
 		port:            uint16(port),
-		currentTid:      0,
 		pid:             peer.GenerateRandomID(),
 		extensions:      [8]byte{},
 		trackerManager:  trackermanager.New(),

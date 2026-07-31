@@ -25,8 +25,8 @@ func (s *Session) handleRemoveTorrent(t *Torrent) {
 	delete(s.torrents, t.meta.Infohash)
 }
 
-func (s *Session) NewTorrentFromFile(path string) (*Torrent, error) {
-	file, err := os.Open(path)
+func (s *Session) AddTorrentFromFile(torrFile string, savePath string) (*Torrent, error) {
+	file, err := os.Open(torrFile)
 	if err != nil {
 		return nil, fmt.Errorf("error opening torrent file -> %v", err)
 	}
@@ -36,12 +36,11 @@ func (s *Session) NewTorrentFromFile(path string) (*Torrent, error) {
 		return nil, fmt.Errorf("error creating torrent metadata -> %v", err)
 	}
 
-	t, err := newTorrentFromMetadata(s, s.currentTid, meta)
+	t, err := newTorrentFromMetadata(s, meta, savePath)
 	if err != nil {
 		return nil, err
 	}
 
-	s.currentTid++
 	s.newTorrent <- t
 
 	return t, nil

@@ -18,6 +18,7 @@ import (
 	"Naverno/internal/storage"
 	"Naverno/internal/storage/defaultstorage"
 	"Naverno/internal/tracker"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -26,13 +27,14 @@ import (
 )
 
 type Torrent struct {
-	id         uint32
+	id         []byte
 	pid        [20]byte
 	extensions [8]byte
 	port       uint16
 	downloaded int64
 	uploaded   int64
 	left       int64
+	savePath   string
 
 	session                *Session
 	storage                storage.Storage
@@ -66,12 +68,13 @@ type Torrent struct {
 	doneC  chan struct{}
 }
 
-func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (*Torrent, error) {
+func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath string) (*Torrent, error) {
 	pieces := piece.NewPieces(meta)
 	t := Torrent{
 		session:                sess,
 		meta:                   meta,
-		logger:                 sess.logger.With("TorrentID", id),
+		logger:                 sess.logger.With("TorrentID", fmt.Sprintf("%X", meta.Infohash[:4])),
+		savePath:               savePath,
 		peers:                  make(map[[20]byte]*peer.Peer),
 		outgoing:               make(map[*handshaker.OutgoingHandshaker]struct{}),
 		downloaders:            make(map[*peer.Peer]*piecedownloader.PieceDownloader),
@@ -101,14 +104,14 @@ func newTorrentFromMetadata(sess *Session, id uint32, meta *metadata.Metadata) (
 		closeC:                 make(chan struct{}),
 		doneC:                  make(chan struct{}),
 		pid:                    sess.pid,
-		id:                     id,
+		id:                     meta.Infohash[:4],
 		extensions:             sess.extensions,
 	}
 
 	if len(meta.Files) > 1 {
-		t.storage = defaultstorage.New(t.logger, meta.Files, filepath.Join(sess.path, meta.Name))
+		t.storage = defaultstorage.New(t.logger, meta.Files, filepath.Join(t.savePath, meta.Name))
 	} else {
-		t.storage = defaultstorage.New(t.logger, meta.Files, sess.path)
+		t.storage = defaultstorage.New(t.logger, meta.Files, t.savePath)
 	}
 
 	trackers := [][]tracker.Tracker{}
