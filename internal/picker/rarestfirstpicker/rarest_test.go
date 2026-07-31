@@ -9,10 +9,13 @@ import (
 
 func TestRarestFirst(t *testing.T) {
 
-	p := rarestfirstpicker.New(20)
-	p.OnPeerHave(5)
+	p := rarestfirstpicker.New(5)
+	p.OnPeerHave(0)
+	p.OnPeerHave(1)
+	p.OnPeerHave(2)
+	p.OnPeerHave(3)
 
-	peerPieces := bitfield.New(20)
+	peerPieces := bitfield.New(5)
 	peerPieces.SetAll()
 
 	pe := picker.NewMockPeer(peerPieces)
@@ -22,7 +25,7 @@ func TestRarestFirst(t *testing.T) {
 		t.Fatal("Pick() failed")
 	}
 
-	if picked != 5 {
-		t.Errorf("should have picked piece with index %v, picked %v instead", 5, picked)
+	if picked != 4 {
+		t.Errorf("should have picked piece with index %v, picked %v instead", 4, picked)
 	}
 }

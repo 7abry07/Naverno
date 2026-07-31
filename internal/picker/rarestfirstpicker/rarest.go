@@ -34,11 +34,11 @@ func (p *RarestFirstPicker) Pick(pe picker.Peer) (uint32, bool) {
 		return 0, false
 	}
 
-	slices.SortFunc(pickable, func(e1, e2 uint32) int { return cmp.Compare(p.availability[e2], p.availability[e1]) })
+	slices.SortFunc(pickable, func(e1, e2 uint32) int { return cmp.Compare(p.availability[e1], p.availability[e2]) })
 
 	previusAvailabilty := p.availability[0]
 	for _, idx := range pickable {
-		if p.availability[idx] < previusAvailabilty {
+		if p.availability[idx] > previusAvailabilty {
 			break
 		}
 		rarest = append(rarest, idx)
