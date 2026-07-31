@@ -18,14 +18,14 @@ func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
 	}
 	if !res.Matches {
 		t.logger.Warn("torrent -> hash doesn't match", "Piece", res.Piece.Idx)
-		t.picker.SetFree(res.Piece)
+		t.picker.SetFree(res.Piece.Idx)
 		return
 	}
 
 	t.downloaded += int64(res.Piece.Size)
 	t.left = t.meta.Length - t.downloaded
 	t.bitset.Set(uint(res.Piece.Idx))
-	t.picker.OnPieceCompleted(res.Piece)
+	t.picker.OnPieceCompleted(res.Piece.Idx)
 	for _, pe := range t.peers {
 		pe.Have(res.Piece.Idx)
 	}
@@ -74,13 +74,13 @@ func (t *Torrent) download(pe *peer.Peer) {
 		return
 	}
 
-	picked := t.picker.Pick(pe)
-	if picked == nil {
+	picked, ok := t.picker.Pick(pe)
+	if !ok {
 		pe.IsInteresting = false
 		return
 	}
 
-	downloader, ok = t.stalledDownloaders[picked]
+	downloader, ok = t.stalledDownloaders[t.pieces[picked]]
 	if ok {
 		delete(t.stalledDownloaders, downloader.Piece)
 		downloader.Set(pe)
@@ -89,11 +89,11 @@ func (t *Torrent) download(pe *peer.Peer) {
 		downloader.RequestBlocks(10)
 		return
 	}
-	t.downloaders[pe] = piecedownloader.NewPieceDownloader(t.logger, picked)
+	t.downloaders[pe] = piecedownloader.NewPieceDownloader(t.logger, t.pieces[picked])
 	downloader = t.downloaders[pe]
 	downloader.Set(pe)
 	downloader.RequestBlocks(10)
-	t.logger.Debug("torrent -> started downloader for piece", "Piece", picked.Idx, "PeerID", string(pe.ID[:]))
+	t.logger.Debug("torrent -> started downloader for piece", "Piece", picked, "PeerID", string(pe.ID[:]))
 }
 
 func (t *Torrent) closeWriters() {

@@ -1,13 +1,11 @@
 package picker
 
-import "Naverno/internal/piece"
-
 type Picker interface {
-	Pick(pe Peer) *piece.Piece
+	Pick(pe Peer) (uint32, bool)
 
-	OnPieceCompleted(p *piece.Piece)
-	OnPeerHave(p *piece.Piece)
-	SetFree(p *piece.Piece)
+	OnPieceCompleted(idx uint32)
+	OnPeerHave(idx uint32)
+	SetFree(idx uint32)
 
 	OnPeerBitfield(pe Peer)
 	OnPeerDisconnected(pe Peer)

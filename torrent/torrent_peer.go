@@ -15,7 +15,7 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 	downloader, ok := t.downloaders[p]
 	if ok {
 		t.stalledDownloaders[downloader.Piece] = downloader
-		t.picker.SetFree(downloader.Piece)
+		t.picker.SetFree(downloader.Piece.Idx)
 		downloader.OnPeerDisconnected()
 		t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece.Idx)
 	}

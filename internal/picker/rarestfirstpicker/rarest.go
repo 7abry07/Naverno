@@ -2,63 +2,77 @@ package rarestfirstpicker
 
 import (
 	"Naverno/internal/picker"
-	"Naverno/internal/piece"
 	"cmp"
 	"math/rand/v2"
 	"slices"
 )
 
 type RarestFirstPicker struct {
-	pieces []Piece
+	pieces       []picker.PieceState
+	availability []uint32
 }
 
-func New(pieces []*piece.Piece) *RarestFirstPicker {
-	pickerPieces := []Piece{}
-	for _, p := range pieces {
-		pickerPieces = append(pickerPieces, Piece{Piece: picker.Piece{Piece: p, State: picker.PIECE_FREE}, availability: 0})
+func New(pieces uint32) *RarestFirstPicker {
+	pickerPieces := []picker.PieceState{}
+	availability := make([]uint32, pieces)
+	for range pieces {
+		pickerPieces = append(pickerPieces, picker.PIECE_FREE)
 	}
-	return &RarestFirstPicker{pieces: pickerPieces}
+	return &RarestFirstPicker{pieces: pickerPieces, availability: availability}
 }
 
-func (p *RarestFirstPicker) Pick(pe picker.Peer) *piece.Piece {
-	pickable := []Piece{}
+func (p *RarestFirstPicker) Pick(pe picker.Peer) (uint32, bool) {
+	pickable := []uint32{}
+	rarest := []uint32{}
 	for set := range pe.GetPieces().EachSet() {
-		if p.pieces[set].State == picker.PIECE_FREE {
-			pickable = append(pickable, p.pieces[set])
+		if p.pieces[set] == picker.PIECE_FREE {
+			pickable = append(pickable, uint32(set))
 		}
 	}
-	slices.SortFunc(pickable, func(e1, e2 Piece) int { return cmp.Compare(e1.availability, e2.availability) })
-	rarest := []Piece{}
-	previusAvailabilty := p.pieces[0].availability
-	for _, p := range pickable {
-		if p.availability < previusAvailabilty {
+
+	if len(pickable) == 0 {
+		return 0, false
+	}
+
+	slices.SortFunc(pickable, func(e1, e2 uint32) int { return cmp.Compare(p.availability[e2], p.availability[e1]) })
+
+	previusAvailabilty := p.availability[0]
+	for _, idx := range pickable {
+		if p.availability[idx] < previusAvailabilty {
 			break
 		}
-		rarest = append(rarest, p)
-		previusAvailabilty = p.availability
+		rarest = append(rarest, idx)
+		previusAvailabilty = p.availability[idx]
 	}
 
 	if len(rarest) > 1 {
 		rand.Shuffle(len(rarest), func(i, j int) { rarest[i], rarest[j] = rarest[j], rarest[i] })
 	}
-	return rarest[0].Piece.Piece
+	return rarest[0], true
 }
-func (p *RarestFirstPicker) OnPeerHave(pi *piece.Piece) {
-	p.pieces[pi.Idx].availability++
+
+func (p *RarestFirstPicker) OnPeerHave(idx uint32) {
+	p.availability[idx]++
 }
+
 func (p *RarestFirstPicker) OnPeerBitfield(pe picker.Peer) {
 	for set := range pe.GetPieces().EachSet() {
-		p.pieces[set].availability++
+		p.availability[set]++
 	}
 }
+
 func (p *RarestFirstPicker) OnPeerDisconnected(pe picker.Peer) {
 	for set := range pe.GetPieces().EachSet() {
-		p.pieces[set].availability++
+		if p.availability[set] > 0 {
+			p.availability[set]--
+		}
 	}
 }
-func (p *RarestFirstPicker) SetFree(pi *piece.Piece) {
-	p.pieces[pi.Idx].State = picker.PIECE_FREE
+
+func (p *RarestFirstPicker) SetFree(idx uint32) {
+	p.pieces[idx] = picker.PIECE_FREE
 }
-func (p *RarestFirstPicker) OnPieceCompleted(pi *piece.Piece) {
-	p.pieces[pi.Idx].State = picker.PIECE_COMPLETED
+
+func (p *RarestFirstPicker) OnPieceCompleted(idx uint32) {
+	p.pieces[idx] = picker.PIECE_COMPLETED
 }

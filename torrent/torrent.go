@@ -84,7 +84,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		downloaded:             0,
 		uploaded:               0,
 		left:                   meta.Length,
-		picker:                 sequentialpicker.New(pieces),
+		picker:                 sequentialpicker.New(uint32(meta.PieceCount)),
 		choker:                 choker.New(time.Second*10, time.Second*30),
 		pieces:                 pieces,
 		bitset:                 bitfield.New(uint32(meta.PieceCount)),

@@ -1,9 +1,5 @@
 package picker
 
-import (
-	"Naverno/internal/piece"
-)
-
 type PieceState uint8
 
 const (
@@ -11,8 +7,3 @@ const (
 	PIECE_DOWNLOADING
 	PIECE_COMPLETED
 )
-
-type Piece struct {
-	*piece.Piece
-	State PieceState
-}

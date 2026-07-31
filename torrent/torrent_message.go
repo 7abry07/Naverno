@@ -15,7 +15,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			if d, ok := t.downloaders[pe.Peer]; ok {
 				delete(t.downloaders, pe.Peer)
 				t.stalledDownloaders[d.Piece] = d
-				t.picker.SetFree(d.Piece)
+				t.picker.SetFree(d.Piece.Idx)
 				d.OnPeerChoke()
 				t.logger.Info("torrent -> downloader stalled", "Piece", d.Piece.Idx)
 			}
@@ -52,7 +52,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			if pe.Pieces.Difference(t.bitset.BitSet).Any() && !pe.IsInteresting {
 				pe.Interested()
 			}
-			t.picker.OnPeerHave(t.pieces[mess.Idx])
+			t.picker.OnPeerHave(mess.Idx)
 			t.download(pe.Peer)
 		}
 	case peerprotocol.Bitfield:

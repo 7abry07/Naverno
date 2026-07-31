@@ -4,56 +4,47 @@ import (
 	"Naverno/internal/bitfield"
 	"Naverno/internal/picker"
 	"Naverno/internal/picker/sequentialpicker"
-	"Naverno/internal/piece"
 	"testing"
 )
 
 func TestPicker(t *testing.T) {
-	pieces := make([]*piece.Piece, 20)
-	for i := range len(pieces) {
-		pieces[i] = piece.NewPiece(uint32(i), 10, 0, [20]byte{})
-	}
-	p := sequentialpicker.New(pieces)
+	p := sequentialpicker.New(20)
 
 	peerPieces := bitfield.New(20)
 	peerPieces.Set(1).Set(10)
 
 	pe := picker.NewMockPeer(peerPieces)
 
-	piece1 := p.Pick(pe)
-	if piece1 == nil {
+	piece1, ok := p.Pick(pe)
+	if !ok {
 		t.Fatal("Pick() failed")
 	}
-	if piece1.Idx != 1 {
+	if piece1 != 1 {
 		t.Errorf("expected index -> %v | got -> %v", 1, piece1)
 	}
 
-	piece2 := p.Pick(pe)
-	if piece2 == nil {
+	piece2, ok := p.Pick(pe)
+	if !ok {
 		t.Fatal("Pick() failed")
 	}
-	if piece2.Idx != 10 {
+	if piece2 != 10 {
 		t.Errorf("expected index -> %v | got -> %v", 10, piece2)
 	}
 }
 
 func TestPickerFail(t *testing.T) {
-	pieces := make([]*piece.Piece, 20)
-	for i := range len(pieces) {
-		pieces[i] = piece.NewPiece(uint32(i), 10, 0, [20]byte{})
-	}
-	p := sequentialpicker.New(pieces)
-	p.OnPieceCompleted(pieces[1])
-	p.OnPieceCompleted(pieces[10])
-	p.OnPieceCompleted(pieces[19])
+	p := sequentialpicker.New(20)
+	p.OnPieceCompleted(1)
+	p.OnPieceCompleted(10)
+	p.OnPieceCompleted(19)
 
 	peerPieces := bitfield.New(20)
 	peerPieces.Set(1).Set(10).Set(19)
 
 	pe := picker.NewMockPeer(peerPieces)
 
-	piece := p.Pick(pe)
-	if piece != nil {
+	piece, ok := p.Pick(pe)
+	if ok {
 		t.Errorf("Pick() should have failed, got -> %v", piece)
 	}
 }
