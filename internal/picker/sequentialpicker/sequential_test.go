@@ -2,7 +2,6 @@ package sequentialpicker_test
 
 import (
 	"Naverno/internal/bitfield"
-	"Naverno/internal/picker"
 	"Naverno/internal/picker/sequentialpicker"
 	"testing"
 )
@@ -13,9 +12,7 @@ func TestPicker(t *testing.T) {
 	peerPieces := bitfield.New(20)
 	peerPieces.Set(1).Set(10)
 
-	pe := picker.NewMockPeer(peerPieces)
-
-	piece1, ok := p.Pick(pe)
+	piece1, ok := p.Pick(peerPieces)
 	if !ok {
 		t.Fatal("Pick() failed")
 	}
@@ -23,7 +20,7 @@ func TestPicker(t *testing.T) {
 		t.Errorf("expected index -> %v | got -> %v", 1, piece1)
 	}
 
-	piece2, ok := p.Pick(pe)
+	piece2, ok := p.Pick(peerPieces)
 	if !ok {
 		t.Fatal("Pick() failed")
 	}
@@ -41,9 +38,7 @@ func TestPickerFail(t *testing.T) {
 	peerPieces := bitfield.New(20)
 	peerPieces.Set(1).Set(10).Set(19)
 
-	pe := picker.NewMockPeer(peerPieces)
-
-	piece, ok := p.Pick(pe)
+	piece, ok := p.Pick(peerPieces)
 	if ok {
 		t.Errorf("Pick() should have failed, got -> %v", piece)
 	}

@@ -13,21 +13,21 @@ type Bitfield struct {
 	*bitset.BitSet
 }
 
-func New(length uint32) Bitfield {
-	return Bitfield{bitset.MustNew(uint(length))}
+func New(length uint32) *Bitfield {
+	return &Bitfield{bitset.MustNew(uint(length))}
 }
 
-func From(data []byte, length uint32) (Bitfield, error) {
+func From(data []byte, length uint32) (*Bitfield, error) {
 	spareBits := uint32(len(data)*8) - length
 	for i := range spareBits {
 		if data[len(data)-1]&1<<i != 0 {
-			return Bitfield{}, fmt.Errorf("spare bits are set")
+			return nil, fmt.Errorf("spare bits are set")
 		}
 	}
 
 	minimumBits := util.Align(uint64(length), 8)
 	if len(data)*8 != int(minimumBits) {
-		return Bitfield{}, fmt.Errorf("invalid length")
+		return nil, fmt.Errorf("invalid length")
 	}
 	buf := make([]byte, minimumBits/8)
 	copy(buf, data)
@@ -44,7 +44,7 @@ func From(data []byte, length uint32) (Bitfield, error) {
 		words[i] = binary.LittleEndian.Uint64(padded[i*8:])
 	}
 
-	return Bitfield{bitset.FromWithLength(uint(length), words)}, nil
+	return &Bitfield{bitset.FromWithLength(uint(length), words)}, nil
 }
 
 func (b *Bitfield) Bytes() []byte {

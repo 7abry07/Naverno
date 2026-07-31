@@ -1,6 +1,7 @@
 package rarestfirstpicker
 
 import (
+	"Naverno/internal/bitfield"
 	"Naverno/internal/picker"
 	"cmp"
 	"math/rand/v2"
@@ -21,10 +22,10 @@ func New(pieces uint32) *RarestFirstPicker {
 	return &RarestFirstPicker{pieces: pickerPieces, availability: availability}
 }
 
-func (p *RarestFirstPicker) Pick(pe picker.Peer) (uint32, bool) {
+func (p *RarestFirstPicker) Pick(peerPieces *bitfield.Bitfield) (uint32, bool) {
 	pickable := []uint32{}
 	rarest := []uint32{}
-	for set := range pe.GetPieces().EachSet() {
+	for set := range peerPieces.EachSet() {
 		if p.pieces[set] == picker.PIECE_FREE {
 			pickable = append(pickable, uint32(set))
 		}
@@ -55,14 +56,17 @@ func (p *RarestFirstPicker) OnPeerHave(idx uint32) {
 	p.availability[idx]++
 }
 
-func (p *RarestFirstPicker) OnPeerBitfield(pe picker.Peer) {
-	for set := range pe.GetPieces().EachSet() {
+func (p *RarestFirstPicker) OnPeerBitfield(pieces *bitfield.Bitfield) {
+	for set := range pieces.EachSet() {
 		p.availability[set]++
 	}
 }
 
-func (p *RarestFirstPicker) OnPeerDisconnected(pe picker.Peer) {
-	for set := range pe.GetPieces().EachSet() {
+func (p *RarestFirstPicker) OnPeerDisconnected(pieces *bitfield.Bitfield) {
+	if pieces == nil {
+		return
+	}
+	for set := range pieces.EachSet() {
 		if p.availability[set] > 0 {
 			p.availability[set]--
 		}

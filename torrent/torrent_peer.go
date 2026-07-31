@@ -11,7 +11,7 @@ import (
 )
 
 func (t *Torrent) handleDisconnected(p *peer.Peer) {
-	t.picker.OnPeerDisconnected(p)
+	t.picker.OnPeerDisconnected(p.Pieces)
 	downloader, ok := t.downloaders[p]
 	if ok {
 		t.stalledDownloaders[downloader.Piece] = downloader

@@ -10,7 +10,8 @@ import (
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/picker"
-	"Naverno/internal/picker/sequentialpicker"
+	"Naverno/internal/picker/rarestfirstpicker"
+	// "Naverno/internal/picker/sequentialpicker"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"Naverno/internal/piecewriter"
@@ -38,7 +39,7 @@ type Torrent struct {
 	storage                storage.Storage
 	picker                 picker.Picker
 	choker                 *choker.Choker
-	bitset                 bitfield.Bitfield
+	bitset                 *bitfield.Bitfield
 	logger                 *slog.Logger
 	meta                   *metadata.Metadata
 	announcer              *announcer.Announcer
@@ -84,7 +85,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		downloaded:             0,
 		uploaded:               0,
 		left:                   meta.Length,
-		picker:                 sequentialpicker.New(uint32(meta.PieceCount)),
+		picker:                 rarestfirstpicker.New(uint32(meta.PieceCount)),
 		choker:                 choker.New(time.Second*10, time.Second*30),
 		pieces:                 pieces,
 		bitset:                 bitfield.New(uint32(meta.PieceCount)),

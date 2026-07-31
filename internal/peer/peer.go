@@ -19,7 +19,7 @@ type Peer struct {
 	IsInteresting bool
 	AmChoked      bool
 	AmInteresting bool
-	Pieces        bitfield.Bitfield
+	Pieces        *bitfield.Bitfield
 
 	connectedAt     time.Time
 	lastRateUpdated time.Time
@@ -61,7 +61,7 @@ func New(logger *slog.Logger, connectedAt time.Time, conn net.Conn, ID [20]byte,
 		IsInteresting:   false,
 		AmInteresting:   false,
 		lastRateUpdated: time.Now(),
-		Pieces:          bitfield.Bitfield{},
+		Pieces:          nil,
 		out:             writer.New(plogger, conn),
 		in:              reader.New(plogger, conn),
 		closeC:          make(chan struct{}),
@@ -71,10 +71,6 @@ func New(logger *slog.Logger, connectedAt time.Time, conn net.Conn, ID [20]byte,
 
 func (p *Peer) Addr() net.Addr {
 	return p.conn.RemoteAddr()
-}
-
-func (p *Peer) GetPieces() bitfield.Bitfield {
-	return p.Pieces
 }
 
 func (p *Peer) HasPiece(idx uint32) bool {

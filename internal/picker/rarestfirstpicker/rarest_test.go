@@ -2,7 +2,6 @@ package rarestfirstpicker_test
 
 import (
 	"Naverno/internal/bitfield"
-	"Naverno/internal/picker"
 	"Naverno/internal/picker/rarestfirstpicker"
 	"testing"
 )
@@ -18,14 +17,18 @@ func TestRarestFirst(t *testing.T) {
 	peerPieces := bitfield.New(5)
 	peerPieces.SetAll()
 
-	pe := picker.NewMockPeer(peerPieces)
-
-	picked, ok := p.Pick(pe)
+	picked, ok := p.Pick(peerPieces)
 	if !ok {
 		t.Fatal("Pick() failed")
 	}
 
 	if picked != 4 {
 		t.Errorf("should have picked piece with index %v, picked %v instead", 4, picked)
+	}
+
+	p.OnPeerDisconnected(peerPieces)
+	picked, ok = p.Pick(peerPieces)
+	if !ok {
+		t.Fatal("Pick() failed")
 	}
 }

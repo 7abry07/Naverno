@@ -1,6 +1,7 @@
 package sequentialpicker
 
 import (
+	"Naverno/internal/bitfield"
 	"Naverno/internal/picker"
 )
 
@@ -16,8 +17,8 @@ func New(pieces uint32) *SequentialPicker {
 	return &SequentialPicker{pieces: pickerPieces}
 }
 
-func (p *SequentialPicker) Pick(pe picker.Peer) (uint32, bool) {
-	for i := range pe.GetPieces().EachSet() {
+func (p *SequentialPicker) Pick(peerPieces *bitfield.Bitfield) (uint32, bool) {
+	for i := range peerPieces.EachSet() {
 		if p.pieces[i] == picker.PIECE_FREE {
 			p.pieces[i] = picker.PIECE_DOWNLOADING
 			return uint32(i), true
@@ -25,9 +26,9 @@ func (p *SequentialPicker) Pick(pe picker.Peer) (uint32, bool) {
 	}
 	return 0, false
 }
-func (p *SequentialPicker) OnPeerHave(idx uint32)             {}
-func (p *SequentialPicker) OnPeerBitfield(pe picker.Peer)     {}
-func (p *SequentialPicker) OnPeerDisconnected(pe picker.Peer) {}
+func (p *SequentialPicker) OnPeerHave(idx uint32)                        {}
+func (p *SequentialPicker) OnPeerBitfield(pieces *bitfield.Bitfield)     {}
+func (p *SequentialPicker) OnPeerDisconnected(pieces *bitfield.Bitfield) {}
 func (p *SequentialPicker) SetFree(idx uint32) {
 	p.pieces[idx] = picker.PIECE_FREE
 }

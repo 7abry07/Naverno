@@ -1,12 +1,14 @@
 package picker
 
+import "Naverno/internal/bitfield"
+
 type Picker interface {
-	Pick(pe Peer) (uint32, bool)
+	Pick(peerPieces *bitfield.Bitfield) (uint32, bool)
 
 	OnPieceCompleted(idx uint32)
 	OnPeerHave(idx uint32)
 	SetFree(idx uint32)
 
-	OnPeerBitfield(pe Peer)
-	OnPeerDisconnected(pe Peer)
+	OnPeerBitfield(pieces *bitfield.Bitfield)
+	OnPeerDisconnected(pieces *bitfield.Bitfield)
 }

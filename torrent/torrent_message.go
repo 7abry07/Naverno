@@ -39,7 +39,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Have:
 		{
-			if (pe.Pieces == bitfield.Bitfield{}) {
+			if pe.Pieces == nil {
 				pe.Pieces = bitfield.New(uint32(t.meta.PieceCount))
 			}
 			if mess.Idx > uint32(t.meta.PieceCount-1) {
@@ -57,7 +57,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Bitfield:
 		{
-			if (pe.Pieces != bitfield.Bitfield{}) {
+			if pe.Pieces != nil {
 				t.closePeer(pe.Peer)
 				return
 			}
@@ -72,7 +72,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			if data.Difference(t.bitset.BitSet).Any() && !pe.IsInteresting {
 				pe.Interested()
 			}
-			t.picker.OnPeerBitfield(pe)
+			t.picker.OnPeerBitfield(data)
 		}
 	case peerprotocol.Request:
 		{
