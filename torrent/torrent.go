@@ -11,13 +11,12 @@ import (
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/picker"
 	"Naverno/internal/picker/rarestfirstpicker"
-	// "Naverno/internal/picker/sequentialpicker"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"Naverno/internal/piecewriter"
 	"Naverno/internal/requesthandler"
 	"Naverno/internal/storage"
-	"Naverno/internal/storage/defaultstorage"
+	"Naverno/internal/storage/posixstorage"
 	"Naverno/internal/tracker"
 	"fmt"
 	"log/slog"
@@ -106,9 +105,9 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 	}
 
 	if len(meta.Files) > 1 {
-		t.storage = defaultstorage.New(t.logger, meta.Files, filepath.Join(t.savePath, meta.Name))
+		t.storage = posixstorage.New(t.logger, meta.Files, filepath.Join(t.savePath, meta.Name))
 	} else {
-		t.storage = defaultstorage.New(t.logger, meta.Files, t.savePath)
+		t.storage = posixstorage.New(t.logger, meta.Files, t.savePath)
 	}
 
 	trackers := [][]tracker.Tracker{}

@@ -1,4 +1,4 @@
-package defaultstorage
+package posixstorage
 
 import (
 	"Naverno/internal/metadata"
