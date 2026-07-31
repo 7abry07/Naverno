@@ -9,7 +9,7 @@ type SequentialPicker struct {
 	pieces []picker.Piece
 }
 
-func NewSequentialPicker(pieces []*piece.Piece) *SequentialPicker {
+func New(pieces []*piece.Piece) *SequentialPicker {
 	pickerPieces := []picker.Piece{}
 	for _, p := range pieces {
 		pickerPieces = append(pickerPieces, picker.Piece{Piece: p, State: picker.PIECE_FREE})

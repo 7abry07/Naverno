@@ -10,7 +10,7 @@ import (
 func (t *Torrent) handleNewConn(conn net.Conn) {
 	hs := handshaker.NewOutgoingHandshaker(conn)
 	t.outgoing[hs] = struct{}{}
-	go hs.Run(t.outgoingResults, t.pid, t.meta.Infohash, t.extensions, time.Second*2)
+	go hs.Run(t.outgoingResults, t.session.pid, t.meta.Infohash, t.session.extensions, time.Second*2)
 	t.logger.Debug("torrent -> started handshaker for connection", "Address", conn.RemoteAddr().String())
 }
 

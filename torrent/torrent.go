@@ -28,8 +28,6 @@ import (
 
 type Torrent struct {
 	id         []byte
-	pid        [20]byte
-	extensions [8]byte
 	port       uint16
 	downloaded int64
 	uploaded   int64
@@ -86,7 +84,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		downloaded:             0,
 		uploaded:               0,
 		left:                   meta.Length,
-		picker:                 sequentialpicker.NewSequentialPicker(pieces),
+		picker:                 sequentialpicker.New(pieces),
 		choker:                 choker.New(time.Second*10, time.Second*30),
 		pieces:                 pieces,
 		bitset:                 bitfield.New(uint32(meta.PieceCount)),
@@ -103,9 +101,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		incomingResults:        make(chan *handshaker.IncomingHandshaker),
 		closeC:                 make(chan struct{}),
 		doneC:                  make(chan struct{}),
-		pid:                    sess.pid,
 		id:                     meta.Infohash[:4],
-		extensions:             sess.extensions,
 	}
 
 	if len(meta.Files) > 1 {
@@ -120,7 +116,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		for _, url := range urls {
 			tr, err := sess.trackerManager.Get(url.String())
 			if err != nil {
-				t.logger.Warn("torrent -> couldn't get tracker implementation", "Tracker URL", url.String(), "Error", err.Error())
+				t.logger.Warn("torrent -> couldn't get tracker", "Tracker URL", url.String(), "Error", err.Error())
 				continue
 			}
 			tier = append(tier, tr)

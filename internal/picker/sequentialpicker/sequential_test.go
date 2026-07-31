@@ -13,7 +13,7 @@ func TestPicker(t *testing.T) {
 	for i := range len(pieces) {
 		pieces[i] = piece.NewPiece(uint32(i), 10, 0, [20]byte{})
 	}
-	p := sequentialpicker.NewSequentialPicker(pieces)
+	p := sequentialpicker.New(pieces)
 
 	peerPieces := bitfield.New(20)
 	peerPieces.Set(1).Set(10)
@@ -42,7 +42,7 @@ func TestPickerFail(t *testing.T) {
 	for i := range len(pieces) {
 		pieces[i] = piece.NewPiece(uint32(i), 10, 0, [20]byte{})
 	}
-	p := sequentialpicker.NewSequentialPicker(pieces)
+	p := sequentialpicker.New(pieces)
 	p.OnPieceCompleted(pieces[1])
 	p.OnPieceCompleted(pieces[10])
 	p.OnPieceCompleted(pieces[19])

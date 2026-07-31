@@ -39,7 +39,6 @@ func (s *Session) stopHandshakes() {
 }
 
 func (s *Session) listen() {
-
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
