@@ -50,11 +50,12 @@ func (s *DefaultStorage) Write(off uint64, data []byte) error {
 			if writeLen == 0 {
 				break
 			}
-			err := os.MkdirAll(s.path, 0755)
+			path := filepath.Join(s.path, f.Path)
+			err := os.MkdirAll(filepath.Dir(path), 0755)
 			if err != nil {
 				return err
 			}
-			handle, err := os.OpenFile(filepath.Join(s.path, f.Path), os.O_CREATE|os.O_WRONLY, 0644)
+			handle, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err
 			}
@@ -86,11 +87,13 @@ func (s *DefaultStorage) Read(off uint64, length uint64) ([]byte, error) {
 				break
 			}
 			buf := make([]byte, readLen)
-			err := os.MkdirAll(s.path, 0755)
+
+			path := filepath.Join(s.path, f.Path)
+			err := os.MkdirAll(filepath.Dir(path), 0755)
 			if err != nil {
 				return []byte{}, err
 			}
-			handle, err := os.OpenFile(filepath.Join(s.path, f.Path), os.O_CREATE|os.O_RDONLY, 0644)
+			handle, err := os.OpenFile(path, os.O_CREATE|os.O_RDONLY, 0644)
 			if err != nil {
 				return []byte{}, err
 			}
