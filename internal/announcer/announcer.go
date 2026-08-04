@@ -108,7 +108,7 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 			continue
 		}
 		a.announceTimer = time.NewTimer(res.Interval)
-		a.logger.Info("announcer -> announced succesfully", "Tracker URL", tr.URL(), "Reannounce In", res.Interval.Seconds())
+		a.logger.Info("announcer -> announced succesfully", "Tracker URL", tr.URL(), "Peers", len(res.Peers), "Reannounce In", res.Interval.Seconds())
 
 		tier = util.Remove(tier, tr, func(e1, e2 tracker.Tracker) bool { return e1 == e2 })
 		tier = slices.Insert(tier, 0, tr)

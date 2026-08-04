@@ -1,0 +1,215 @@
+package udptracker
+
+import (
+	"Naverno/internal/util"
+	"bytes"
+	"context"
+	"fmt"
+	"math/rand/v2"
+	"net"
+	"net/url"
+	"sync"
+	"time"
+)
+
+type Request interface {
+	Encode(uint32) []byte
+}
+
+type Connection struct {
+	*net.UDPConn
+	requests []uint32
+}
+
+type UDPTransportRequest struct {
+	ctx      context.Context
+	url      url.URL
+	request  Request
+	response chan any
+}
+
+func NewUDPTransportRequest(ctx context.Context, url url.URL, request Request) *UDPTransportRequest {
+	return &UDPTransportRequest{
+		ctx:      ctx,
+		url:      url,
+		request:  request,
+		response: make(chan any),
+	}
+}
+
+type UDPTransport struct {
+	connections    map[string]*Connection
+	pending        map[uint32]*UDPTransportRequest
+	connectionsMut sync.Mutex
+	pendingMut     sync.Mutex
+	req            chan *UDPTransportRequest
+	res            chan []byte
+
+	closeC chan struct{}
+	doneC  chan struct{}
+}
+
+func NewUDPTransport() *UDPTransport {
+	return &UDPTransport{
+		connections: make(map[string]*Connection),
+		pending:     make(map[uint32]*UDPTransportRequest),
+		req:         make(chan *UDPTransportRequest),
+		res:         make(chan []byte),
+		closeC:      make(chan struct{}),
+		doneC:       make(chan struct{}),
+	}
+}
+
+func (t *UDPTransport) Do(req *UDPTransportRequest) (any, error) {
+	t.req <- req
+	res := <-req.response
+	switch res := res.(type) {
+	case connectResponse:
+		switch req.request.(type) {
+		case connectRequest:
+			return res, nil
+		default:
+			return nil, fmt.Errorf("response-request mismatch")
+		}
+	case announceResponse:
+		switch req.request.(type) {
+		case announceRequest:
+			return res, nil
+		default:
+			return nil, fmt.Errorf("response-request mismatch")
+		}
+	case errorResponse:
+		return nil, fmt.Errorf("tracker error -> %v", res.message)
+	case error:
+		return nil, res
+	default:
+		panic("the response type is unknown")
+	}
+}
+
+func (t *UDPTransport) Run() {
+	defer close(t.doneC)
+
+	for {
+		select {
+		case <-t.closeC:
+			return
+		case r := <-t.req:
+			done := make(chan struct{})
+
+			t.connectionsMut.Lock()
+			conn, ok := t.connections[r.url.Host]
+			if !ok {
+				dialer := net.Dialer{}
+				c, err := dialer.DialContext(r.ctx, "udp", r.url.Host)
+				if err != nil {
+					r.response <- fmt.Errorf("dial error -> %v", err)
+					continue
+				}
+				conn = &Connection{UDPConn: c.(*net.UDPConn), requests: []uint32{}}
+				t.connections[r.url.Host] = conn
+				go t.readLoopConn(conn)
+			}
+
+			go func() {
+				defer conn.SetWriteDeadline(time.Time{})
+				select {
+				case <-done:
+				case <-r.ctx.Done():
+					conn.SetWriteDeadline(time.Now())
+				}
+			}()
+
+			transactionID := rand.Uint32()
+			req := r.request.Encode(transactionID)
+			err := util.WriteFull(conn, req)
+			if err != nil {
+				r.response <- err
+			}
+			t.pendingMut.Lock()
+			t.pending[transactionID] = r
+
+			close(done)
+			t.pendingMut.Unlock()
+			t.connectionsMut.Unlock()
+
+		case r := <-t.res:
+			buf := bytes.NewBuffer(r)
+			a, tid, err := getResponseInfo(buf)
+			if err != nil {
+				fmt.Printf("error -> %v", err)
+				continue
+			}
+			pending, ok := t.pending[tid]
+			if !ok {
+				continue
+			}
+			delete(t.pending, tid)
+
+			switch a {
+			case action_connect:
+				connect := connectResponse{}
+				err := connect.decode(buf)
+				if err != nil {
+					pending.response <- err
+					continue
+				}
+				pending.response <- connect
+			case action_announce:
+				ann := announceResponse{}
+				err := ann.decode(buf)
+				if err != nil {
+					pending.response <- err
+					continue
+				}
+				pending.response <- ann
+			case action_error:
+				errResp := errorResponse{}
+				err := errResp.decode(buf)
+				if err != nil {
+					pending.response <- err
+					continue
+				}
+				pending.response <- errResp
+			default:
+				pending.response <- fmt.Errorf("unrecognized action")
+				continue
+			}
+		}
+	}
+}
+
+func (t *UDPTransport) Close() {
+	close(t.closeC)
+	for _, conn := range t.connections {
+		conn.Close()
+	}
+	<-t.doneC
+}
+
+func (t *UDPTransport) readLoopConn(conn *Connection) {
+	for {
+		buf := make([]byte, 65535)
+		read, err := conn.Read(buf)
+		if err != nil {
+			t.pendingMut.Lock()
+			t.connectionsMut.Lock()
+			delete(t.connections, conn.RemoteAddr().String())
+			t.connectionsMut.Unlock()
+			conn.Close()
+			for _, r := range conn.requests {
+				pending, ok := t.pending[r]
+				if !ok {
+					panic("found pending request that wasn't pending")
+				}
+				delete(t.pending, r)
+				pending.response <- err
+			}
+			t.pendingMut.Unlock()
+			return
+		}
+
+		buf = buf[:read]
+		t.res <- buf
+	}
+}
