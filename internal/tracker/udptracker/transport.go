@@ -110,6 +110,7 @@ func (t *UDPTransport) Run() {
 				t.connections[r.url.Host] = conn
 				go t.readLoopConn(conn)
 			}
+			t.connectionsMut.Unlock()
 
 			go func() {
 				defer conn.SetWriteDeadline(time.Time{})
@@ -131,7 +132,6 @@ func (t *UDPTransport) Run() {
 
 			close(done)
 			t.pendingMut.Unlock()
-			t.connectionsMut.Unlock()
 
 		case r := <-t.res:
 			buf := bytes.NewBuffer(r)

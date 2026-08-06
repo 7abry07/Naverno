@@ -13,12 +13,6 @@ import (
 	"github.com/zeebo/bencode"
 )
 
-const (
-	maxNumwant       = 100
-	defNumwant       = 50
-	announceInterval = 1800
-)
-
 type announceResponse struct {
 	Failure  string             `bencode:"failure reason,omitempty"`
 	RetryIn  string             `bencode:"retry in,omitempty"`
@@ -34,7 +28,6 @@ type announceRequest struct {
 	Ip       netip.Addr
 	Event    string
 	Numwant  int64
-	Compact  bool
 }
 
 type HTTPServer struct {
@@ -183,7 +176,6 @@ func parseRequest(values url.Values) (announceRequest, error) {
 	}
 
 	req.Event = values.Get("event")
-	req.Compact = values.Get("compact") == "1"
 
 	if values.Get("numwant") != "" {
 		numwant, err := strconv.ParseInt(values.Get("numwant"), 10, 64)
