@@ -4,13 +4,13 @@ import (
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/piece"
 	"Naverno/internal/requesthandler"
-	"Naverno/internal/storage"
+	"Naverno/internal/storage/discardstorage"
 	"testing"
 	"time"
 )
 
 func TestHandler(t *testing.T) {
-	s := storage.NewMockStorage()
+	s := discardstorage.New()
 	p := piece.NewPiece(0, 10, 0, [20]byte{})
 	h := requesthandler.New(s, [20]byte{1}, p, peerprotocol.Request{Idx: p.Idx, Begin: 0, Length: 5})
 	res := make(chan *requesthandler.RequestHandler)

@@ -3,14 +3,14 @@ package hashchecker_test
 import (
 	"Naverno/internal/hashchecker"
 	"Naverno/internal/piece"
-	"Naverno/internal/storage"
+	"Naverno/internal/storage/discardstorage"
 	"crypto/sha1"
 	"testing"
 	"time"
 )
 
 func TestCheck(t *testing.T) {
-	s := storage.NewMockStorage()
+	s := discardstorage.New()
 	p := piece.NewPiece(4, 10, 30, [20]byte{0})
 	p.Hash = sha1.Sum(make([]byte, p.Size))
 	w := hashchecker.New(s, p)
