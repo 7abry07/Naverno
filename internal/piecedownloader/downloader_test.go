@@ -1,6 +1,7 @@
 package piecedownloader_test
 
 import (
+	"Naverno/internal/peerprotocol"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"io"
@@ -8,11 +9,33 @@ import (
 	"testing"
 )
 
+type MockPeer struct {
+	requests []peerprotocol.Request
+}
+
+func NewMockPeer() *MockPeer {
+	return &MockPeer{requests: []peerprotocol.Request{}}
+}
+
+func (pe *MockPeer) GetPieces() []peerprotocol.Piece {
+	res := []peerprotocol.Piece{}
+	for _, r := range pe.requests {
+		res = append(res, peerprotocol.Piece{Idx: r.Idx, Begin: r.Begin, Data: make([]byte, r.Length)})
+	}
+
+	pe.requests = []peerprotocol.Request{}
+	return res
+}
+
+func (pe *MockPeer) Request(idx, begin, length uint32) {
+	pe.requests = append(pe.requests, peerprotocol.Request{Idx: idx, Begin: begin, Length: length})
+}
+
 func TestDownloader(t *testing.T) {
 	p := piece.NewPiece(5, piece.BlockSize*5, 0, [20]byte{})
 
 	d := piecedownloader.NewPieceDownloader(slog.New(slog.NewTextHandler(io.Discard, nil)), p)
-	pe := piecedownloader.NewMockPeer()
+	pe := NewMockPeer()
 
 	d.Set(pe)
 	d.RequestBlocks(3)
