@@ -73,16 +73,8 @@ func (p *Peer) Addr() net.Addr {
 	return p.conn.RemoteAddr()
 }
 
-func (p *Peer) HasPiece(idx uint32) bool {
-	return p.Pieces.Test(uint(idx))
-}
-
 func (p *Peer) SetPiece(idx uint32) {
 	p.Pieces.Set(uint(idx))
-}
-
-func (p *Peer) IsChoking() bool {
-	return p.AmChoked
 }
 
 func (p *Peer) IsInterested() bool {
@@ -99,14 +91,6 @@ func (p *Peer) DownloadRate() uint64 {
 
 func (p *Peer) UploadRate() uint64 {
 	return p.uploadRate
-}
-
-func (p *Peer) Choking() bool {
-	return p.IsChoked
-}
-
-func (p *Peer) Interested() bool {
-	return p.IsInteresting
 }
 
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
