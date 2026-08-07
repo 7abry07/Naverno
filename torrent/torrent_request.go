@@ -21,5 +21,6 @@ func (t *Torrent) handleRequestResult(res *requesthandler.RequestHandler) {
 		return
 	}
 	p.Piece(res.Request.Idx, res.Request.Begin, res.Data)
+	p.UpdateStats(0, uint64(len(res.Data)))
 	t.logger.Error("torrent -> request data sent", "Request", fmt.Sprintf("(%v, %v, %v)", res.Request.Idx, res.Request.Begin, len(res.Data)))
 }

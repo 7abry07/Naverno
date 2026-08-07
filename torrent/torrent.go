@@ -134,8 +134,6 @@ func (t *Torrent) run() {
 	go t.announcer.Run(t.torrentAnnounce, t.peersC)
 	go t.choker.Run(t.chokerEvents)
 
-	peerStatsTicker := time.NewTicker(time.Second)
-
 	for {
 		select {
 		case <-t.closeC:
@@ -146,10 +144,6 @@ func (t *Torrent) run() {
 			t.closeHashers()
 			t.choker.Close()
 			return
-		case <-peerStatsTicker.C:
-			for _, p := range t.peers {
-				p.CalculateStats(time.Now())
-			}
 		case ev := <-t.chokerEvents:
 			t.handleChokerEvent(ev)
 		case conn := <-t.newConns:

@@ -7,10 +7,12 @@ import (
 	"Naverno/internal/peerprotocol"
 	"log/slog"
 	"net"
+	"sync"
 	"time"
 )
 
 type Peer struct {
+	conn   net.Conn
 	logger *slog.Logger
 
 	ID            [20]byte
@@ -23,14 +25,14 @@ type Peer struct {
 
 	connectedAt     time.Time
 	lastRateUpdated time.Time
-	Downloaded      uint64
-	Uploaded        uint64
+	downloaded      uint64
+	uploaded        uint64
 	downloadRate    uint64
 	uploadRate      uint64
+	statsMut        sync.Mutex
 
-	conn net.Conn
-	out  *writer.Writer
-	in   *reader.Reader
+	out *writer.Writer
+	in  *reader.Reader
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -86,10 +88,14 @@ func (p *Peer) ConnectedAt() time.Time {
 }
 
 func (p *Peer) DownloadRate() uint64 {
+	p.statsMut.Lock()
+	defer p.statsMut.Unlock()
 	return p.downloadRate
 }
 
 func (p *Peer) UploadRate() uint64 {
+	p.statsMut.Lock()
+	defer p.statsMut.Unlock()
 	return p.uploadRate
 }
 
@@ -101,6 +107,7 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 
 	peerTimeout := time.NewTimer(time.Minute * 3)
 	selfTimeout := time.NewTicker(time.Minute)
+	statsTick := time.NewTicker(time.Second)
 
 	for {
 		select {
@@ -115,6 +122,14 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			case <-p.closeC:
 			}
 			return
+		case <-statsTick.C:
+			p.lastRateUpdated = time.Now()
+			p.statsMut.Lock()
+			p.uploadRate = p.uploaded / uint64(time.Second)
+			p.downloadRate = p.downloaded / uint64(time.Second)
+			p.downloaded = 0
+			p.uploaded = 0
+			p.statsMut.Unlock()
 		case err := <-p.in.Error():
 			p.logger.Debug("peer -> read error", "Error", err.Error())
 			select {
@@ -146,12 +161,11 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 	}
 }
 
-func (p *Peer) CalculateStats(t time.Time) {
-	p.uploadRate = p.Uploaded / uint64(time.Since(p.lastRateUpdated).Milliseconds())
-	p.downloadRate = p.Downloaded / uint64(time.Since(p.lastRateUpdated).Milliseconds())
-	p.lastRateUpdated = t
-	p.Downloaded = 0
-	p.Uploaded = 0
+func (p *Peer) UpdateStats(uploaded, downloaded uint64) {
+	p.statsMut.Lock()
+	defer p.statsMut.Unlock()
+	p.uploaded += uploaded
+	p.downloaded += downloaded
 }
 
 func (p *Peer) Stop() {

@@ -88,7 +88,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
-			pe.Uploaded += uint64(len(mess.Data))
+			pe.UpdateStats(uint64(len(mess.Data)), 0)
 			downloader.OnBlockReceived(mess.Begin, uint32(len(mess.Data)))
 			t.writePiece(downloader.Piece, mess.Begin, mess.Data)
 			if downloader.Completed() {
