@@ -79,7 +79,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			handler := requesthandler.New(t.storage, pe.ID, t.pieces[mess.Idx], mess)
 			t.requestHandlers[mess] = handler
 			go handler.Run(t.requestHandlersResults)
-			t.logger.Info("torrent -> started request handler", "Peer", string(pe.ID[:]), "Piece", mess.Idx, "Block", mess.Begin)
+			t.logger.Debug("torrent -> started request handler", "Peer", string(pe.ID[:]), "Piece", mess.Idx, "Block", mess.Begin)
 		}
 	case peerprotocol.Piece:
 		{

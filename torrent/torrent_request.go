@@ -1,6 +1,9 @@
 package torrent
 
-import "Naverno/internal/requesthandler"
+import (
+	"Naverno/internal/requesthandler"
+	"fmt"
+)
 
 func (t *Torrent) handleRequestResult(res *requesthandler.RequestHandler) {
 	if res.Err != nil {
@@ -18,4 +21,5 @@ func (t *Torrent) handleRequestResult(res *requesthandler.RequestHandler) {
 		return
 	}
 	p.Piece(res.Request.Idx, res.Request.Begin, res.Data)
+	t.logger.Error("torrent -> request data sent", "Request", fmt.Sprintf("(%v, %v, %v)", res.Request.Idx, res.Request.Begin, len(res.Data)))
 }

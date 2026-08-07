@@ -137,7 +137,11 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			if mess.ID() == peerprotocol.KeepAliveID {
 				continue
 			}
-			inbox <- PeerMessage{p, mess}
+
+			select {
+			case inbox <- PeerMessage{p, mess}:
+			case <-p.closeC:
+			}
 		}
 	}
 }
