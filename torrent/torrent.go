@@ -28,7 +28,6 @@ import (
 
 type Torrent struct {
 	id         []byte
-	port       uint16
 	downloaded int64
 	uploaded   int64
 	left       int64
@@ -67,6 +66,9 @@ type Torrent struct {
 }
 
 func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath string) (*Torrent, error) {
+	if len(meta.Files) > 1 {
+		savePath = filepath.Join(savePath, meta.Name)
+	}
 	t := Torrent{
 		session:                sess,
 		meta:                   meta,
@@ -79,7 +81,6 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		writers:                make(map[*piece.Piece]*piecewriter.PieceWriter),
 		requestHandlers:        map[peerprotocol.Request]*requesthandler.RequestHandler{},
 		hashers:                map[*piece.Piece]*hashchecker.HashChecker{},
-		port:                   sess.port,
 		downloaded:             0,
 		uploaded:               0,
 		left:                   meta.Length,
@@ -87,6 +88,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		choker:                 choker.New(time.Second*10, time.Second*30),
 		pieces:                 piece.NewPieces(meta),
 		bitset:                 bitfield.New(uint32(meta.PieceCount)),
+		storage:                posixstorage.New(sess.logger, meta.Files, savePath),
 		writersResults:         make(chan *piecewriter.PieceWriter),
 		hashersResults:         make(chan *hashchecker.HashChecker),
 		newConns:               make(chan net.Conn),
@@ -103,12 +105,6 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		id:                     meta.Infohash[:4],
 	}
 
-	if len(meta.Files) > 1 {
-		t.storage = posixstorage.New(t.logger, meta.Files, filepath.Join(t.savePath, meta.Name))
-	} else {
-		t.storage = posixstorage.New(t.logger, meta.Files, t.savePath)
-	}
-
 	trackers := [][]tracker.Tracker{}
 	for _, urls := range meta.AnnounceList {
 		tier := []tracker.Tracker{}
@@ -123,7 +119,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		trackers = append(trackers, tier)
 	}
 
-	t.announcer = announcer.New(t.logger, trackers, t.port)
+	t.announcer = announcer.New(t.logger, trackers, sess.port)
 
 	return &t, nil
 }
