@@ -8,6 +8,7 @@ import (
 
 func TestQueue(t *testing.T) {
 	queue := blockingqueue.New([]int{})
+	defer queue.Stop()
 	poppedValues := make(chan []int)
 	go func(res chan []int) {
 		items := []int{}

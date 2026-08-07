@@ -67,7 +67,6 @@ type Torrent struct {
 }
 
 func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath string) (*Torrent, error) {
-	pieces := piece.NewPieces(meta)
 	t := Torrent{
 		session:                sess,
 		meta:                   meta,
@@ -86,7 +85,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		left:                   meta.Length,
 		picker:                 rarestfirstpicker.New(uint32(meta.PieceCount)),
 		choker:                 choker.New(time.Second*10, time.Second*30),
-		pieces:                 pieces,
+		pieces:                 piece.NewPieces(meta),
 		bitset:                 bitfield.New(uint32(meta.PieceCount)),
 		writersResults:         make(chan *piecewriter.PieceWriter),
 		hashersResults:         make(chan *hashchecker.HashChecker),
@@ -143,13 +142,13 @@ func (t *Torrent) run() {
 			t.closePeers()
 			t.closeHandshakes()
 			t.closeAnnouncer()
-			t.choker.Close()
 			t.closeWriters()
 			t.closeHashers()
+			t.choker.Close()
 			return
 		case <-peerStatsTicker.C:
 			for _, p := range t.peers {
-				p.CalculateStats()
+				p.CalculateStats(time.Now())
 			}
 		case ev := <-t.chokerEvents:
 			t.handleChokerEvent(ev)

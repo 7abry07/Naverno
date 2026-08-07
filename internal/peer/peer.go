@@ -158,10 +158,10 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 	}
 }
 
-func (p *Peer) CalculateStats() {
+func (p *Peer) CalculateStats(t time.Time) {
 	p.uploadRate = p.Uploaded / uint64(time.Since(p.lastRateUpdated).Milliseconds())
 	p.downloadRate = p.Downloaded / uint64(time.Since(p.lastRateUpdated).Milliseconds())
-	p.lastRateUpdated = time.Now()
+	p.lastRateUpdated = t
 	p.Downloaded = 0
 	p.Uploaded = 0
 }

@@ -38,14 +38,15 @@ func New(logger *slog.Logger, conn net.Conn) *Writer {
 func (w *Writer) Run() {
 	defer close(w.doneC)
 	for {
-		mess, ok := w.queue.Pop()
-		if !ok {
-			return
-		}
 		select {
 		case <-w.closeC:
 			return
 		default:
+		}
+
+		mess, ok := w.queue.Pop()
+		if !ok {
+			return
 		}
 
 		w.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))

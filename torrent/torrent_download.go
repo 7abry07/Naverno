@@ -11,7 +11,7 @@ import (
 func (t *Torrent) handleHasherResult(res *hashchecker.HashChecker) {
 	delete(t.hashers, res.Piece)
 	if res.Err != nil {
-		t.logger.Error("torrent -> error in piece writer", "Error", res.Err)
+		t.logger.Error("torrent -> error while checking hash", "Error", res.Err)
 		t.session.RemoveTorrent(t)
 		return
 	}
