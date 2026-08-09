@@ -4,7 +4,6 @@ import (
 	"Naverno/internal/bitfield"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
-	"Naverno/internal/requesthandler"
 )
 
 func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
@@ -76,9 +75,8 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Request:
 		{
-			handler := requesthandler.New(t.storage, pe.ID, t.pieces[mess.Idx], mess)
-			t.requestHandlers[mess] = handler
-			go handler.Run(t.requestHandlersResults)
+			t.pendingRequests[mess] = pe.ID
+			t.storage.AsyncRead(t.readResults, t.pieces[mess.Idx], mess.Begin, mess.Length)
 			t.logger.Debug("torrent -> started request handler", "Peer", string(pe.ID[:]), "Piece", mess.Idx, "Block", mess.Begin)
 		}
 	case peerprotocol.Piece:
@@ -100,7 +98,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Cancel:
 		{
-			delete(t.requestHandlers, peerprotocol.Request{Idx: mess.Idx, Begin: mess.Begin, Length: mess.Length})
+			delete(t.pendingRequests, peerprotocol.Request{Idx: mess.Idx, Begin: mess.Begin, Length: mess.Length})
 			t.logger.Info("torrent -> request canceled", "Peer", string(pe.ID[:]), "Piece", mess.Idx, "Block", mess.Begin)
 		}
 	}

@@ -10,10 +10,11 @@ type WriteResult struct {
 }
 
 type ReadResult struct {
-	Piece *piece.Piece
-	Begin uint32
-	Data  []byte
-	Err   error
+	RequestedBy [20]byte
+	Piece       *piece.Piece
+	Begin       uint32
+	Data        []byte
+	Err         error
 }
 
 type HashResult struct {

@@ -5,7 +5,6 @@ import (
 	"Naverno/internal/bitfield"
 	"Naverno/internal/choker"
 	"Naverno/internal/handshaker"
-	// "Naverno/internal/hashchecker"
 	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
@@ -13,8 +12,6 @@ import (
 	"Naverno/internal/picker/rarestfirstpicker"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
-	// "Naverno/internal/piecewriter"
-	"Naverno/internal/requesthandler"
 	"Naverno/internal/storage"
 	"Naverno/internal/storage/posixstorage"
 	"Naverno/internal/tracker"
@@ -33,20 +30,18 @@ type Torrent struct {
 	left       int64
 	savePath   string
 
-	session   *Session
-	storage   storage.Storage
-	picker    picker.Picker
-	choker    *choker.Choker
-	bitset    *bitfield.Bitfield
-	logger    *slog.Logger
-	meta      *metadata.Metadata
-	announcer *announcer.Announcer
-	pieces    []*piece.Piece
-	peers     map[[20]byte]*peer.Peer
-	outgoing  map[*handshaker.OutgoingHandshaker]struct{}
-	// writers            map[*piece.Piece]*piecewriter.PieceWriter
-	// hashers            map[*piece.Piece]*hashchecker.HashChecker
-	requestHandlers    map[peerprotocol.Request]*requesthandler.RequestHandler
+	session            *Session
+	storage            storage.Storage
+	picker             picker.Picker
+	choker             *choker.Choker
+	bitset             *bitfield.Bitfield
+	logger             *slog.Logger
+	meta               *metadata.Metadata
+	announcer          *announcer.Announcer
+	pieces             []*piece.Piece
+	peers              map[[20]byte]*peer.Peer
+	outgoing           map[*handshaker.OutgoingHandshaker]struct{}
+	pendingRequests    map[peerprotocol.Request][20]byte
 	downloaders        map[*peer.Peer]*piecedownloader.PieceDownloader
 	stalledDownloaders map[*piece.Piece]*piecedownloader.PieceDownloader
 	newConns           chan net.Conn
@@ -55,13 +50,11 @@ type Torrent struct {
 	torrentAnnounce    chan announcer.Torrent
 	writeResults       chan storage.WriteResult
 	hashResults        chan storage.HashResult
-	// writersResults         chan *piecewriter.PieceWriter
-	requestHandlersResults chan *requesthandler.RequestHandler
-	// hashersResults         chan *hashchecker.HashChecker
-	incomingResults chan *handshaker.IncomingHandshaker
-	outgoingResults chan *handshaker.OutgoingHandshaker
-	peersC          chan []netip.AddrPort
-	chokerEvents    chan any
+	readResults        chan storage.ReadResult
+	incomingResults    chan *handshaker.IncomingHandshaker
+	outgoingResults    chan *handshaker.OutgoingHandshaker
+	peersC             chan []netip.AddrPort
+	chokerEvents       chan any
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -80,33 +73,29 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		outgoing:           make(map[*handshaker.OutgoingHandshaker]struct{}),
 		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
 		stalledDownloaders: make(map[*piece.Piece]*piecedownloader.PieceDownloader),
-		// writers:            make(map[*piece.Piece]*piecewriter.PieceWriter),
-		requestHandlers: map[peerprotocol.Request]*requesthandler.RequestHandler{},
-		// hashers:            map[*piece.Piece]*hashchecker.HashChecker{},
-		downloaded:   0,
-		uploaded:     0,
-		left:         meta.Length,
-		picker:       rarestfirstpicker.New(uint32(meta.PieceCount)),
-		choker:       choker.New(time.Second*10, time.Second*30),
-		pieces:       piece.NewPieces(meta),
-		bitset:       bitfield.New(uint32(meta.PieceCount)),
-		storage:      posixstorage.New(sess.logger, meta.Files, savePath),
-		writeResults: make(chan storage.WriteResult),
-		hashResults:  make(chan storage.HashResult),
-		// writersResults:         make(chan *piecewriter.PieceWriter),
-		// hashersResults:         make(chan *hashchecker.HashChecker),
-		newConns:               make(chan net.Conn),
-		peerMessages:           make(chan peer.PeerMessage),
-		disconnectedPeers:      make(chan *peer.Peer),
-		torrentAnnounce:        make(chan announcer.Torrent),
-		peersC:                 make(chan []netip.AddrPort),
-		chokerEvents:           make(chan any),
-		outgoingResults:        make(chan *handshaker.OutgoingHandshaker),
-		requestHandlersResults: make(chan *requesthandler.RequestHandler),
-		incomingResults:        make(chan *handshaker.IncomingHandshaker),
-		closeC:                 make(chan struct{}),
-		doneC:                  make(chan struct{}),
-		id:                     meta.Infohash[:4],
+		pendingRequests:    make(map[peerprotocol.Request][20]byte),
+		downloaded:         0,
+		uploaded:           0,
+		left:               meta.Length,
+		picker:             rarestfirstpicker.New(uint32(meta.PieceCount)),
+		choker:             choker.New(time.Second*10, time.Second*30),
+		pieces:             piece.NewPieces(meta),
+		bitset:             bitfield.New(uint32(meta.PieceCount)),
+		storage:            posixstorage.New(sess.logger, meta.Files, savePath),
+		writeResults:       make(chan storage.WriteResult),
+		hashResults:        make(chan storage.HashResult),
+		readResults:        make(chan storage.ReadResult),
+		newConns:           make(chan net.Conn),
+		peerMessages:       make(chan peer.PeerMessage),
+		disconnectedPeers:  make(chan *peer.Peer),
+		torrentAnnounce:    make(chan announcer.Torrent),
+		peersC:             make(chan []netip.AddrPort),
+		chokerEvents:       make(chan any),
+		outgoingResults:    make(chan *handshaker.OutgoingHandshaker),
+		incomingResults:    make(chan *handshaker.IncomingHandshaker),
+		closeC:             make(chan struct{}),
+		doneC:              make(chan struct{}),
+		id:                 meta.Infohash[:4],
 	}
 
 	trackers := [][]tracker.Tracker{}
@@ -141,8 +130,6 @@ func (t *Torrent) run() {
 			t.closeHandshakes()
 			t.closeAnnouncer()
 			t.storage.StopPendingJobs()
-			// t.closeWriters()
-			// t.closeHashers()
 			t.choker.Close()
 			return
 		case ev := <-t.chokerEvents:
@@ -163,8 +150,8 @@ func (t *Torrent) run() {
 			t.handleWriteResult(res)
 		case res := <-t.hashResults:
 			t.handleHashResult(res)
-		case res := <-t.requestHandlersResults:
-			t.handleRequestResult(res)
+		case res := <-t.readResults:
+			t.handleReadResult(res)
 		case p := <-t.peerMessages:
 			t.handlePeerMessage(p)
 		}

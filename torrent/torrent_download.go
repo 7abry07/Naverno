@@ -1,16 +1,13 @@
 package torrent
 
 import (
-	// "Naverno/internal/hashchecker"
 	"Naverno/internal/peer"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
-	// "Naverno/internal/piecewriter"
 	"Naverno/internal/storage"
 )
 
 func (t *Torrent) handleHashResult(res storage.HashResult) {
-	// delete(t.hashers, res.Piece)
 	if res.Err != nil {
 		t.logger.Error("torrent -> error while checking hash", "Error", res.Err)
 		t.session.RemoveTorrent(t)
@@ -29,7 +26,7 @@ func (t *Torrent) handleHashResult(res storage.HashResult) {
 	for _, pe := range t.peers {
 		pe.Have(res.Piece.Idx)
 	}
-	t.logger.Info("torrent -> piece completed", "Piece", res.Piece.Idx, "Pieces Completed", t.bitset.Count())
+	t.logger.Info("torrent -> piece completed", "Piece", res.Piece.Idx)
 
 	if t.bitset.All() {
 		t.closeSeeds()
@@ -41,7 +38,6 @@ func (t *Torrent) handleHashResult(res storage.HashResult) {
 }
 
 func (t *Torrent) handleWriteResult(res storage.WriteResult) {
-	// delete(t.writers, res.Piece)
 	if res.Err != nil {
 		t.logger.Error("torrent -> error in piece writer", "Error", res.Err)
 		t.session.RemoveTorrent(t)
@@ -50,17 +46,11 @@ func (t *Torrent) handleWriteResult(res storage.WriteResult) {
 }
 
 func (t *Torrent) pieceCompleted(p *piece.Piece) {
-	// hasher := hashchecker.New(t.storage, p)
-	// t.hashers[p] = hasher
-	// go hasher.Run(t.hashersResults)
 	t.storage.AsyncHash(t.hashResults, p)
 	t.logger.Debug("torrent -> started hash checker", "Piece", p.Idx)
 }
 
 func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {
-	// writer := piecewriter.New(t.storage, p, begin, data)
-	// t.writers[p] = writer
-	// go writer.Run(t.writersResults)
 	t.storage.AsyncWrite(t.writeResults, p, begin, data)
 	t.logger.Debug("torrent -> started piece writer", "Piece", p.Idx, "Block", begin)
 }
@@ -74,6 +64,10 @@ func (t *Torrent) download(pe *peer.Peer) {
 	if ok {
 		downloader.RequestBlocks(10)
 		return
+	}
+
+	if len(t.stalledDownloaders) != 0 {
+
 	}
 
 	picked, ok := t.picker.Pick(pe.Pieces)
@@ -97,15 +91,3 @@ func (t *Torrent) download(pe *peer.Peer) {
 	downloader.RequestBlocks(10)
 	t.logger.Debug("torrent -> started downloader for piece", "Piece", picked, "PeerID", string(pe.ID[:]))
 }
-
-// func (t *Torrent) closeWriters() {
-// 	for _, w := range t.writers {
-// 		w.Close()
-// 	}
-// }
-//
-// func (t *Torrent) closeHashers() {
-// 	for _, c := range t.hashers {
-// 		c.Close()
-// 	}
-// }

@@ -12,7 +12,10 @@ type DiscardStorage struct {
 }
 
 func New() *DiscardStorage {
-	return &DiscardStorage{}
+	return &DiscardStorage{
+		wg:     sync.WaitGroup{},
+		closeC: make(chan struct{}),
+	}
 }
 
 func (s *DiscardStorage) Write(p *piece.Piece, begin uint32, data []byte) error {
@@ -28,46 +31,47 @@ func (s *DiscardStorage) Hash(p *piece.Piece) (bool, error) {
 }
 
 func (s *DiscardStorage) AsyncWrite(resC chan storage.WriteResult, p *piece.Piece, begin uint32, data []byte) {
-	s.wg.Add(1)
-	defer s.wg.Done()
-	select {
-	case <-s.closeC:
-	case resC <- storage.WriteResult{
-		Err:         nil,
-		Piece:       p,
-		Begin:       begin,
-		DataWritten: uint64(len(data)),
-	}:
-	}
-
+	s.wg.Go(
+		func() {
+			select {
+			case <-s.closeC:
+			case resC <- storage.WriteResult{
+				Err:         nil,
+				Piece:       p,
+				Begin:       begin,
+				DataWritten: uint64(len(data)),
+			}:
+			}
+		})
 }
 
 func (s *DiscardStorage) AsyncRead(resC chan storage.ReadResult, p *piece.Piece, begin, length uint32) {
-	s.wg.Add(1)
-	defer s.wg.Done()
-	select {
-	case <-s.closeC:
-	case resC <- storage.ReadResult{
-		Err:   nil,
-		Piece: p,
-		Begin: begin,
-		Data:  make([]byte, length),
-	}:
-	}
-
+	s.wg.Go(
+		func() {
+			select {
+			case <-s.closeC:
+			case resC <- storage.ReadResult{
+				Err:   nil,
+				Piece: p,
+				Begin: begin,
+				Data:  make([]byte, length),
+			}:
+			}
+		})
 }
 
 func (s *DiscardStorage) AsyncHash(resC chan storage.HashResult, p *piece.Piece) {
-	s.wg.Add(1)
-	defer s.wg.Done()
-	select {
-	case <-s.closeC:
-	case resC <- storage.HashResult{
-		Err:   nil,
-		Piece: p,
-		Ok:    true,
-	}:
-	}
+	s.wg.Go(
+		func() {
+			select {
+			case <-s.closeC:
+			case resC <- storage.HashResult{
+				Err:   nil,
+				Piece: p,
+				Ok:    true,
+			}:
+			}
+		})
 }
 
 func (s *DiscardStorage) StopPendingJobs() {

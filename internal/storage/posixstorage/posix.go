@@ -173,62 +173,59 @@ func (s *PosixStorage) Hash(p *piece.Piece) (bool, error) {
 }
 
 func (s *PosixStorage) AsyncWrite(resC chan storage.WriteResult, p *piece.Piece, begin uint32, data []byte) {
-	s.wg.Add(1)
-	go func() {
-		res := storage.WriteResult{}
-		defer func() {
-			select {
-			case resC <- res:
-			case <-s.closeC:
-			}
-			s.wg.Done()
-		}()
+	s.wg.Go(
+		func() {
+			res := storage.WriteResult{}
+			defer func() {
+				select {
+				case resC <- res:
+				case <-s.closeC:
+				}
+			}()
 
-		err := s.Write(p, begin, data)
-		res.Err = err
-		res.Piece = p
-		res.Begin = begin
-		res.DataWritten = uint64(len(data))
-	}()
+			err := s.Write(p, begin, data)
+			res.Err = err
+			res.Piece = p
+			res.Begin = begin
+			res.DataWritten = uint64(len(data))
+		})
 }
 
 func (s *PosixStorage) AsyncRead(resC chan storage.ReadResult, p *piece.Piece, begin, length uint32) {
-	s.wg.Add(1)
-	go func() {
-		res := storage.ReadResult{}
-		defer func() {
-			select {
-			case resC <- res:
-			case <-s.closeC:
-			}
-			s.wg.Done()
-		}()
+	s.wg.Go(
+		func() {
+			res := storage.ReadResult{}
+			defer func() {
+				select {
+				case resC <- res:
+				case <-s.closeC:
+				}
+			}()
 
-		data, err := s.Read(p, begin, length)
-		res.Err = err
-		res.Piece = p
-		res.Begin = begin
-		res.Data = data
-	}()
+			data, err := s.Read(p, begin, length)
+			res.Err = err
+			res.Piece = p
+			res.Begin = begin
+			res.Data = data
+		})
 }
 
 func (s *PosixStorage) AsyncHash(resC chan storage.HashResult, p *piece.Piece) {
-	s.wg.Add(1)
-	go func() {
-		res := storage.HashResult{}
-		defer func() {
-			select {
-			case resC <- res:
-			case <-s.closeC:
-			}
-			s.wg.Done()
-		}()
+	s.wg.Go(
+		func() {
+			res := storage.HashResult{}
+			defer func() {
+				select {
+				case resC <- res:
+				case <-s.closeC:
+				}
+			}()
 
-		ok, err := s.Hash(p)
-		res.Err = err
-		res.Piece = p
-		res.Ok = ok
-	}()
+			ok, err := s.Hash(p)
+			res.Err = err
+			res.Piece = p
+			res.Ok = ok
+		})
 }
 
 func (s *PosixStorage) StopPendingJobs() {

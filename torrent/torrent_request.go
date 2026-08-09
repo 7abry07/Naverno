@@ -1,26 +1,28 @@
 package torrent
 
 import (
-	"Naverno/internal/requesthandler"
+	"Naverno/internal/peerprotocol"
+	"Naverno/internal/storage"
 	"fmt"
 )
 
-func (t *Torrent) handleRequestResult(res *requesthandler.RequestHandler) {
+func (t *Torrent) handleReadResult(res storage.ReadResult) {
 	if res.Err != nil {
 		t.logger.Error("torrent -> error in request handling", "Error", res.Err)
 		t.session.RemoveTorrent(t)
 		return
 	}
-	_, ok := t.requestHandlers[res.Request]
+	request := peerprotocol.Request{Idx: res.Piece.Idx, Begin: res.Begin, Length: uint32(len(res.Data))}
+	requester, ok := t.pendingRequests[request]
 	if !ok {
 		return
 	}
-	delete(t.requestHandlers, res.Request)
-	p, ok := t.peers[res.Requester]
+	delete(t.pendingRequests, request)
+	p, ok := t.peers[requester]
 	if !ok {
 		return
 	}
-	p.Piece(res.Request.Idx, res.Request.Begin, res.Data)
+	p.Piece(request.Idx, request.Begin, res.Data)
 	p.UpdateStats(0, uint64(len(res.Data)))
-	t.logger.Error("torrent -> request data sent", "Request", fmt.Sprintf("(%v, %v, %v)", res.Request.Idx, res.Request.Begin, len(res.Data)))
+	t.logger.Error("torrent -> request data sent", "Request", fmt.Sprintf("(%v, %v, %v)", request.Idx, request.Begin, len(res.Data)))
 }
