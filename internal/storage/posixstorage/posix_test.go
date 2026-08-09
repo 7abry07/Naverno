@@ -2,6 +2,7 @@ package posixstorage_test
 
 import (
 	"Naverno/internal/metadata"
+	"Naverno/internal/piece"
 	"Naverno/internal/storage/posixstorage"
 	"bytes"
 	"io"
@@ -14,25 +15,25 @@ import (
 func TestWrite(t *testing.T) {
 	dir := t.TempDir()
 	files := []metadata.File{
-		{Length: 5, Path: "f1.bin"},
-		{Length: 5, Path: "f2.bin"},
-		{Length: 5, Path: "f3.bin"},
+		{Length: 6, Path: "f1.bin"},
+		{Length: 3, Path: "f2.bin"},
+		{Length: 9, Path: "f3.bin"},
 	}
+	p1 := piece.NewPiece(0, 6, 0, [20]byte{})
 
-	os.WriteFile(filepath.Join(dir, files[0].Path), make([]byte, 5), 0644)
-	os.WriteFile(filepath.Join(dir, files[1].Path), make([]byte, 5), 0644)
-	os.WriteFile(filepath.Join(dir, files[2].Path), make([]byte, 5), 0644)
+	os.WriteFile(filepath.Join(dir, files[0].Path), make([]byte, 6), 0644)
+	os.WriteFile(filepath.Join(dir, files[1].Path), make([]byte, 3), 0644)
+	os.WriteFile(filepath.Join(dir, files[2].Path), make([]byte, 9), 0644)
 
 	s := posixstorage.New(slog.New(slog.NewTextHandler(io.Discard, nil)), files, dir)
-
-	writeData := make([]byte, 7)
-	copy(writeData, []byte("melodye"))
-	err := s.Write(0, writeData)
+	writeData := make([]byte, 3)
+	copy(writeData, []byte("die"))
+	err := s.Write(p1, 0, writeData)
 	if err != nil {
 		t.Fatalf("unexpected error -> %v", err)
 	}
 
-	readData, err := s.Read(0, 7)
+	readData, err := s.Read(p1, 0, 3)
 	if err != nil {
 		t.Fatalf("unexpected error -> %v", err)
 	}

@@ -38,7 +38,8 @@ func (h *RequestHandler) Run(results chan *RequestHandler) {
 		}
 	}()
 
-	data, err := h.storage.Read(h.Piece.Offset+uint64(h.Request.Begin), uint64(h.Request.Length))
+	// data, err := h.storage.Read(h.Piece.Offset+uint64(h.Request.Begin), uint64(h.Request.Length))
+	data, err := h.storage.Read(h.Piece, h.Request.Begin, h.Request.Length)
 	h.Err = err
 	h.Data = data
 }
