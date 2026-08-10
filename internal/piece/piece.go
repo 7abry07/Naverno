@@ -2,9 +2,7 @@ package piece
 
 import (
 	"Naverno/internal/metadata"
-	"Naverno/internal/util"
 	"cmp"
-	"iter"
 	"slices"
 )
 
@@ -13,11 +11,10 @@ const (
 )
 
 type Piece struct {
-	Idx        uint32
-	Offset     uint64
-	Size       uint32
-	BlockCount uint32
-	Hash       [20]byte
+	Idx    uint32
+	Offset uint64
+	Size   uint32
+	Hash   [20]byte
 }
 
 func NewPieces(meta *metadata.Metadata) []*Piece {
@@ -40,24 +37,9 @@ func NewPieces(meta *metadata.Metadata) []*Piece {
 
 func NewPiece(idx, size uint32, offset uint64, hash [20]byte) *Piece {
 	return &Piece{
-		Idx:        uint32(idx),
-		Size:       uint32(size),
-		Hash:       hash,
-		Offset:     offset,
-		BlockCount: uint32(util.Align(uint64(size), BlockSize)) / BlockSize,
-	}
-}
-
-func (p *Piece) Blocks() iter.Seq2[uint32, uint32] {
-	return func(yield func(uint32, uint32) bool) {
-		for i := range p.BlockCount {
-			length := uint64(BlockSize)
-			if i == p.BlockCount-1 {
-				length -= util.Align(uint64(p.Size), BlockSize) - uint64(p.Size)
-			}
-			if !yield(i*BlockSize, uint32(length)) {
-				return
-			}
-		}
+		Idx:    uint32(idx),
+		Size:   uint32(size),
+		Hash:   hash,
+		Offset: offset,
 	}
 }

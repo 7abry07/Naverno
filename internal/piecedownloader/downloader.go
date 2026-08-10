@@ -2,31 +2,58 @@ package piecedownloader
 
 import (
 	"Naverno/internal/piece"
+	"Naverno/internal/util"
+	"errors"
 	"fmt"
 	"log/slog"
-	"maps"
+)
+
+var (
+	ErrInvalid      = errors.New("block invalid")
+	ErrNotRequested = errors.New("block not requested")
+	ErrDuplicate    = errors.New("block duplicate")
+)
+
+const (
+	blockSize = 16 * 1024
 )
 
 type PieceDownloader struct {
 	*piece.Piece
 	peer      Peer
 	logger    *slog.Logger
-	remaining map[uint32]uint32
-	pending   map[uint32]uint32
+	blocks    map[uint32]uint32
+	remaining []uint32
+	pending   map[uint32]struct{}
+	done      map[uint32]struct{}
 }
 
 func NewPieceDownloader(logger *slog.Logger, p *piece.Piece) *PieceDownloader {
 	if logger == nil {
 		panic("passed nil logger to piece downloader")
 	}
-
-	return &PieceDownloader{
+	d := &PieceDownloader{
 		Piece:     p,
 		logger:    logger,
 		peer:      nil,
-		remaining: maps.Collect(p.Blocks()),
-		pending:   make(map[uint32]uint32),
+		blocks:    make(map[uint32]uint32),
+		remaining: []uint32{},
+		pending:   make(map[uint32]struct{}),
+		done:      make(map[uint32]struct{}),
 	}
+
+	blockCount := uint32(util.Align(uint64(p.Size), blockSize)) / blockSize
+
+	for i := range blockCount {
+		length := uint64(blockSize)
+		if i == blockCount-1 {
+			length -= util.Align(uint64(p.Size), blockSize) - uint64(p.Size)
+		}
+		d.blocks[i*blockSize] = uint32(length)
+		d.remaining = append(d.remaining, i*blockSize)
+	}
+
+	return d
 }
 
 func (d *PieceDownloader) Set(p Peer) {
@@ -37,46 +64,52 @@ func (d *PieceDownloader) RequestBlocks(queueSize int) {
 	if d.peer == nil {
 		panic("nil peer in downloader")
 	}
-	i := 1
-	temp := []uint32{}
-	for begin, length := range d.remaining {
+
+	remaining := d.remaining
+	for _, begin := range remaining {
 		if len(d.pending) >= queueSize {
 			break
 		}
+		length := d.blocks[begin]
 
 		d.peer.Request(d.Piece.Idx, begin, length)
-		temp = append(temp, begin)
-		d.pending[begin] = length
+		d.pending[begin] = struct{}{}
+		d.remaining = d.remaining[1:]
 		d.logger.Debug("downloader -> block requested", "Piece", d.Piece.Idx, "Block", fmt.Sprintf("(%v, %v)", begin, length))
-
-		i++
 	}
-
-	for _, begin := range temp {
-		delete(d.remaining, begin)
-	}
-
 }
 
 func (d *PieceDownloader) Completed() bool {
-	return len(d.remaining) == 0 && len(d.pending) == 0
+	return len(d.done) == len(d.blocks)
 }
 
 func (d *PieceDownloader) OnPeerDisconnected() {
-	maps.Copy(d.remaining, d.pending)
-	d.pending = make(map[uint32]uint32)
+	for begin := range d.pending {
+		d.remaining = append(d.remaining, begin)
+	}
+	d.pending = make(map[uint32]struct{})
 }
 
 func (d *PieceDownloader) OnPeerChoke() {
-	maps.Copy(d.remaining, d.pending)
-	d.pending = make(map[uint32]uint32)
+	for begin := range d.pending {
+		d.remaining = append(d.remaining, begin)
+	}
+	d.pending = make(map[uint32]struct{})
 }
 
-func (d *PieceDownloader) OnFailedWrite(begin, length uint32) {
-	d.remaining[begin] = length
-}
+func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) error {
+	if _, ok := d.blocks[begin]; !ok {
+		return ErrInvalid
+	}
 
-func (d *PieceDownloader) OnBlockReceived(begin uint32, length uint32) {
+	if _, ok := d.done[begin]; ok {
+		return ErrDuplicate
+	}
+
+	if _, ok := d.pending[begin]; !ok {
+		return ErrNotRequested
+	}
 	delete(d.pending, begin)
-	delete(d.remaining, begin)
+	d.done[begin] = struct{}{}
+	return nil
 }
