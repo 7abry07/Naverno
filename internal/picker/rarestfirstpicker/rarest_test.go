@@ -26,6 +26,15 @@ func TestRarestFirst(t *testing.T) {
 		t.Errorf("should have picked piece with index %v, picked %v instead", 4, picked)
 	}
 
+	picked, ok = p.Pick(peerPieces)
+	if !ok {
+		t.Fatal("Pick() failed")
+	}
+
+	if picked == 4 {
+		t.Errorf("shouldn't have picked piece already downloading piece")
+	}
+
 	p.OnPeerDisconnected(peerPieces)
 	picked, ok = p.Pick(peerPieces)
 	if !ok {

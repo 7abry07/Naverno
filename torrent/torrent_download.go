@@ -26,7 +26,7 @@ func (t *Torrent) handleHashResult(res storage.HashResult) {
 	for _, pe := range t.peers {
 		pe.Have(res.Piece.Idx)
 	}
-	t.logger.Info("torrent -> piece completed", "Piece", res.Piece.Idx)
+	t.logger.Info("torrent -> piece completed", "Piece", res.Piece.Idx, "Completed", t.bitset.Count())
 
 	if t.bitset.All() {
 		t.closeSeeds()

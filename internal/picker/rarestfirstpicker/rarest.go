@@ -49,6 +49,7 @@ func (p *RarestFirstPicker) Pick(peerPieces *bitfield.Bitfield) (uint32, bool) {
 	if len(rarest) > 1 {
 		rand.Shuffle(len(rarest), func(i, j int) { rarest[i], rarest[j] = rarest[j], rarest[i] })
 	}
+	p.pieces[rarest[0]] = picker.PIECE_DOWNLOADING
 	return rarest[0], true
 }
 
