@@ -19,6 +19,9 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 		t.logger.Debug("torrent -> error during handshake", "Address", res.Conn.RemoteAddr().String(), "Error", res.Error.Error())
 		return
 	}
+	if _, ok := t.peers[res.PeerID]; ok {
+		return
+	}
 	t.logger.Debug("torrent -> peer connected to us", "Peer", string(res.PeerID[:]), "Peer Count", len(t.peers))
 	pe := peer.New(t.logger, time.Now(), res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe.ID] = pe
@@ -30,6 +33,9 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	delete(t.outgoing, res)
 	if res.Error != nil {
 		t.logger.Debug("torrent -> error during handshake", "Address", res.Conn.RemoteAddr().String(), "Error", res.Error.Error())
+		return
+	}
+	if _, ok := t.peers[res.PeerID]; ok {
 		return
 	}
 	t.logger.Debug("torrent -> connected to peer", "Peer", string(res.PeerID[:]), "Peer Count", len(t.peers))
