@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"Naverno/internal/peer"
+	"Naverno/internal/picker"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"Naverno/internal/storage"
@@ -66,11 +67,7 @@ func (t *Torrent) download(pe *peer.Peer) {
 		return
 	}
 
-	if len(t.stalledDownloaders) != 0 {
-
-	}
-
-	picked, ok := t.picker.Pick(pe.Pieces)
+	picked, ok := t.picker.Pick(picker.RAREST_FIRST, pe.Pieces)
 	if !ok {
 		pe.IsInteresting = false
 		return
