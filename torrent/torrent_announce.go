@@ -22,14 +22,3 @@ func (t *Torrent) announceCompleted() {
 			Left:       t.left,
 		})
 }
-
-func (t *Torrent) closeAnnouncer() {
-	t.announcer.Close(
-		announcer.Torrent{
-			InfoHash:   t.meta.Infohash,
-			PeerID:     t.session.pid,
-			Downloaded: t.downloaded,
-			Uploaded:   t.uploaded,
-			Left:       t.left,
-		})
-}

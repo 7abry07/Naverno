@@ -54,6 +54,7 @@ type Torrent struct {
 	outgoingResults    chan *handshaker.OutgoingHandshaker
 	peersC             chan []netip.AddrPort
 	chokerEvents       chan any
+	statsRequest       chan TorrentStats
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -90,6 +91,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		torrentAnnounce:    make(chan announcer.Torrent),
 		peersC:             make(chan []netip.AddrPort),
 		chokerEvents:       make(chan any),
+		statsRequest:       make(chan TorrentStats),
 		outgoingResults:    make(chan *handshaker.OutgoingHandshaker),
 		incomingResults:    make(chan *handshaker.IncomingHandshaker),
 		closeC:             make(chan struct{}),
@@ -131,6 +133,9 @@ func (t *Torrent) run() {
 			t.storage.StopPendingJobs()
 			t.choker.Close()
 			return
+		case req := <-t.statsRequest:
+			t.fillStats(&req)
+			t.statsRequest <- req
 		case ev := <-t.chokerEvents:
 			t.handleChokerEvent(ev)
 		case conn := <-t.newConns:
@@ -157,8 +162,9 @@ func (t *Torrent) run() {
 	}
 }
 
-func (t *Torrent) Stop() {
-	close(t.closeC)
-	<-t.doneC
-	t.logger.Info("torrent -> stopped")
+func (t *Torrent) Metadata() (metadata.Metadata, bool) {
+	if t.meta != nil {
+		return *t.meta, true
+	}
+	return metadata.Metadata{}, false
 }

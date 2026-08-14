@@ -44,9 +44,3 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 	pe.Bitfield(t.bitset.Bytes())
 }
-
-func (t *Torrent) closeHandshakes() {
-	for hs := range t.outgoing {
-		hs.Close()
-	}
-}

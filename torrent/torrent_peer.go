@@ -73,23 +73,3 @@ func (t *Torrent) dial(peers []netip.AddrPort) {
 		}()
 	}
 }
-
-func (t *Torrent) closePeer(p *peer.Peer) {
-	delete(t.downloaders, p)
-	delete(t.peers, p.ID)
-	p.Stop()
-}
-
-func (t *Torrent) closeSeeds() {
-	for _, p := range t.peers {
-		if p.Pieces.All() {
-			t.closePeer(p)
-		}
-	}
-}
-
-func (t *Torrent) closePeers() {
-	for _, p := range t.peers {
-		t.closePeer(p)
-	}
-}

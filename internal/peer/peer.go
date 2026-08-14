@@ -99,6 +99,18 @@ func (p *Peer) UploadRate() uint64 {
 	return p.uploadRate
 }
 
+func (p *Peer) Downloaded() uint64 {
+	p.statsMut.Lock()
+	defer p.statsMut.Unlock()
+	return p.downloaded
+}
+
+func (p *Peer) Uploaded() uint64 {
+	p.statsMut.Lock()
+	defer p.statsMut.Unlock()
+	return p.uploaded
+}
+
 func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 	defer close(p.doneC)
 

@@ -6,8 +6,6 @@ import (
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/piecedownloader"
 	"fmt"
-	// "Naverno/internal/piecedownloader"
-	// "fmt"
 )
 
 func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {

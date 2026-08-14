@@ -32,6 +32,10 @@ func (p *Picker) Pick(policy policy, peerPieces *bitfield.Bitfield) (uint32, boo
 	}
 }
 
+func (p *Picker) GetAvailability() []uint32 {
+	return p.availability
+}
+
 func (p *Picker) OnPeerHave(idx uint32) {
 	p.availability[idx]++
 }

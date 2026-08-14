@@ -13,6 +13,7 @@ import (
 
 type Announcer struct {
 	firstAnnounce map[tracker.Tracker]struct{}
+	trackerStats  map[string]any
 	trackers      [][]tracker.Tracker
 	logger        *slog.Logger
 	announceTimer *time.Timer
@@ -20,6 +21,7 @@ type Announcer struct {
 	port          uint16
 
 	completed chan Torrent
+	statsReq  chan map[string]any
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -32,6 +34,7 @@ func New(logger *slog.Logger, trackers [][]tracker.Tracker, port uint16) *Announ
 
 	a := Announcer{
 		firstAnnounce: make(map[tracker.Tracker]struct{}),
+		trackerStats:  make(map[string]any),
 		trackers:      trackers,
 		logger:        logger,
 		announceTimer: nil,
@@ -39,14 +42,16 @@ func New(logger *slog.Logger, trackers [][]tracker.Tracker, port uint16) *Announ
 		port:          port,
 		completed:     make(chan Torrent),
 
-		closeC: make(chan struct{}),
-		doneC:  make(chan struct{}),
+		statsReq: make(chan map[string]any),
+		closeC:   make(chan struct{}),
+		doneC:    make(chan struct{}),
 	}
 
 	for _, tier := range trackers {
 		rand.Shuffle(len(tier), func(i, j int) { tier[i], tier[j] = tier[j], tier[i] })
 		for _, tr := range tier {
 			a.firstAnnounce[tr] = struct{}{}
+			a.trackerStats[tr.URL()] = nil
 		}
 	}
 
@@ -65,6 +70,8 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 		select {
 		case <-a.closeC:
 			return
+		case <-a.statsReq:
+			a.statsReq <- a.trackerStats
 		case torrent := <-a.completed:
 			{
 				for _, tier := range a.trackers {
@@ -105,10 +112,12 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 		res, err := a.announce(ctx, tr, torrent, ev)
 		if err != nil {
 			a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
+			a.trackerStats[tr.URL()] = err
 			continue
 		}
 		a.announceTimer = time.NewTimer(res.Interval)
 		a.logger.Info("announcer -> announced succesfully", "Tracker URL", tr.URL(), "Peers", len(res.Peers), "Reannounce In", res.Interval.Seconds())
+		a.trackerStats[tr.URL()] = res
 
 		tier = util.Remove(tier, tr, func(e1, e2 tracker.Tracker) bool { return e1 == e2 })
 		tier = slices.Insert(tier, 0, tr)
@@ -124,8 +133,10 @@ func (a *Announcer) announceTierCompleted(ctx context.Context, tier []tracker.Tr
 		res, err := a.announce(ctx, tr, torrent, tracker.TRACKER_COMPLETED)
 		if err != nil {
 			a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
+			a.trackerStats[tr.URL()] = err
 			continue
 		}
+		a.trackerStats[tr.URL()] = res
 		peers = append(peers, res.Peers...)
 	}
 	if len(peers) == 0 {
@@ -156,6 +167,12 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 
 	a.logger.Info("announcer -> announcing to tracker", "Tracker URL", tr.URL(), "Event", event.String())
 	return tr.Announce(ctx, req)
+}
+
+func (a *Announcer) GetTrackerStats() map[string]any {
+	a.statsReq <- map[string]any{}
+	res := <-a.statsReq
+	return res
 }
 
 func (a *Announcer) Completed(t Torrent) {
