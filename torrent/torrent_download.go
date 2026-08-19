@@ -6,12 +6,13 @@ import (
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"Naverno/internal/storage"
+	"fmt"
 )
 
 func (t *Torrent) handleHashResult(res storage.HashResult) {
 	if res.Err != nil {
+		t.err = fmt.Errorf("error while checking hash -> %v", res.Err)
 		t.logger.Error("torrent -> error while checking hash", "Error", res.Err)
-		t.session.RemoveTorrent(t)
 		return
 	}
 	if !res.Ok {
@@ -40,8 +41,8 @@ func (t *Torrent) handleHashResult(res storage.HashResult) {
 
 func (t *Torrent) handleWriteResult(res storage.WriteResult) {
 	if res.Err != nil {
-		t.logger.Error("torrent -> error in piece writer", "Error", res.Err)
-		t.session.RemoveTorrent(t)
+		t.err = fmt.Errorf("error while writing piece-> %v", res.Err)
+		t.logger.Error("torrent -> error while writing piece", "Error", res.Err)
 		return
 	}
 }
@@ -57,6 +58,10 @@ func (t *Torrent) writePiece(p *piece.Piece, begin uint32, data []byte) {
 }
 
 func (t *Torrent) download(pe *peer.Peer) {
+	if t.err != nil {
+		return
+	}
+
 	if pe.Pieces == nil || pe.AmChoked {
 		return
 	}

@@ -4,8 +4,8 @@ alias t := test
 alias d := debug
 alias dt := debugtest
 
-@run args="":
-    go run cmd/app/main.go {{ args }}
+@run args="-race" package="app":
+    go run cmd/{{ package }}/main.go {{ args }}
 
 @build:
     go build cmd/app/main.go

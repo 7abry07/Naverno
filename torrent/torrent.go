@@ -53,9 +53,10 @@ type Torrent struct {
 	incomingResults    chan *handshaker.IncomingHandshaker
 	outgoingResults    chan *handshaker.OutgoingHandshaker
 	peersC             chan []netip.AddrPort
-	chokerEvents       chan any
 	statsRequest       chan TorrentStats
+	chokerEvents       chan any
 
+	err    error
 	closeC chan struct{}
 	doneC  chan struct{}
 }

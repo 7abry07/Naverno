@@ -34,6 +34,7 @@ type TorrentStats struct {
 	Downloaded       uint64
 	Uploaded         uint64
 	Connections      int
+	Error            error
 	Peers            []PeerInfo
 	Pieces           []PieceInfo
 	Trackers         []TrackerInfo
@@ -50,6 +51,7 @@ func (t *Torrent) fillStats(req *TorrentStats) {
 	req.Uploaded = uint64(t.uploaded)
 	req.PiecesDownloaded = uint64(t.bitset.Count())
 	req.Connections += len(t.peers) + len(t.outgoing)
+	req.Error = t.err
 	for id, p := range t.peers {
 		req.Peers = append(req.Peers, PeerInfo{
 			ID:           id,

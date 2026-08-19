@@ -8,8 +8,8 @@ import (
 
 func (t *Torrent) handleReadResult(res storage.ReadResult) {
 	if res.Err != nil {
-		t.logger.Error("torrent -> error in request handling", "Error", res.Err)
-		t.session.RemoveTorrent(t)
+		t.err = fmt.Errorf("error while reading -> %v", res.Err)
+		t.logger.Error("torrent -> error while reading", "Error", res.Err)
 		return
 	}
 	request := peerprotocol.Request{Idx: res.Piece.Idx, Begin: res.Begin, Length: uint32(len(res.Data))}
