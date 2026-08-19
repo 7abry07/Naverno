@@ -8,20 +8,21 @@ import (
 	"math/rand/v2"
 	"net/netip"
 	"slices"
+	"sync"
 	"time"
 )
 
 type Announcer struct {
-	firstAnnounce map[tracker.Tracker]struct{}
-	trackerStats  map[string]any
-	trackers      [][]tracker.Tracker
-	logger        *slog.Logger
-	announceTimer *time.Timer
-	numwant       uint32
-	port          uint16
+	firstAnnounce   map[tracker.Tracker]struct{}
+	trackerStats    map[string]any
+	trackerStatsMut sync.Mutex
+	trackers        [][]tracker.Tracker
+	logger          *slog.Logger
+	announceTimer   *time.Timer
+	numwant         uint32
+	port            uint16
 
 	completed chan Torrent
-	statsReq  chan map[string]any
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -42,9 +43,8 @@ func New(logger *slog.Logger, trackers [][]tracker.Tracker, port uint16) *Announ
 		port:          port,
 		completed:     make(chan Torrent),
 
-		statsReq: make(chan map[string]any),
-		closeC:   make(chan struct{}),
-		doneC:    make(chan struct{}),
+		closeC: make(chan struct{}),
+		doneC:  make(chan struct{}),
 	}
 
 	for _, tier := range trackers {
@@ -61,7 +61,6 @@ func New(logger *slog.Logger, trackers [][]tracker.Tracker, port uint16) *Announ
 func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 	defer close(a.doneC)
 
 	a.announceTimer = time.NewTimer(0)
@@ -70,8 +69,6 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 		select {
 		case <-a.closeC:
 			return
-		case <-a.statsReq:
-			a.statsReq <- a.trackerStats
 		case torrent := <-a.completed:
 			{
 				for _, tier := range a.trackers {
@@ -100,6 +97,35 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 	}
 }
 
+func (a *Announcer) GetTrackerStats() map[string]any {
+	a.trackerStatsMut.Lock()
+	defer a.trackerStatsMut.Unlock()
+	return a.trackerStats
+}
+
+func (a *Announcer) Completed(t Torrent) {
+	a.completed <- t
+}
+
+func (a *Announcer) Close(t Torrent) {
+	close(a.closeC)
+	a.announceTimer.Stop()
+	select {
+	case <-a.announceTimer.C:
+	default:
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for _, tier := range a.trackers {
+		for _, tr := range tier {
+			a.announce(ctx, tr, t, tracker.TRACKER_STOPPED)
+		}
+	}
+
+	<-a.doneC
+}
+
 func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, torrent Torrent) ([]netip.AddrPort, bool) {
 	for _, tr := range tier {
 		_, first := a.firstAnnounce[tr]
@@ -117,7 +143,9 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 		}
 		a.announceTimer = time.NewTimer(res.Interval)
 		a.logger.Info("announcer -> announced succesfully", "Tracker URL", tr.URL(), "Peers", len(res.Peers), "Reannounce In", res.Interval.Seconds())
+		a.trackerStatsMut.Lock()
 		a.trackerStats[tr.URL()] = res
+		a.trackerStatsMut.Unlock()
 
 		tier = util.Remove(tier, tr, func(e1, e2 tracker.Tracker) bool { return e1 == e2 })
 		tier = slices.Insert(tier, 0, tr)
@@ -136,7 +164,9 @@ func (a *Announcer) announceTierCompleted(ctx context.Context, tier []tracker.Tr
 			a.trackerStats[tr.URL()] = err
 			continue
 		}
+		a.trackerStatsMut.Lock()
 		a.trackerStats[tr.URL()] = res
+		a.trackerStatsMut.Unlock()
 		peers = append(peers, res.Peers...)
 	}
 	if len(peers) == 0 {
@@ -167,33 +197,4 @@ func (a *Announcer) announce(ctx context.Context, tr tracker.Tracker, torrent To
 
 	a.logger.Info("announcer -> announcing to tracker", "Tracker URL", tr.URL(), "Event", event.String())
 	return tr.Announce(ctx, req)
-}
-
-func (a *Announcer) GetTrackerStats() map[string]any {
-	a.statsReq <- map[string]any{}
-	res := <-a.statsReq
-	return res
-}
-
-func (a *Announcer) Completed(t Torrent) {
-	a.completed <- t
-}
-
-func (a *Announcer) Close(t Torrent) {
-	close(a.closeC)
-	a.announceTimer.Stop()
-	select {
-	case <-a.announceTimer.C:
-	default:
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	for _, tier := range a.trackers {
-		for _, tr := range tier {
-			a.announce(ctx, tr, t, tracker.TRACKER_STOPPED)
-		}
-	}
-
-	<-a.doneC
 }
