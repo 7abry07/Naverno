@@ -43,9 +43,15 @@ type TorrentStats struct {
 }
 
 func (t *Torrent) GetStats() *TorrentStats {
-	t.statsRequest <- TorrentStats{}
-	stats := <-t.statsRequest
-	return &stats
+	for {
+		select {
+		case t.statsRequest <- TorrentStats{}:
+		case stats := <-t.statsRequest:
+			return &stats
+		case <-t.closeC:
+			return nil
+		}
+	}
 }
 
 func (t *Torrent) fillStats(req *TorrentStats) {

@@ -43,9 +43,17 @@ func (c *Choker) Run(events chan any) {
 			optimisticTick.Stop()
 			return
 		case <-unchokeTick.C:
-			events <- Unchoke{}
+			select {
+			case events <- Unchoke{}:
+			case <-c.closeC:
+				continue
+			}
 		case <-optimisticTick.C:
-			events <- Optimistic{}
+			select {
+			case events <- Optimistic{}:
+			case <-c.closeC:
+				continue
+			}
 		}
 	}
 }

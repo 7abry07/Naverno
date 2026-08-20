@@ -4,12 +4,17 @@ import (
 	"Naverno/internal/util"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"net"
 	"net/url"
 	"sync"
 	"time"
+)
+
+var (
+	TransportClosedErr error = errors.New("closed udp transport")
 )
 
 type Request interface {
@@ -61,8 +66,19 @@ func NewUDPTransport() *UDPTransport {
 }
 
 func (t *UDPTransport) Do(req *UDPTransportRequest) (any, error) {
-	t.req <- req
-	res := <-req.response
+	select {
+	case <-req.ctx.Done():
+		return nil, req.ctx.Err()
+	case t.req <- req:
+	case <-t.doneC:
+		return nil, TransportClosedErr
+	}
+	var res any
+	select {
+	case res = <-req.response:
+	case <-req.ctx.Done():
+		return nil, req.ctx.Err()
+	}
 	switch res := res.(type) {
 	case connectResponse:
 		switch req.request.(type) {

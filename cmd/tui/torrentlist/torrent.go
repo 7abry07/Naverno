@@ -12,7 +12,7 @@ import (
 type TableColumn string
 
 var (
-	StatusDownloadingStyle = lipgloss.NewStyle().Foreground(lipgloss.Cyan)
+	StatusDownloadingStyle = lipgloss.NewStyle().Foreground(lipgloss.BrightBlue)
 	StatusErroredStyle     = lipgloss.NewStyle().Foreground(lipgloss.BrightRed)
 	StatusCompletedStyle   = lipgloss.NewStyle().Foreground(lipgloss.BrightGreen)
 )
@@ -50,22 +50,58 @@ func (s TorrentStatus) Style(status string) string {
 }
 
 type TorrentEntry struct {
-	Name     string
-	Status   TorrentStatus
-	Length   uint64
-	Stats    torrent.TorrentStats
-	Progress progress.Model
-	Error    error
+	Handle     *torrent.Torrent
+	Name       string
+	StatusType TorrentStatus
+	Status     string
+	Length     uint64
+	Stats      torrent.TorrentStats
+	Progress   progress.Model
 }
 
-func newTorrentEntry(name string, status TorrentStatus, length uint64) *TorrentEntry {
+func NewTorrentEntry(handle *torrent.Torrent, name string, length uint64) *TorrentEntry {
 	return &TorrentEntry{
+		Handle:   handle,
 		Name:     name,
-		Status:   status,
 		Length:   length,
 		Progress: progress.New(progress.WithColors(lipgloss.White, lipgloss.White)),
-		Error:    nil,
 	}
+}
+
+func (e *TorrentEntry) Errored(err error) {
+	e.Status = ErroredStatus.String() + ": " + err.Error()
+	e.StatusType = ErroredStatus
+}
+
+func (e *TorrentEntry) Completed() {
+	e.Status = CompletedStatus.String()
+	e.StatusType = CompletedStatus
+}
+
+func (e *TorrentEntry) Downloading() {
+	e.Status = DownloadingStatus.String()
+	e.StatusType = DownloadingStatus
+}
+
+func (e *TorrentEntry) Render(selected lipgloss.Style, limits []int) string {
+	name := clamp(e.Name, limits[0])
+	length := clamp(formatLength(e.Length), limits[1])
+	status := clamp(e.Status, limits[2])
+	e.Progress.SetWidth(limits[3])
+	e.Progress.ShowPercentage = false
+	peers := clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
+	drate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.DownloadRate)), limits[5])
+	urate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.UploadRate)), limits[6])
+
+	return fmt.Sprintf("%v  %v  %v  %v  %v  %v  %v",
+		selected.Render(name),
+		length,
+		e.StatusType.Style(status),
+		e.Progress.View(),
+		peers,
+		drate,
+		urate,
+	)
 }
 
 func clamp(text string, limit int) string {
@@ -97,7 +133,7 @@ func formatRate(rate uint64) string {
 	if rate > 1000 {
 		return fmt.Sprintf("%.2f Kbps", float64(rate)/1000.0)
 	}
-	return fmt.Sprintf("%v Bps", rate)
+	return fmt.Sprintf("%v bps", rate)
 }
 
 func formatLength(length uint64) string {
@@ -114,25 +150,4 @@ func formatLength(length uint64) string {
 		return fmt.Sprintf("%.2f KiB", float64(length)/1000.0)
 	}
 	return fmt.Sprintf("%v B", length)
-}
-
-func (e *TorrentEntry) Render(limits []int) string {
-	name := clamp(e.Name, limits[0])
-	length := clamp(formatLength(e.Length), limits[1])
-	status := clamp(e.Status.String(), limits[2])
-	e.Progress.SetWidth(limits[3])
-	e.Progress.ShowPercentage = false
-	peers := clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
-	drate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.DownloadRate)), limits[5])
-	urate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.UploadRate)), limits[6])
-
-	return fmt.Sprintf("%v  %v  %v  %v  %v  %v  %v",
-		name,
-		length,
-		e.Status.Style(status),
-		e.Progress.View(),
-		peers,
-		drate,
-		urate,
-	)
 }

@@ -69,7 +69,10 @@ func (t *Torrent) dial(peers []netip.AddrPort) {
 				t.logger.Debug("torrent -> error in connecting to remote peer", "Address", a.Addr().String(), "Error", err.Error())
 				return
 			}
-			t.newConns <- conn
+			select {
+			case t.newConns <- conn:
+			case <-t.closeC:
+			}
 		}()
 	}
 }
