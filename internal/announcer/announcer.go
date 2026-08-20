@@ -74,7 +74,10 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 				for _, tier := range a.trackers {
 					res, ok := a.announceTierCompleted(ctx, tier, torrent)
 					if ok {
-						peers <- res
+						select {
+						case peers <- res:
+						case <-a.closeC:
+						}
 						break
 					}
 				}
@@ -88,7 +91,10 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 					res, ok := a.announceTier(ctx, tier, torrent)
 					if ok {
 						a.trackers[i] = tier
-						peers <- res
+						select {
+						case peers <- res:
+						case <-a.closeC:
+						}
 						break
 					}
 				}

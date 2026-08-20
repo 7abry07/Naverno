@@ -145,8 +145,8 @@ func (t *Torrent) run() {
 			return
 		case <-rateTick.C:
 			t.rateMut.Lock()
-			t.uploadRate = (t.uploadedSince / uint64(time.Second.Seconds())) * 8
-			t.downloadRate = (t.downloadedSince / uint64(time.Second.Seconds())) * 8
+			t.uploadRate = t.uploadedSince * 8
+			t.downloadRate = t.downloadedSince * 8
 			t.downloadedSince = 0
 			t.uploadedSince = 0
 			t.rateMut.Unlock()

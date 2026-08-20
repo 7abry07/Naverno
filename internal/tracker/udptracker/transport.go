@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/url"
 	"sync"
-	"time"
 )
 
 var (
@@ -103,6 +102,22 @@ func (t *UDPTransport) Do(req *UDPTransportRequest) (any, error) {
 	}
 }
 
+func (t *UDPTransport) getConnection(ctx context.Context, host string) (*Connection, error) {
+	t.connectionsMut.Lock()
+	defer t.connectionsMut.Unlock()
+	conn, ok := t.connections[host]
+	if !ok {
+		dialer := net.Dialer{}
+		c, err := dialer.DialContext(ctx, "udp", host)
+		if err != nil {
+			return nil, fmt.Errorf("dial error -> %v", err)
+		}
+		conn = &Connection{UDPConn: c.(*net.UDPConn), requests: []uint32{}}
+		t.connections[host] = conn
+	}
+	return conn, nil
+}
+
 func (t *UDPTransport) Run() {
 	defer close(t.doneC)
 
@@ -113,41 +128,33 @@ func (t *UDPTransport) Run() {
 		case r := <-t.req:
 			done := make(chan struct{})
 
-			t.connectionsMut.Lock()
-			conn, ok := t.connections[r.url.Host]
-			if !ok {
-				dialer := net.Dialer{}
-				c, err := dialer.DialContext(r.ctx, "udp", r.url.Host)
-				if err != nil {
-					r.response <- fmt.Errorf("dial error -> %v", err)
-					continue
-				}
-				conn = &Connection{UDPConn: c.(*net.UDPConn), requests: []uint32{}}
-				t.connections[r.url.Host] = conn
-				go t.readLoopConn(conn)
+			conn, err := t.getConnection(r.ctx, r.url.Host)
+			if err != nil {
+				r.response <- err
+				continue
 			}
-			t.connectionsMut.Unlock()
+			go t.readLoopConn(conn)
 
 			go func() {
-				defer conn.SetWriteDeadline(time.Time{})
 				select {
 				case <-done:
 				case <-r.ctx.Done():
-					conn.SetWriteDeadline(time.Now())
+					conn.Close()
 				}
 			}()
 
 			transactionID := rand.Uint32()
 			req := r.request.Encode(transactionID)
-			err := util.WriteFull(conn, req)
+			err = util.WriteFull(conn, req)
+			conn.requests = append(conn.requests, transactionID)
 			if err != nil {
-				r.response <- err
+				t.deleteConnection(conn, err)
+				continue
 			}
 			t.pendingMut.Lock()
 			t.pending[transactionID] = r
-
-			close(done)
 			t.pendingMut.Unlock()
+			close(done)
 
 		case r := <-t.res:
 			buf := bytes.NewBuffer(r)
@@ -203,25 +210,32 @@ func (t *UDPTransport) Close() {
 	<-t.doneC
 }
 
+func (t *UDPTransport) deleteConnection(conn *Connection, err error) {
+	t.pendingMut.Lock()
+	t.connectionsMut.Lock()
+	defer t.connectionsMut.Unlock()
+	defer t.pendingMut.Unlock()
+	delete(t.connections, conn.RemoteAddr().String())
+	conn.Close()
+	for _, r := range conn.requests {
+		pending, ok := t.pending[r]
+		if !ok {
+			panic("found pending request that wasn't pending")
+		}
+		delete(t.pending, r)
+		select {
+		case pending.response <- err:
+		case <-pending.ctx.Done():
+		}
+	}
+}
+
 func (t *UDPTransport) readLoopConn(conn *Connection) {
 	for {
 		buf := make([]byte, 65535)
 		read, err := conn.Read(buf)
 		if err != nil {
-			t.pendingMut.Lock()
-			t.connectionsMut.Lock()
-			delete(t.connections, conn.RemoteAddr().String())
-			t.connectionsMut.Unlock()
-			conn.Close()
-			for _, r := range conn.requests {
-				pending, ok := t.pending[r]
-				if !ok {
-					panic("found pending request that wasn't pending")
-				}
-				delete(t.pending, r)
-				pending.response <- err
-			}
-			t.pendingMut.Unlock()
+			t.deleteConnection(conn, err)
 			return
 		}
 
