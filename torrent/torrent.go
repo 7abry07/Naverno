@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/netip"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -28,6 +29,12 @@ type Torrent struct {
 	uploaded   int64
 	left       int64
 	savePath   string
+
+	downloadedSince uint64
+	uploadedSince   uint64
+	uploadRate      uint64
+	downloadRate    uint64
+	rateMut         sync.Mutex
 
 	session            *Session
 	storage            storage.Storage
@@ -125,6 +132,8 @@ func (t *Torrent) run() {
 	go t.announcer.Run(t.torrentAnnounce, t.peersC)
 	go t.choker.Run(t.chokerEvents)
 
+	rateTick := time.NewTicker(time.Second)
+
 	for {
 		select {
 		case <-t.closeC:
@@ -134,6 +143,13 @@ func (t *Torrent) run() {
 			t.storage.StopPendingJobs()
 			t.choker.Close()
 			return
+		case <-rateTick.C:
+			t.rateMut.Lock()
+			t.uploadRate = (t.uploadedSince / uint64(time.Second.Seconds())) * 8
+			t.downloadRate = (t.downloadedSince / uint64(time.Second.Seconds())) * 8
+			t.downloadedSince = 0
+			t.uploadedSince = 0
+			t.rateMut.Unlock()
 		case req := <-t.statsRequest:
 			t.fillStats(&req)
 			t.statsRequest <- req

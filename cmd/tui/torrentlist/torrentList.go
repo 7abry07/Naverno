@@ -14,10 +14,12 @@ import (
 
 var TableLengthLimits = []int{
 	20,
-	15,
+	10,
+	10,
 	20,
-	30,
-	15,
+	10,
+	13,
+	17,
 }
 
 var TableColumnFields = []string{
@@ -26,6 +28,8 @@ var TableColumnFields = []string{
 	"STATUS",
 	"PROGRESS",
 	"PEERS",
+	"DOWNLOAD RATE",
+	"UPLOAD RATE",
 }
 
 func (l *Model) stats() tea.Cmd {

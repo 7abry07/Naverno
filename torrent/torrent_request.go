@@ -22,7 +22,9 @@ func (t *Torrent) handleReadResult(res storage.ReadResult) {
 	if !ok {
 		return
 	}
+
 	p.Piece(request.Idx, request.Begin, res.Data)
 	p.UpdateStats(0, uint64(len(res.Data)))
+	t.uploadedSince += uint64(len(res.Data))
 	t.logger.Error("torrent -> request data sent", "Request", fmt.Sprintf("(%v, %v, %v)", request.Idx, request.Begin, len(res.Data)))
 }

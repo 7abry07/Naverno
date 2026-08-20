@@ -28,10 +28,6 @@ func newModel() *model {
 		fmt.Printf("could't get terminal size -> %v\n", err)
 		return nil
 	}
-	// if W < 64 || H < 30 {
-	// 	fmt.Printf("terminal size too small\n")
-	// 	return nil
-	// }
 	return &model{
 		Torrents: torrentlist.New(W, int(float64(H)/1.8)),
 	}

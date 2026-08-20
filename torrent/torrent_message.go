@@ -111,6 +111,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				return
 			}
 
+			t.downloadedSince += uint64(len(mess.Data))
 			t.writePiece(downloader.Piece, mess.Begin, mess.Data)
 			pe.UpdateStats(uint64(len(mess.Data)), 0)
 			if downloader.Completed() {

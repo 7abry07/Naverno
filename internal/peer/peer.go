@@ -23,13 +23,12 @@ type Peer struct {
 	AmInteresting bool
 	Pieces        *bitfield.Bitfield
 
-	connectedAt     time.Time
-	lastRateUpdated time.Time
-	downloaded      uint64
-	uploaded        uint64
-	downloadRate    uint64
-	uploadRate      uint64
-	statsMut        sync.Mutex
+	connectedAt  time.Time
+	downloaded   uint64
+	uploaded     uint64
+	downloadRate uint64
+	uploadRate   uint64
+	statsMut     sync.Mutex
 
 	out *writer.Writer
 	in  *reader.Reader
@@ -53,21 +52,20 @@ func New(logger *slog.Logger, connectedAt time.Time, conn net.Conn, ID [20]byte,
 
 	plogger := logger.With("PeerID", string(ID[:]))
 	return &Peer{
-		ID:              ID,
-		connectedAt:     connectedAt,
-		Extensions:      extensions,
-		logger:          plogger,
-		conn:            conn,
-		IsChoked:        true,
-		AmChoked:        true,
-		IsInteresting:   false,
-		AmInteresting:   false,
-		lastRateUpdated: time.Now(),
-		Pieces:          nil,
-		out:             writer.New(plogger, conn),
-		in:              reader.New(plogger, conn),
-		closeC:          make(chan struct{}),
-		doneC:           make(chan struct{}),
+		ID:            ID,
+		connectedAt:   connectedAt,
+		Extensions:    extensions,
+		logger:        plogger,
+		conn:          conn,
+		IsChoked:      true,
+		AmChoked:      true,
+		IsInteresting: false,
+		AmInteresting: false,
+		Pieces:        nil,
+		out:           writer.New(plogger, conn),
+		in:            reader.New(plogger, conn),
+		closeC:        make(chan struct{}),
+		doneC:         make(chan struct{}),
 	}
 }
 
@@ -135,10 +133,9 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			}
 			return
 		case <-statsTick.C:
-			p.lastRateUpdated = time.Now()
 			p.statsMut.Lock()
-			p.uploadRate = p.uploaded / uint64(time.Second)
-			p.downloadRate = p.downloaded / uint64(time.Second)
+			p.uploadRate = (p.uploaded / uint64(time.Second.Seconds())) * 8
+			p.downloadRate = (p.downloaded / uint64(time.Second.Seconds())) * 8
 			p.downloaded = 0
 			p.uploaded = 0
 			p.statsMut.Unlock()

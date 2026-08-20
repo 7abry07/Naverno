@@ -84,7 +84,23 @@ func clamp(text string, limit int) string {
 	return text
 }
 
-func formatLength(length int) string {
+func formatRate(rate uint64) string {
+	if rate > 1000000000000 {
+		return fmt.Sprintf("%.2f Tbps", float64(rate)/1000000000000.0)
+	}
+	if rate > 1000000000 {
+		return fmt.Sprintf("%.2f Gbps", float64(rate)/1000000000.0)
+	}
+	if rate > 1000000 {
+		return fmt.Sprintf("%.2f Mbps", float64(rate)/1000000.0)
+	}
+	if rate > 1000 {
+		return fmt.Sprintf("%.2f Kbps", float64(rate)/1000.0)
+	}
+	return fmt.Sprintf("%v Bps", rate)
+}
+
+func formatLength(length uint64) string {
 	if length > 1000000000000 {
 		return fmt.Sprintf("%.2f TiB", float64(length)/1000000000000.0)
 	}
@@ -102,17 +118,21 @@ func formatLength(length int) string {
 
 func (e *TorrentEntry) Render(limits []int) string {
 	name := clamp(e.Name, limits[0])
-	length := clamp(formatLength(int(e.Length)), limits[1])
+	length := clamp(formatLength(e.Length), limits[1])
 	status := clamp(e.Status.String(), limits[2])
 	e.Progress.SetWidth(limits[3])
-	peers := clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
 	e.Progress.ShowPercentage = false
+	peers := clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
+	drate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.DownloadRate)), limits[5])
+	urate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.UploadRate)), limits[6])
 
-	return fmt.Sprintf("%v  %v  %v  %v  %v",
+	return fmt.Sprintf("%v  %v  %v  %v  %v  %v  %v",
 		name,
 		length,
 		e.Status.Style(status),
 		e.Progress.View(),
 		peers,
+		drate,
+		urate,
 	)
 }
