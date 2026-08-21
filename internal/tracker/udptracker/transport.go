@@ -47,7 +47,7 @@ type UDPTransport struct {
 	connectionsMut sync.Mutex
 	pendingMut     sync.Mutex
 	req            chan *UDPTransportRequest
-	res            chan []byte
+	// res            chan []byte
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -58,9 +58,9 @@ func NewUDPTransport() *UDPTransport {
 		connections: make(map[string]*Connection),
 		pending:     make(map[uint32]*UDPTransportRequest),
 		req:         make(chan *UDPTransportRequest),
-		res:         make(chan []byte),
-		closeC:      make(chan struct{}),
-		doneC:       make(chan struct{}),
+		// res:         make(chan []byte),
+		closeC: make(chan struct{}),
+		doneC:  make(chan struct{}),
 	}
 }
 
@@ -148,7 +148,7 @@ func (t *UDPTransport) Run() {
 			err = util.WriteFull(conn, req)
 			conn.requests = append(conn.requests, transactionID)
 			if err != nil {
-				t.deleteConnection(conn, err)
+				t.deleteConnection(conn)
 				continue
 			}
 			t.pendingMut.Lock()
@@ -156,48 +156,48 @@ func (t *UDPTransport) Run() {
 			t.pendingMut.Unlock()
 			close(done)
 
-		case r := <-t.res:
-			buf := bytes.NewBuffer(r)
-			a, tid, err := getResponseInfo(buf)
-			if err != nil {
-				fmt.Printf("error -> %v", err)
-				continue
-			}
-			pending, ok := t.pending[tid]
-			if !ok {
-				continue
-			}
-			delete(t.pending, tid)
-
-			switch a {
-			case action_connect:
-				connect := connectResponse{}
-				err := connect.decode(buf)
-				if err != nil {
-					pending.response <- err
-					continue
-				}
-				pending.response <- connect
-			case action_announce:
-				ann := announceResponse{}
-				err := ann.decode(buf)
-				if err != nil {
-					pending.response <- err
-					continue
-				}
-				pending.response <- ann
-			case action_error:
-				errResp := errorResponse{}
-				err := errResp.decode(buf)
-				if err != nil {
-					pending.response <- err
-					continue
-				}
-				pending.response <- errResp
-			default:
-				pending.response <- fmt.Errorf("unrecognized action")
-				continue
-			}
+			// case r := <-t.res:
+			// buf := bytes.NewBuffer(r)
+			// a, tid, err := getResponseInfo(buf)
+			// if err != nil {
+			// 	fmt.Printf("error -> %v", err)
+			// 	continue
+			// }
+			// pending, ok := t.pending[tid]
+			// if !ok {
+			// 	continue
+			// }
+			// delete(t.pending, tid)
+			//
+			// switch a {
+			// case action_connect:
+			// 	connect := connectResponse{}
+			// 	err := connect.decode(buf)
+			// 	if err != nil {
+			// 		pending.response <- err
+			// 		continue
+			// 	}
+			// 	pending.response <- connect
+			// case action_announce:
+			// 	ann := announceResponse{}
+			// 	err := ann.decode(buf)
+			// 	if err != nil {
+			// 		pending.response <- err
+			// 		continue
+			// 	}
+			// 	pending.response <- ann
+			// case action_error:
+			// 	errResp := errorResponse{}
+			// 	err := errResp.decode(buf)
+			// 	if err != nil {
+			// 		pending.response <- err
+			// 		continue
+			// 	}
+			// 	pending.response <- errResp
+			// default:
+			// 	pending.response <- fmt.Errorf("unrecognized action")
+			// 	continue
+			// }
 		}
 	}
 }
@@ -210,7 +210,7 @@ func (t *UDPTransport) Close() {
 	<-t.doneC
 }
 
-func (t *UDPTransport) deleteConnection(conn *Connection, err error) {
+func (t *UDPTransport) deleteConnection(conn *Connection) {
 	t.pendingMut.Lock()
 	t.connectionsMut.Lock()
 	defer t.connectionsMut.Unlock()
@@ -223,10 +223,7 @@ func (t *UDPTransport) deleteConnection(conn *Connection, err error) {
 			panic("found pending request that wasn't pending")
 		}
 		delete(t.pending, r)
-		select {
-		case pending.response <- err:
-		case <-pending.ctx.Done():
-		}
+		close(pending.response)
 	}
 }
 
@@ -235,11 +232,67 @@ func (t *UDPTransport) readLoopConn(conn *Connection) {
 		buf := make([]byte, 65535)
 		read, err := conn.Read(buf)
 		if err != nil {
-			t.deleteConnection(conn, err)
+			t.deleteConnection(conn)
 			return
 		}
 
 		buf = buf[:read]
-		t.res <- buf
+
+		temp := bytes.NewBuffer(buf)
+		a, tid, err := getResponseInfo(temp)
+		if err != nil {
+			continue
+		}
+		pending, ok := t.pending[tid]
+		if !ok {
+			continue
+		}
+		delete(t.pending, tid)
+
+		connReqs := []uint32{}
+		for _, r := range conn.requests {
+			if r == tid {
+				continue
+			}
+			connReqs = append(connReqs, r)
+		}
+		conn.requests = connReqs
+
+		var res any
+		switch a {
+		case action_connect:
+			connect := connectResponse{}
+			err := connect.decode(temp)
+			if err != nil {
+				res = err
+				continue
+			}
+			res = connect
+		case action_announce:
+			ann := announceResponse{}
+			err := ann.decode(temp)
+			if err != nil {
+				res = err
+				continue
+			}
+			res = ann
+			pending.response <- ann
+		case action_error:
+			errResp := errorResponse{}
+			err := errResp.decode(temp)
+			if err != nil {
+				res = err
+				continue
+			}
+			res = errResp
+		default:
+			res = fmt.Errorf("unrecognized action")
+			continue
+		}
+		select {
+		case pending.response <- res:
+		case <-pending.ctx.Done():
+		case <-t.closeC:
+		}
 	}
 }
