@@ -55,7 +55,7 @@ func (m Model) View() string {
 	fmt.Fprintf(b, "Pieces         %v\n", meta.PieceCount)
 	fmt.Fprintf(b, "Piece Length   %v\n", meta.PieceLength)
 	fmt.Fprintf(b, "Private        %v\n", meta.Private)
-	fmt.Fprintf(b, "Created By     %v\n", meta.Created_by)
+	fmt.Fprintf(b, "Created By     %v\n", meta.CreatedBy)
 	fmt.Fprintf(b, "Creation Date  %v\n", meta.CreationDate)
 	fmt.Fprintf(b, "Comment        %v\n", meta.Comment)
 	m.viewport.SetContent(b.String())

@@ -37,6 +37,16 @@ func TestParseValidSingleTorrent(t *testing.T) {
 		t.Errorf("expected: [%v] | got: [%v]", pieces, len(meta.Pieces))
 	}
 
+	comment := "Debian CD from cdimage.debian.org"
+	if meta.Comment != comment {
+		t.Errorf("expected: [%v] | got: [%v]", comment, meta.Comment)
+	}
+
+	createdby := "mktorrent 1.1"
+	if meta.CreatedBy != createdby {
+		t.Errorf("expected: [%v] | got: [%v]", createdby, meta.CreatedBy)
+	}
+
 	if len(meta.Files) != 1 {
 		t.Fatalf("expected: [%v files] | got: [%v files]", 1, len(meta.Files))
 	}

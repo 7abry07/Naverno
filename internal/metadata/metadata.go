@@ -16,7 +16,7 @@ type Metadata struct {
 
 	CreationDate time.Time
 	Comment      string
-	Created_by   string
+	CreatedBy    string
 }
 
 func New(in io.Reader) (*Metadata, error) {
@@ -28,7 +28,7 @@ func New(in io.Reader) (*Metadata, error) {
 		AnnounceList bencode.RawMessage `bencode:"announce-list"`
 		CreationDate int64              `bencode:"creation date"`
 		Comment      string             `bencode:"comment"`
-		Created_by   string             `bencode:"created by"`
+		CreatedBy    string             `bencode:"created by"`
 	}
 
 	decoder := bencode.NewDecoder(in)
@@ -80,6 +80,9 @@ func New(in io.Reader) (*Metadata, error) {
 		return nil, err
 	}
 	meta.Info = *info
+	meta.CreatedBy = root.CreatedBy
+	meta.Comment = root.Comment
+	meta.CreationDate = time.Unix(root.CreationDate, 0)
 
 	return &meta, nil
 }

@@ -47,7 +47,6 @@ type UDPTransport struct {
 	connectionsMut sync.Mutex
 	pendingMut     sync.Mutex
 	req            chan *UDPTransportRequest
-	// res            chan []byte
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -58,9 +57,8 @@ func NewUDPTransport() *UDPTransport {
 		connections: make(map[string]*Connection),
 		pending:     make(map[uint32]*UDPTransportRequest),
 		req:         make(chan *UDPTransportRequest),
-		// res:         make(chan []byte),
-		closeC: make(chan struct{}),
-		doneC:  make(chan struct{}),
+		closeC:      make(chan struct{}),
+		doneC:       make(chan struct{}),
 	}
 }
 
