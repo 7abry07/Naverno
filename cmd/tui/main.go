@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Naverno/cmd/tui/metadata"
 	"Naverno/cmd/tui/torrentlist"
 	"Naverno/torrent"
 	"fmt"
@@ -21,6 +22,7 @@ type model struct {
 	session        *torrent.Session
 	picker         filepicker.Model
 	torrents       torrentlist.Model
+	metadata       metadata.Model
 	pickingFile    bool
 	terminalWidth  int
 	terminalHeight int
@@ -39,6 +41,7 @@ func newModel(s *torrent.Session) *model {
 		session:  s,
 		picker:   p,
 		torrents: torrentlist.New(W, int(float64(H)/1.8)),
+		metadata: *metadata.New(W/3, int(float64(H)/2.4)),
 	}
 }
 
@@ -77,7 +80,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.terminalWidth = msg.Width
 		m.terminalHeight = msg.Height
 		m.torrents.SetWidth(msg.Width)
+		m.metadata.SetWidth(msg.Width / 3)
 		m.torrents.SetHeight(int(float64(msg.Height) / 1.8))
+		m.metadata.SetHeight(int(float64(msg.Height) / 2.4))
 	}
 
 	m.picker, cmd = m.picker.Update(msg)
@@ -99,7 +104,6 @@ func (m model) View() tea.View {
 
 	if m.terminalWidth < 64 || m.terminalHeight < 24 {
 		v.Content = TerminalTooSmall(64, 24, m.terminalWidth, m.terminalHeight)
-
 		return v
 	}
 
@@ -108,7 +112,12 @@ func (m model) View() tea.View {
 		return v
 	}
 
-	v.Content = m.torrents.View().Content
+	selected := m.torrents.GetSelected()
+	if selected != nil {
+		m.metadata.SetTorrent(selected)
+	}
+	v.Content = m.torrents.View().Content + "\n" + m.metadata.View()
+
 	return v
 }
 

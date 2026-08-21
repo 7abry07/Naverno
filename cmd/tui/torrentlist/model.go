@@ -63,7 +63,6 @@ func New(w, h int) Model {
 		limits = append(limits, int((float64(limit)/100.0)*float64(w)))
 	}
 	v := viewport.New(viewport.WithWidth(w), viewport.WithHeight(h))
-	v.FillHeight = true
 
 	return Model{
 		limits:        limits,
