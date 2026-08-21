@@ -51,6 +51,7 @@ type Model struct {
 	viewport      viewport.Model
 	list          []*TorrentEntry
 	SelectedStyle lipgloss.Style
+	yOffset       int
 	selected      int
 	limits        []int
 }
@@ -61,11 +62,15 @@ func New(w, h int) Model {
 	for _, limit := range TableLengthLimits {
 		limits = append(limits, int((float64(limit)/100.0)*float64(w)))
 	}
+	v := viewport.New(viewport.WithWidth(w), viewport.WithHeight(h))
+	v.FillHeight = true
+
 	return Model{
 		limits:        limits,
 		selected:      -1,
+		yOffset:       0,
 		SelectedStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("#898486")),
-		viewport:      viewport.New(viewport.WithWidth(w), viewport.WithHeight(h)),
+		viewport:      v,
 	}
 }
 
@@ -123,8 +128,12 @@ func (l Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			case -1:
 				l.selected = 0
 			case 0:
+				l.yOffset = 0
 			default:
 				l.selected -= 1
+				if l.selected < l.yOffset {
+					l.yOffset -= l.yOffset - l.selected
+				}
 			}
 		case "j", "down":
 			if len(l.list) == 0 {
@@ -136,6 +145,9 @@ func (l Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			case len(l.list) - 1:
 			default:
 				l.selected += 1
+				if l.viewport.Height()-4-(l.selected+1)+l.yOffset <= 0 {
+					l.yOffset = -(l.viewport.Height() - 4 - (l.selected + 1))
+				}
 			}
 		}
 		return l, nil
@@ -145,25 +157,26 @@ func (l Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (l Model) View() tea.View {
+	style := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false).
+		BorderBottom(true)
+
 	b := &strings.Builder{}
 	for i, text := range TableColumnFields {
 		fmt.Fprintf(b, "%-*s", l.limits[i]+2, text)
 	}
-	styled := lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false).
-		BorderBottom(true).
-		Render(b.String())
-
+	s := style.Render(b.String())
 	b.Reset()
-	b.WriteString(styled + "\n")
+	b.WriteString(s + "\n")
 
-	// fmt.Printf("selected -> %v", l.selected)
 	for i, e := range l.list {
-		if i == l.selected {
-			fmt.Fprintf(b, "%v\n", e.Render(l.SelectedStyle, l.limits))
-			continue
+		if i >= l.yOffset && i < len(l.list)+l.yOffset {
+			if i == l.selected {
+				fmt.Fprintf(b, "%v\n", e.Render(l.SelectedStyle, l.limits))
+			} else {
+				fmt.Fprintf(b, "%v\n", e.Render(lipgloss.NewStyle(), l.limits))
+			}
 		}
-		fmt.Fprintf(b, "%v\n", e.Render(lipgloss.NewStyle(), l.limits))
 	}
 
 	l.viewport.SetContent(b.String())
@@ -182,19 +195,22 @@ func (l *Model) AddTorrent(t *torrent.Torrent) {
 	l.list = append(l.list, e)
 }
 
-func (l *Model) RemoveTorrent(t *torrent.Torrent) {
-	t.Stop()
+func (l *Model) RemoveTorrent(t *torrent.Torrent) tea.Cmd {
 	temp := []*TorrentEntry{}
-	for _, e := range l.list {
+	index := 0
+	for i, e := range l.list {
 		if e.Handle != t {
 			temp = append(temp, e)
+			continue
 		}
+		index = i
 	}
-	if l.selected != 0 {
+	if l.selected != 0 && l.selected >= index {
 		l.selected -= 1
 	}
 
 	l.list = temp
+	return func() tea.Msg { t.Stop(); return nil }
 }
 
 func (l *Model) GetSelected() *torrent.Torrent {

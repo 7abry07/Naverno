@@ -125,7 +125,9 @@ func (a *Announcer) Close(t Torrent) {
 	defer cancel()
 	for _, tier := range a.trackers {
 		for _, tr := range tier {
-			a.announce(ctx, tr, t, tracker.TRACKER_STOPPED)
+			if _, ok := a.firstAnnounce[tr]; !ok {
+				a.announce(ctx, tr, t, tracker.TRACKER_STOPPED)
+			}
 		}
 	}
 

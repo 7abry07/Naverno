@@ -33,7 +33,7 @@ func newModel(s *torrent.Session) *model {
 		return nil
 	}
 	p := filepicker.New()
-	p.CurrentDirectory = "/home/fabry"
+	p.CurrentDirectory = "/home"
 	p.AllowedTypes = []string{".torrent"}
 	return &model{
 		session:  s,
@@ -50,6 +50,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	cmds := []tea.Cmd{}
 
+	m.torrents, cmd = m.torrents.Update(msg)
+	cmds = append(cmds, cmd)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -64,8 +67,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			t := m.torrents.GetSelected()
 			if t != nil {
-				m.torrents.RemoveTorrent(t)
+				cmds = append(cmds, m.torrents.RemoveTorrent(t))
 			}
+		}
+		if !m.pickingFile {
+			return m, tea.Batch(cmds...)
 		}
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
@@ -75,9 +81,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	m.picker, cmd = m.picker.Update(msg)
-	cmds = append(cmds, cmd)
-
-	m.torrents, cmd = m.torrents.Update(msg)
 	cmds = append(cmds, cmd)
 
 	if ok, path := m.picker.DidSelectFile(msg); ok {
@@ -96,12 +99,12 @@ func (m model) View() tea.View {
 
 	if m.terminalWidth < 64 || m.terminalHeight < 24 {
 		v.Content = TerminalTooSmall(64, 24, m.terminalWidth, m.terminalHeight)
+
 		return v
 	}
 
 	if m.pickingFile {
 		v.Content = m.picker.View()
-		v.AltScreen = true
 		return v
 	}
 
@@ -150,18 +153,7 @@ func main() {
 	}
 	p := tea.NewProgram(m)
 
-	// t, err := s.AddTorrentFromFile("/home/fabry/Downloads/debian.torrent", "/home/fabry/Downloads")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// t1, err := s.AddTorrentFromFile("/home/fabry/Downloads/fedora.torrent", "/home/fabry/Downloads")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
 	go http.ListenAndServe(":6060", nil)
-	// go p.Send(AddTorrentMsg{Torrent: t})
-	// go p.Send(AddTorrentMsg{Torrent: t1})
 
 	if _, err := p.Run(); err != nil {
 		panic(err)

@@ -139,15 +139,19 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			p.downloaded = 0
 			p.uploaded = 0
 			p.statsMut.Unlock()
-		case err := <-p.in.Error():
-			p.logger.Debug("peer -> read error", "Error", err.Error())
+		case err, ok := <-p.in.Error():
+			if ok {
+				p.logger.Debug("peer -> read error", "Error", err.Error())
+			}
 			select {
 			case disconnected <- p:
 			case <-p.closeC:
 			}
 			return
-		case err := <-p.out.Error():
-			p.logger.Debug("peer -> write error", "error", err.Error())
+		case err, ok := <-p.out.Error():
+			if ok {
+				p.logger.Debug("peer -> write error", "error", err.Error())
+			}
 			select {
 			case disconnected <- p:
 			case <-p.closeC:

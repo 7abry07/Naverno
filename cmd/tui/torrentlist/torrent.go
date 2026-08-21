@@ -9,8 +9,6 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type TableColumn string
-
 var (
 	StatusDownloadingStyle = lipgloss.NewStyle().Foreground(lipgloss.BrightBlue)
 	StatusErroredStyle     = lipgloss.NewStyle().Foreground(lipgloss.BrightRed)
@@ -32,7 +30,7 @@ func (s TorrentStatus) String() string {
 	case ErroredStatus:
 		return "Errored"
 	case CompletedStatus:
-		return "Completed (Seeding)"
+		return "Seeding"
 	}
 	return ""
 }
@@ -61,10 +59,13 @@ type TorrentEntry struct {
 
 func NewTorrentEntry(handle *torrent.Torrent, name string, length uint64) *TorrentEntry {
 	return &TorrentEntry{
-		Handle:   handle,
-		Name:     name,
-		Length:   length,
-		Progress: progress.New(progress.WithColors(lipgloss.White, lipgloss.White)),
+		Handle: handle,
+		Name:   name,
+		Length: length,
+		Progress: progress.New(
+			progress.WithoutPercentage(),
+			progress.WithColors(lipgloss.White, lipgloss.White),
+		),
 	}
 }
 
@@ -88,7 +89,6 @@ func (e *TorrentEntry) Render(selected lipgloss.Style, limits []int) string {
 	length := clamp(formatLength(e.Length), limits[1])
 	status := clamp(e.Status, limits[2])
 	e.Progress.SetWidth(limits[3])
-	e.Progress.ShowPercentage = false
 	peers := clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
 	drate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.DownloadRate)), limits[5])
 	urate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.UploadRate)), limits[6])
