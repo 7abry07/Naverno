@@ -1,9 +1,9 @@
 package torrentlist
 
 import (
+	"Naverno/cmd/tui/utils"
 	"Naverno/torrent"
 	"fmt"
-	"strings"
 
 	"charm.land/bubbles/v2/progress"
 	"charm.land/lipgloss/v2"
@@ -85,13 +85,13 @@ func (e *TorrentEntry) Downloading() {
 }
 
 func (e *TorrentEntry) Render(selected lipgloss.Style, limits []int) string {
-	name := clamp(e.Name, limits[0])
-	length := clamp(formatLength(e.Length), limits[1])
-	status := clamp(e.Status, limits[2])
+	name := utils.Clamp(e.Name, limits[0])
+	length := utils.Clamp(utils.FormatLength(e.Length), limits[1])
+	status := utils.Clamp(e.Status, limits[2])
 	e.Progress.SetWidth(limits[3])
-	peers := clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
-	drate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.DownloadRate)), limits[5])
-	urate := clamp(fmt.Sprintf("%v", formatRate(e.Stats.UploadRate)), limits[6])
+	peers := utils.Clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
+	drate := utils.Clamp(fmt.Sprintf("%v", utils.FormatRate(e.Stats.DownloadRate)), limits[5])
+	urate := utils.Clamp(fmt.Sprintf("%v", utils.FormatRate(e.Stats.UploadRate)), limits[6])
 
 	return fmt.Sprintf("%v  %v  %v  %v  %v  %v  %v",
 		selected.Render(name),
@@ -102,52 +102,4 @@ func (e *TorrentEntry) Render(selected lipgloss.Style, limits []int) string {
 		drate,
 		urate,
 	)
-}
-
-func clamp(text string, limit int) string {
-	if len(text) == limit {
-		return text
-	} else if len(text) > limit-3 {
-		text = text[:limit-3] + "..."
-	} else {
-		bd := &strings.Builder{}
-		bd.WriteString(text)
-		for range limit - len(text) {
-			bd.WriteString(" ")
-		}
-		text = bd.String()
-	}
-	return text
-}
-
-func formatRate(rate uint64) string {
-	if rate > 1000000000000 {
-		return fmt.Sprintf("%.2f Tbps", float64(rate)/1000000000000.0)
-	}
-	if rate > 1000000000 {
-		return fmt.Sprintf("%.2f Gbps", float64(rate)/1000000000.0)
-	}
-	if rate > 1000000 {
-		return fmt.Sprintf("%.2f Mbps", float64(rate)/1000000.0)
-	}
-	if rate > 1000 {
-		return fmt.Sprintf("%.2f Kbps", float64(rate)/1000.0)
-	}
-	return fmt.Sprintf("%v bps", rate)
-}
-
-func formatLength(length uint64) string {
-	if length > 1000000000000 {
-		return fmt.Sprintf("%.2f TiB", float64(length)/1000000000000.0)
-	}
-	if length > 1000000000 {
-		return fmt.Sprintf("%.2f GiB", float64(length)/1000000000.0)
-	}
-	if length > 1000000 {
-		return fmt.Sprintf("%.2f MiB", float64(length)/1000000.0)
-	}
-	if length > 1000 {
-		return fmt.Sprintf("%.2f KiB", float64(length)/1000.0)
-	}
-	return fmt.Sprintf("%v B", length)
 }
