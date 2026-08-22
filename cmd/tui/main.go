@@ -2,6 +2,7 @@ package main
 
 import (
 	"Naverno/cmd/tui/metadata"
+	"Naverno/cmd/tui/peerlist"
 	"Naverno/cmd/tui/torrentlist"
 	"Naverno/torrent"
 	"fmt"
@@ -23,6 +24,7 @@ type model struct {
 	picker         filepicker.Model
 	torrents       torrentlist.Model
 	metadata       metadata.Model
+	peers          peerlist.Model
 	pickingFile    bool
 	terminalWidth  int
 	terminalHeight int
@@ -37,11 +39,18 @@ func newModel(s *torrent.Session) *model {
 	p := filepicker.New()
 	p.CurrentDirectory = "/home"
 	p.AllowedTypes = []string{".torrent"}
+
+	torrentlistW := (W / 3) * 2
+	torrentlistH := int(float64(H) / 1.8)
+	metadataW := W - torrentlistW
+	peerlistH := H - torrentlistH
+
 	return &model{
 		session:  s,
 		picker:   p,
-		torrents: torrentlist.New(W, int(float64(H)/1.8)),
-		metadata: *metadata.New(W/3, int(float64(H)/2.4)),
+		torrents: torrentlist.New(torrentlistW, torrentlistH),
+		metadata: metadata.New(metadataW, torrentlistH),
+		peers:    peerlist.New(W, peerlistH),
 	}
 }
 
@@ -79,10 +88,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
 		m.terminalHeight = msg.Height
-		m.torrents.SetWidth(msg.Width)
-		m.metadata.SetWidth(msg.Width / 3)
-		m.torrents.SetHeight(int(float64(msg.Height) / 1.8))
-		m.metadata.SetHeight(int(float64(msg.Height) / 2.4))
+
+		torrentlistW := (msg.Width / 3) * 2
+		torrentlistH := int(float64(msg.Height) / 1.8)
+		metadataW := msg.Width - torrentlistW
+		peerlistH := msg.Height - torrentlistH
+
+		m.torrents.SetWidth(torrentlistW)
+		m.metadata.SetWidth(metadataW)
+		m.torrents.SetHeight(torrentlistH)
+		m.metadata.SetHeight(torrentlistH)
+		m.peers.SetWidth(msg.Width)
+		m.peers.SetHeight(peerlistH)
 	}
 
 	m.picker, cmd = m.picker.Update(msg)
@@ -115,9 +132,16 @@ func (m model) View() tea.View {
 	selected := m.torrents.GetSelected()
 	if selected != nil {
 		m.metadata.SetTorrent(selected)
+		m.peers.SetPeers(m.torrents.GetPeers(selected))
 	}
-	v.Content = m.torrents.View().Content + "\n" + m.metadata.View()
 
+	v.Content = lipgloss.JoinVertical(
+		lipgloss.Top,
+		lipgloss.JoinHorizontal(
+			lipgloss.Bottom,
+			m.metadata.View(),
+			m.torrents.View()),
+		m.peers.View())
 	return v
 }
 

@@ -14,22 +14,20 @@ import (
 
 var TableLengthLimits = []int{
 	20,
-	10,
-	10,
-	20,
-	10,
+	11,
 	13,
+	17,
+	15,
 	17,
 }
 
 var TableColumnFields = []string{
-	"NAME",
-	"LENGTH",
-	"STATUS",
-	"PROGRESS",
-	"PEERS",
-	"DOWNLOAD RATE",
-	"UPLOAD RATE",
+	"Name",
+	"Length",
+	"Status",
+	"Progress",
+	"Download Rate",
+	"Upload Rate",
 }
 
 type StatsMsg struct {
@@ -155,7 +153,7 @@ func (l Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 }
 
-func (l Model) View() tea.View {
+func (l Model) View() string {
 	style := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false).
 		BorderBottom(true)
@@ -183,8 +181,7 @@ func (l Model) View() tea.View {
 		Border(lipgloss.RoundedBorder(), true).
 		Padding(0, 1)
 
-	v := tea.NewView(l.viewport.View())
-	return v
+	return l.viewport.View()
 }
 
 func (l *Model) AddTorrent(t *torrent.Torrent) {
@@ -219,6 +216,19 @@ func (l *Model) GetSelected() *torrent.Torrent {
 		}
 	}
 	return nil
+}
+
+func (l *Model) GetPeers(t *torrent.Torrent) []torrent.PeerInfo {
+	if t == nil {
+		return []torrent.PeerInfo{}
+	}
+
+	for _, e := range l.list {
+		if e.Handle == t {
+			return e.Stats.Peers
+		}
+	}
+	return []torrent.PeerInfo{}
 }
 
 func (l *Model) SetWidth(width int) {

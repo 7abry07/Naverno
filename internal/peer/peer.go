@@ -23,12 +23,14 @@ type Peer struct {
 	AmInteresting bool
 	Pieces        *bitfield.Bitfield
 
-	connectedAt  time.Time
-	downloaded   uint64
-	uploaded     uint64
-	downloadRate uint64
-	uploadRate   uint64
-	statsMut     sync.Mutex
+	connectedAt     time.Time
+	downloaded      uint64
+	uploaded        uint64
+	downloadedSince uint64
+	uploadedSince   uint64
+	downloadRate    uint64
+	uploadRate      uint64
+	statsMut        sync.Mutex
 
 	out *writer.Writer
 	in  *reader.Reader
@@ -134,10 +136,10 @@ func (p *Peer) Run(inbox chan<- PeerMessage, disconnected chan<- *Peer) {
 			return
 		case <-statsTick.C:
 			p.statsMut.Lock()
-			p.uploadRate = (p.uploaded / uint64(time.Second.Seconds())) * 8
-			p.downloadRate = (p.downloaded / uint64(time.Second.Seconds())) * 8
-			p.downloaded = 0
-			p.uploaded = 0
+			p.uploadRate = (p.uploadedSince / uint64(time.Second.Seconds())) * 8
+			p.downloadRate = (p.downloadedSince / uint64(time.Second.Seconds())) * 8
+			p.downloadedSince = 0
+			p.uploadedSince = 0
 			p.statsMut.Unlock()
 		case err, ok := <-p.in.Error():
 			if ok {
@@ -179,6 +181,9 @@ func (p *Peer) UpdateStats(uploaded, downloaded uint64) {
 	defer p.statsMut.Unlock()
 	p.uploaded += uploaded
 	p.downloaded += downloaded
+
+	p.downloadedSince += downloaded
+	p.uploadedSince += uploaded
 }
 
 func (p *Peer) Stop() {

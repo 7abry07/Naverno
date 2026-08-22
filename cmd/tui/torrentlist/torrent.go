@@ -89,16 +89,16 @@ func (e *TorrentEntry) Render(selected lipgloss.Style, limits []int) string {
 	length := utils.Clamp(utils.FormatLength(e.Length), limits[1])
 	status := utils.Clamp(e.Status, limits[2])
 	e.Progress.SetWidth(limits[3])
-	peers := utils.Clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
-	drate := utils.Clamp(fmt.Sprintf("%v", utils.FormatRate(e.Stats.DownloadRate)), limits[5])
-	urate := utils.Clamp(fmt.Sprintf("%v", utils.FormatRate(e.Stats.UploadRate)), limits[6])
+	// peers := utils.Clamp(fmt.Sprintf("%v", len(e.Stats.Peers)), limits[4])
+	drate := utils.Clamp(fmt.Sprintf("%v", utils.FormatRate(e.Stats.DownloadRate)), limits[4])
+	urate := utils.Clamp(fmt.Sprintf("%v", utils.FormatRate(e.Stats.UploadRate)), limits[5])
 
-	return fmt.Sprintf("%v  %v  %v  %v  %v  %v  %v",
+	return fmt.Sprintf("%v  %v  %v  %v  %v  %v",
 		selected.Render(name),
 		length,
 		e.StatusType.Style(status),
 		e.Progress.View(),
-		peers,
+		// peers,
 		drate,
 		urate,
 	)

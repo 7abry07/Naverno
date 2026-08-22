@@ -16,8 +16,8 @@ type Model struct {
 	torrent  *torrent.Torrent
 }
 
-func New(w, h int) *Model {
-	return &Model{
+func New(w, h int) Model {
+	return Model{
 		viewport: viewport.New(viewport.WithWidth(w), viewport.WithHeight(h)),
 	}
 }
@@ -33,29 +33,28 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	style := lipgloss.NewStyle().
+	b := &strings.Builder{}
+	m.viewport.Style = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder(), true).
 		Padding(0, 1)
 
-	if m.torrent == nil {
-		return style.Render(m.viewport.View())
+	b.WriteString("Metadata\n\n")
+
+	if m.torrent != nil {
+		meta, _ := m.torrent.Metadata()
+		fmt.Fprintf(b, "Name           %v\n", meta.Name)
+		fmt.Fprintf(b, "Length         %v\n", utils.FormatLength(uint64(meta.Length)))
+		fmt.Fprintf(b, "Private        %v\n", meta.Private)
+		fmt.Fprintf(b, "Pieces         %v\n", meta.PieceCount)
+		fmt.Fprintf(b, "Piece Length   %v\n", utils.FormatLength(uint64(meta.PieceLength)))
+		fmt.Fprintf(b, "Info Hash      %x\n", meta.Infohash)
+		fmt.Fprintf(b, "Created By     %v\n", meta.CreatedBy)
+		fmt.Fprintf(b, "Creation Date  %v\n", meta.CreationDate)
+		fmt.Fprintf(b, "Comment        %v\n", meta.Comment)
 	}
 
-	meta, _ := m.torrent.Metadata()
-	b := &strings.Builder{}
-	fmt.Fprintf(b, "Name           %v\n", meta.Name)
-	fmt.Fprintf(b, "Length         %v\n", utils.FormatLength(uint64(meta.Length)))
-	fmt.Fprintf(b, "Private        %v\n", meta.Private)
-	fmt.Fprintf(b, "Pieces         %v\n", meta.PieceCount)
-	fmt.Fprintf(b, "Piece Length   %v\n", utils.FormatLength(uint64(meta.PieceLength)))
-	fmt.Fprintf(b, "Info Hash      %x\n", meta.Infohash)
-	fmt.Fprintf(b, "Created By     %v\n", meta.CreatedBy)
-	fmt.Fprintf(b, "Creation Date  %v\n", meta.CreationDate)
-	fmt.Fprintf(b, "Comment        %v\n", meta.Comment)
-
 	m.viewport.SetContent(b.String())
-
-	return style.Render(m.viewport.View())
+	return m.viewport.View()
 }
 
 func (m *Model) SetWidth(w int) {
