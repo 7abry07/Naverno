@@ -1,7 +1,7 @@
 package torrentlist
 
 import (
-	"Naverno/cmd/tui/utils"
+	"Naverno/cmd/testtui/utils"
 	"Naverno/torrent"
 	"fmt"
 

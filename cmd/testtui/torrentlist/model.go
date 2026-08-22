@@ -2,6 +2,7 @@ package torrentlist
 
 import (
 	"Naverno/torrent"
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -38,7 +39,7 @@ func (l *Model) stats() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		stats := map[*TorrentEntry]*torrent.TorrentStats{}
 		for _, e := range l.list {
-			s := e.Handle.GetStats()
+			s := e.Handle.Stats(context.TODO())
 			stats[e] = s
 		}
 		return StatsMsg{stats}
@@ -222,9 +223,10 @@ func (l *Model) GetPeers(t *torrent.Torrent) []torrent.PeerInfo {
 		return []torrent.PeerInfo{}
 	}
 
+	peers := t.Peers(context.TODO())
 	for _, e := range l.list {
 		if e.Handle == t {
-			return e.Stats.Peers
+			return peers
 		}
 	}
 	return []torrent.PeerInfo{}

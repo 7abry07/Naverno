@@ -60,7 +60,10 @@ type Torrent struct {
 	incomingResults    chan *handshaker.IncomingHandshaker
 	outgoingResults    chan *handshaker.OutgoingHandshaker
 	peersC             chan []netip.AddrPort
-	statsRequest       chan TorrentStats
+	statsReq           chan TorrentStats
+	peersReq           chan []PeerInfo
+	trackersReq        chan []TrackerInfo
+	piecesReq          chan []PieceInfo
 	chokerEvents       chan any
 
 	err    error
@@ -99,7 +102,10 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		torrentAnnounce:    make(chan announcer.Torrent),
 		peersC:             make(chan []netip.AddrPort),
 		chokerEvents:       make(chan any),
-		statsRequest:       make(chan TorrentStats),
+		statsReq:           make(chan TorrentStats),
+		peersReq:           make(chan []PeerInfo),
+		trackersReq:        make(chan []TrackerInfo),
+		piecesReq:          make(chan []PieceInfo),
 		outgoingResults:    make(chan *handshaker.OutgoingHandshaker),
 		incomingResults:    make(chan *handshaker.IncomingHandshaker),
 		closeC:             make(chan struct{}),
@@ -150,9 +156,18 @@ func (t *Torrent) run() {
 			t.downloadedSince = 0
 			t.uploadedSince = 0
 			t.rateMut.Unlock()
-		case req := <-t.statsRequest:
-			t.fillStats(&req)
-			t.statsRequest <- req
+		case req := <-t.statsReq:
+			t.fillRequest(&req)
+			t.statsReq <- req
+		case req := <-t.peersReq:
+			t.fillRequest(&req)
+			t.peersReq <- req
+		case req := <-t.trackersReq:
+			t.fillRequest(&req)
+			t.trackersReq <- req
+		case req := <-t.piecesReq:
+			t.fillRequest(&req)
+			t.piecesReq <- req
 		case ev := <-t.chokerEvents:
 			t.handleChokerEvent(ev)
 		case conn := <-t.newConns:
@@ -177,11 +192,4 @@ func (t *Torrent) run() {
 			t.handlePeerMessage(p)
 		}
 	}
-}
-
-func (t *Torrent) Metadata() (metadata.Metadata, bool) {
-	if t.meta != nil {
-		return *t.meta, true
-	}
-	return metadata.Metadata{}, false
 }

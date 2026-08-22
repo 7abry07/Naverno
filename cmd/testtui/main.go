@@ -1,9 +1,9 @@
 package main
 
 import (
-	"Naverno/cmd/tui/metadata"
-	"Naverno/cmd/tui/peerlist"
-	"Naverno/cmd/tui/torrentlist"
+	"Naverno/cmd/testtui/metadata"
+	"Naverno/cmd/testtui/peerlist"
+	"Naverno/cmd/testtui/torrentlist"
 	"Naverno/torrent"
 	"fmt"
 	"os"
