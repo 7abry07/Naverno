@@ -1,10 +1,20 @@
 package torrent
 
-import (
-	"Naverno/internal/metadata"
-	"fmt"
-	"os"
-)
+import "fmt"
+
+func (s *Session) AddTorrent(options TorrentOptions) (*Torrent, error) {
+	if options.metadata == nil {
+		return nil, fmt.Errorf("missing required metadata")
+	}
+
+	t, err := fromMetadata(s, options.metadata, options.SavePath, options.PieceSelectionStrategy)
+	if err != nil {
+		return nil, err
+	}
+
+	s.newTorrent <- t
+	return t, nil
+}
 
 func (s *Session) RemoveTorrent(t *Torrent) {
 	s.removeTorrent <- t
@@ -23,27 +33,6 @@ func (s *Session) handleRemoveTorrent(t *Torrent) {
 	s.torrentsMut.Lock()
 	defer s.torrentsMut.Unlock()
 	delete(s.torrents, t.meta.Infohash)
-}
-
-func (s *Session) AddTorrentFromFile(torrFile string, savePath string) (*Torrent, error) {
-	file, err := os.Open(torrFile)
-	if err != nil {
-		return nil, fmt.Errorf("error opening torrent file -> %v", err)
-	}
-
-	meta, err := metadata.New(file)
-	if err != nil {
-		return nil, fmt.Errorf("error creating torrent metadata -> %v", err)
-	}
-
-	t, err := newTorrentFromMetadata(s, meta, savePath)
-	if err != nil {
-		return nil, err
-	}
-
-	s.newTorrent <- t
-
-	return t, nil
 }
 
 func (s *Session) stopTorrents() {

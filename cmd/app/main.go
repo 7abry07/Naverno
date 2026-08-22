@@ -13,7 +13,13 @@ import (
 func main() {
 	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{Level: slog.LevelInfo}))
 	sess := torrent.StartSession(logger)
-	_, err := sess.AddTorrentFromFile("/home/fabry/Downloads/debian.torrent", "/home/fabry/Downloads")
+	options, err := torrent.FromFile("/home/fabry/Downloads/debian.torrent")
+	if err != nil {
+		panic(err)
+	}
+	options.PieceSelectionStrategy = torrent.DEFAULT_PIECE_SELECTION
+	options.SavePath = "/home/fabry/Downloads"
+	_, err = sess.AddTorrent(options)
 	if err != nil {
 		panic(err)
 	}

@@ -21,7 +21,7 @@ func New(pieces uint32) *Picker {
 	return &Picker{pieces: pickerPieces, availability: availability}
 }
 
-func (p *Picker) Pick(policy policy, peerPieces *bitfield.Bitfield) (uint32, bool) {
+func (p *Picker) Pick(policy Policy, peerPieces *bitfield.Bitfield) (uint32, bool) {
 	switch policy {
 	case RAREST_FIRST:
 		return p.pickRarest(peerPieces)

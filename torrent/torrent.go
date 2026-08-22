@@ -36,6 +36,8 @@ type Torrent struct {
 	downloadRate    uint64
 	rateMut         sync.Mutex
 
+	pickerStrategy PieceSelectionStrategy
+
 	session            *Session
 	storage            storage.Storage
 	picker             *picker.Picker
@@ -71,9 +73,12 @@ type Torrent struct {
 	doneC  chan struct{}
 }
 
-func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath string) (*Torrent, error) {
+func fromMetadata(sess *Session, meta *metadata.Metadata, savePath string, strategy PieceSelectionStrategy) (*Torrent, error) {
 	if len(meta.Files) > 1 {
 		savePath = filepath.Join(savePath, meta.Name)
+	}
+	if strategy == DEFAULT_PIECE_SELECTION {
+		strategy = RAREST_FIRST_PIECE_SELECTION
 	}
 	t := Torrent{
 		session:            sess,
@@ -88,6 +93,7 @@ func newTorrentFromMetadata(sess *Session, meta *metadata.Metadata, savePath str
 		downloaded:         0,
 		uploaded:           0,
 		left:               meta.Length,
+		pickerStrategy:     strategy,
 		picker:             picker.New(uint32(meta.PieceCount)),
 		choker:             choker.New(time.Second*10, time.Second*30),
 		pieces:             piece.NewPieces(meta),

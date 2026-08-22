@@ -130,7 +130,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 
 			if ok, path := m.picker.DidSelectFile(msg); ok && m.focused == PICKER {
-				if t, err := m.session.AddTorrentFromFile(path, "/home/fabry/Downloads"); err == nil {
+				options, err := torrent.FromFile(path)
+				if err != nil {
+
+				}
+				options.PieceSelectionStrategy = torrent.DEFAULT_PIECE_SELECTION
+				options.SavePath = "/home/fabry/Downloads"
+				if t, err := m.session.AddTorrent(options); err == nil {
 					m.torrents.AddTorrent(t)
 				}
 				m.focused = TORRENTLIST

@@ -72,7 +72,14 @@ func (t *Torrent) download(pe *peer.Peer) {
 		return
 	}
 
-	picked, ok := t.picker.Pick(picker.RAREST_FIRST, pe.Pieces)
+	var picked uint32
+	switch t.pickerStrategy {
+	case SEQUENTIAL_PIECE_SELECTION:
+		picked, ok = t.picker.Pick(picker.SEQUENTIAL, pe.Pieces)
+	case RAREST_FIRST_PIECE_SELECTION:
+		picked, ok = t.picker.Pick(picker.RAREST_FIRST, pe.Pieces)
+	}
+
 	if !ok {
 		pe.IsInteresting = false
 		return

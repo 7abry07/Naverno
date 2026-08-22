@@ -1,8 +1,8 @@
 package picker
 
-type policy uint8
+type Policy uint8
 
 const (
-	RAREST_FIRST policy = iota
+	RAREST_FIRST Policy = iota
 	SEQUENTIAL
 )
