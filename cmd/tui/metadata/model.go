@@ -14,6 +14,7 @@ import (
 type Model struct {
 	viewport viewport.Model
 	torrent  *torrent.Torrent
+	Style    lipgloss.Style
 }
 
 func New(w, h int) Model {
@@ -27,17 +28,12 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.viewport, cmd = m.viewport.Update(msg)
-	return m, cmd
+	return m, nil
 }
 
 func (m Model) View() string {
 	b := &strings.Builder{}
-	m.viewport.Style = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder(), true).
-		Padding(0, 1)
-
+	m.viewport.Style = m.Style
 	b.WriteString("Metadata\n\n")
 
 	if m.torrent != nil {

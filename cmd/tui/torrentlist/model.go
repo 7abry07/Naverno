@@ -49,6 +49,7 @@ type Model struct {
 	viewport      viewport.Model
 	list          []*TorrentEntry
 	SelectedStyle lipgloss.Style
+	Style         lipgloss.Style
 	yOffset       int
 	selected      int
 	limits        []int
@@ -115,39 +116,6 @@ func (l Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 		}
 		return l, nil
-	case tea.KeyMsg:
-		if len(l.list) == 0 {
-			return l, nil
-		}
-		switch msg.String() {
-		case "k", "up":
-			switch l.selected {
-			case -1:
-				l.selected = 0
-			case 0:
-				l.yOffset = 0
-			default:
-				l.selected -= 1
-				if l.selected < l.yOffset {
-					l.yOffset -= l.yOffset - l.selected
-				}
-			}
-		case "j", "down":
-			if len(l.list) == 0 {
-				return l, nil
-			}
-			switch l.selected {
-			case -1:
-				l.selected = 0
-			case len(l.list) - 1:
-			default:
-				l.selected += 1
-				if l.viewport.Height()-4-(l.selected+1)+l.yOffset <= 0 {
-					l.yOffset = -(l.viewport.Height() - 4 - (l.selected + 1))
-				}
-			}
-		}
-		return l, nil
 	default:
 		return l, nil
 	}
@@ -177,11 +145,42 @@ func (l Model) View() string {
 	}
 
 	l.viewport.SetContent(b.String())
-	l.viewport.Style = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder(), true).
-		Padding(0, 1)
+	l.viewport.Style = l.Style
 
 	return l.viewport.View()
+}
+
+func (l *Model) ScrollUp(int) {
+	if len(l.list) == 0 {
+		return
+	}
+	switch l.selected {
+	case -1:
+		l.selected = 0
+	case 0:
+		l.yOffset = 0
+	default:
+		l.selected -= 1
+		if l.selected < l.yOffset {
+			l.yOffset -= l.yOffset - l.selected
+		}
+	}
+}
+
+func (l *Model) ScrollDown(int) {
+	if len(l.list) == 0 {
+		return
+	}
+	switch l.selected {
+	case -1:
+		l.selected = 0
+	case len(l.list) - 1:
+	default:
+		l.selected += 1
+		if l.viewport.Height()-4-(l.selected+1)+l.yOffset <= 0 {
+			l.yOffset = -(l.viewport.Height() - 4 - (l.selected + 1))
+		}
+	}
 }
 
 func (l *Model) AddTorrent(t *torrent.Torrent) {

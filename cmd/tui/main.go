@@ -19,13 +19,26 @@ import (
 	"github.com/charmbracelet/x/term"
 )
 
+type focused uint8
+
+const (
+	PICKER focused = iota
+	TORRENTLIST
+	METADATA
+	PEERLIST
+)
+
+var (
+	BorderColor = lipgloss.Color("#444444")
+)
+
 type model struct {
+	focused        focused
 	session        *torrent.Session
 	picker         filepicker.Model
 	torrents       torrentlist.Model
 	metadata       metadata.Model
 	peers          peerlist.Model
-	pickingFile    bool
 	terminalWidth  int
 	terminalHeight int
 }
@@ -44,13 +57,21 @@ func newModel(s *torrent.Session) *model {
 	torrentlistH := int(float64(H) / 1.8)
 	metadataW := W - torrentlistW
 	peerlistH := H - torrentlistH
+	torrents := torrentlist.New(torrentlistW, torrentlistH)
+	peers := peerlist.New(W, peerlistH)
+	metadata := metadata.New(metadataW, torrentlistH)
+
+	torrents.Style = lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).BorderForeground(BorderColor)
+	peers.Style = lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).BorderForeground(BorderColor)
+	metadata.Style = lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).BorderForeground(BorderColor)
 
 	return &model{
+		focused:  TORRENTLIST,
 		session:  s,
 		picker:   p,
-		torrents: torrentlist.New(torrentlistW, torrentlistH),
-		metadata: metadata.New(metadataW, torrentlistH),
-		peers:    peerlist.New(W, peerlistH),
+		torrents: torrents,
+		metadata: metadata,
+		peers:    peers,
 	}
 }
 
@@ -62,29 +83,60 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	cmds := []tea.Cmd{}
 
-	m.torrents, cmd = m.torrents.Update(msg)
-	cmds = append(cmds, cmd)
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			if m.pickingFile {
-				m.pickingFile = false
-				return m, nil
-			}
 			return m, tea.Quit
+		case "k":
+			switch m.focused {
+			case TORRENTLIST:
+				m.torrents.ScrollUp(1)
+			}
+		case "j":
+			switch m.focused {
+			case TORRENTLIST:
+				m.torrents.ScrollDown(1)
+			}
+		case "t":
+			m.focused = TORRENTLIST
 		case "n":
-			m.pickingFile = true
+			m.focused = PICKER
 		case "r":
-			t := m.torrents.GetSelected()
-			if t != nil {
-				cmds = append(cmds, m.torrents.RemoveTorrent(t))
+			switch m.focused {
+			case TORRENTLIST:
+				t := m.torrents.GetSelected()
+				if t != nil {
+					cmds = append(cmds, m.torrents.RemoveTorrent(t))
+				}
+			}
+		case "m":
+			m.focused = METADATA
+		case "p":
+			m.focused = PEERLIST
+		}
+		switch m.focused {
+		case TORRENTLIST:
+			m.torrents, cmd = m.torrents.Update(msg)
+			cmds = append(cmds, cmd)
+		case PEERLIST:
+			m.peers, cmd = m.peers.Update(msg)
+			cmds = append(cmds, cmd)
+		case METADATA:
+			m.metadata, cmd = m.metadata.Update(msg)
+			cmds = append(cmds, cmd)
+		case PICKER:
+			m.picker, cmd = m.picker.Update(msg)
+			cmds = append(cmds, cmd)
+
+			if ok, path := m.picker.DidSelectFile(msg); ok && m.focused == PICKER {
+				if t, err := m.session.AddTorrentFromFile(path, "/home/fabry/Downloads"); err == nil {
+					m.torrents.AddTorrent(t)
+				}
+				m.focused = TORRENTLIST
 			}
 		}
-		if !m.pickingFile {
-			return m, tea.Batch(cmds...)
-		}
+		return m, tea.Batch(cmds...)
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
 		m.terminalHeight = msg.Height
@@ -102,15 +154,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.peers.SetHeight(peerlistH)
 	}
 
-	m.picker, cmd = m.picker.Update(msg)
+	m.torrents, cmd = m.torrents.Update(msg)
 	cmds = append(cmds, cmd)
 
-	if ok, path := m.picker.DidSelectFile(msg); ok {
-		if t, err := m.session.AddTorrentFromFile(path, "/home/fabry/Downloads"); err == nil {
-			m.torrents.AddTorrent(t)
-		}
-		m.pickingFile = false
-	}
+	m.metadata, cmd = m.metadata.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.peers, cmd = m.peers.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.picker, cmd = m.picker.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
@@ -124,15 +178,25 @@ func (m model) View() tea.View {
 		return v
 	}
 
-	if m.pickingFile {
-		v.Content = m.picker.View()
-		return v
-	}
-
 	selected := m.torrents.GetSelected()
 	if selected != nil {
 		m.metadata.SetTorrent(selected)
-		m.peers.SetPeers(m.torrents.GetPeers(selected))
+		peers := m.torrents.GetPeers(selected)
+		if len(peers) > 0 {
+			m.peers.SetPeers(peers)
+		}
+	}
+
+	switch m.focused {
+	case TORRENTLIST:
+		m.torrents.Style = m.torrents.Style.BorderForeground(lipgloss.BrightWhite)
+	case PEERLIST:
+		m.peers.Style = m.peers.Style.BorderForeground(lipgloss.BrightWhite)
+	case METADATA:
+		m.metadata.Style = m.metadata.Style.BorderForeground(lipgloss.BrightWhite)
+	case PICKER:
+		v.Content = m.picker.View()
+		return v
 	}
 
 	v.Content = lipgloss.JoinVertical(
