@@ -37,6 +37,7 @@ type Cancel struct {
 }
 
 type Extended struct {
+	MessageID uint8
 	ExtendedMessage
 }
 
@@ -123,7 +124,7 @@ func (m Extended) Marshal() []byte {
 	extendedMarshaled := m.ExtendedMessage.Marshal()
 	marshaled = binary.BigEndian.AppendUint32(marshaled, uint32(2+len(extendedMarshaled)))
 	marshaled = append(marshaled, byte(ExtendedID))
-	marshaled = append(marshaled, byte(m.ExtendedMessage.ID()))
+	marshaled = append(marshaled, byte(m.MessageID))
 	marshaled = append(marshaled, extendedMarshaled...)
 	// fmt.Printf("marshaled -> %v\n", marshaled)
 	// fmt.Printf("marshaled -> %v\n", string(marshaled))
@@ -213,7 +214,7 @@ func Decode(data []byte) (Message, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Extended{ExtendedMessage: decoded}, nil
+		return Extended{MessageID: messID, ExtendedMessage: decoded}, nil
 	default:
 		return nil, fmt.Errorf("invalid or non supported message id")
 	}

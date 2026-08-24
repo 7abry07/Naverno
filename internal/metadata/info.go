@@ -29,10 +29,12 @@ type Info struct {
 	Pieces      []byte
 	Files       []File
 	Private     bool
+	Raw         []byte
 }
 
 func newInfo(in []byte) (*Info, error) {
 	info := Info{}
+	info.Raw = in
 
 	var infoType struct {
 		Name        string `bencode:"name"`

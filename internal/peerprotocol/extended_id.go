@@ -19,7 +19,7 @@ var extendedStr = map[ExtendedMessageID]string{
 
 func (m ExtendedMessageID) String() string { return extendedStr[m] }
 
-func (m ExtendedHandshake) ID() ExtendedMessageID  { return ExtendedHandshakeID }
-func (m UTMetadataRequest) ID() ExtendedMessageID  { return UTMetadataID }
-func (m UTMetadataResponse) ID() ExtendedMessageID { return UTMetadataID }
-func (m UTMetadataReject) ID() ExtendedMessageID   { return UTMetadataID }
+func (m ExtendedHandshake) LocalID() ExtendedMessageID  { return ExtendedHandshakeID }
+func (m UTMetadataRequest) LocalID() ExtendedMessageID  { return UTMetadataID }
+func (m UTMetadataResponse) LocalID() ExtendedMessageID { return UTMetadataID }
+func (m UTMetadataReject) LocalID() ExtendedMessageID   { return UTMetadataID }

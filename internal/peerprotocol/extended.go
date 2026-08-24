@@ -9,7 +9,7 @@ import (
 
 type ExtendedMessage interface {
 	Marshal() []byte
-	ID() ExtendedMessageID
+	LocalID() ExtendedMessageID
 }
 
 type ExtendedHandshake struct{ IDs map[string]uint8 }

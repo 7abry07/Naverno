@@ -17,13 +17,13 @@ type Peer struct {
 	logger *slog.Logger
 
 	ID            [20]byte
-	Extensions    peerextension.Extensions
+	extensions    peerextension.Extensions
+	ExtendedHS    peerprotocol.ExtendedHandshake
 	IsChoked      bool
 	IsInteresting bool
 	AmChoked      bool
 	AmInteresting bool
 	Pieces        *bitfield.Bitfield
-	ExtendedHS    peerprotocol.ExtendedHandshake
 
 	connectedAt     time.Time
 	downloaded      uint64
@@ -58,7 +58,7 @@ func New(logger *slog.Logger, connectedAt time.Time, conn net.Conn, ID [20]byte,
 	return &Peer{
 		ID:            ID,
 		connectedAt:   connectedAt,
-		Extensions:    extensions,
+		extensions:    extensions,
 		logger:        plogger,
 		conn:          conn,
 		IsChoked:      true,
@@ -249,8 +249,41 @@ func (p *Peer) Cancel(idx, begin, length uint32) {
 }
 
 func (p *Peer) ExtendedHandshake(ids map[string]uint8) {
-	if p.Extensions.Check(peerextension.ExtensionProtocol) {
-		hs := peerprotocol.ExtendedHandshake{IDs: ids}
-		p.out.Write(peerprotocol.Extended{ExtendedMessage: hs})
+	hs := peerprotocol.ExtendedHandshake{IDs: ids}
+	p.out.Write(peerprotocol.Extended{ExtendedMessage: hs})
+}
+
+func (p *Peer) SupportsExtensionProtocol() bool {
+	return p.extensions.Check(peerextension.ExtensionProtocol)
+}
+
+func (p *Peer) SupportsUTMetadata() bool {
+	if p.extensions.Check(peerextension.ExtensionProtocol) {
+		if _, ok := p.ExtendedHS.IDs[peerprotocol.UTMetadataID.String()]; ok {
+			return true
+		}
+		return false
 	}
+	return false
+}
+
+func (p *Peer) SendMetadata(piece uint32, data []byte) {
+	id := p.ExtendedHS.IDs[peerprotocol.UTMetadataID.String()]
+	msg := peerprotocol.UTMetadataResponse{
+		Piece: piece,
+		Data:  data,
+	}
+	p.out.Write(peerprotocol.Extended{MessageID: id, ExtendedMessage: msg})
+}
+
+func (p *Peer) RequestMetadata(piece uint32) {
+	id := p.ExtendedHS.IDs[peerprotocol.UTMetadataID.String()]
+	msg := peerprotocol.UTMetadataRequest{Piece: piece}
+	p.out.Write(peerprotocol.Extended{MessageID: id, ExtendedMessage: msg})
+}
+
+func (p *Peer) RejectMetadataRequest(piece uint32) {
+	id := p.ExtendedHS.IDs[peerprotocol.UTMetadataID.String()]
+	msg := peerprotocol.UTMetadataReject{Piece: piece}
+	p.out.Write(peerprotocol.Extended{MessageID: id, ExtendedMessage: msg})
 }
