@@ -1,6 +1,8 @@
 package torrent
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func (s *Session) AddTorrent(options TorrentOptions) (*Torrent, error) {
 	if options.metadata == nil {

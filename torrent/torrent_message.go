@@ -126,5 +126,12 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			delete(t.pendingRequests, peerprotocol.Request{Idx: mess.Idx, Begin: mess.Begin, Length: mess.Length})
 			t.logger.Info("torrent -> request canceled", "Peer", string(pe.ID[:]), "Piece", mess.Idx, "Block", mess.Begin)
 		}
+	case peerprotocol.Extended:
+		{
+			switch extended := mess.ExtendedMessage.(type) {
+			case peerprotocol.Handshake:
+				t.logger.Info("torrent -> EXTENDED", "Peer", string(pe.ID[:]), "ids", extended.IDs)
+			}
+		}
 	}
 }

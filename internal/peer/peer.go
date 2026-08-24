@@ -4,6 +4,7 @@ import (
 	"Naverno/internal/bitfield"
 	"Naverno/internal/peer/reader"
 	"Naverno/internal/peer/writer"
+	"Naverno/internal/peerextension"
 	"Naverno/internal/peerprotocol"
 	"log/slog"
 	"net"
@@ -16,7 +17,7 @@ type Peer struct {
 	logger *slog.Logger
 
 	ID            [20]byte
-	Extensions    [8]byte
+	Extensions    peerextension.Extensions
 	IsChoked      bool
 	IsInteresting bool
 	AmChoked      bool

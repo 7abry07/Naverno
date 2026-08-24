@@ -12,20 +12,12 @@ type Message interface {
 }
 
 type KeepAlive struct{}
-
 type Choke struct{}
 type Unchoke struct{}
 type Interested struct{}
 type Uninterested struct{}
-
-type Have struct {
-	Idx uint32
-}
-
-type Bitfield struct {
-	Pieces []byte
-}
-
+type Have struct{ Idx uint32 }
+type Bitfield struct{ Pieces []byte }
 type Request struct {
 	Idx    uint32
 	Begin  uint32
@@ -44,6 +36,11 @@ type Cancel struct {
 	Length uint32
 }
 
+type Extended struct {
+	// MessageID uint8
+	ExtendedMessage
+}
+
 func (KeepAlive) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 0)
@@ -53,34 +50,34 @@ func (KeepAlive) Marshal() []byte {
 func (Choke) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 1)
-	marshaled = append(marshaled, 0)
+	marshaled = append(marshaled, byte(ChokeID))
 	return marshaled
 }
 
 func (Unchoke) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 1)
-	marshaled = append(marshaled, 1)
+	marshaled = append(marshaled, byte(UnchokeID))
 	return marshaled
 }
 
 func (Interested) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 1)
-	marshaled = append(marshaled, 2)
+	marshaled = append(marshaled, byte(InterestedID))
 	return marshaled
 
 }
 func (Uninterested) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 1)
-	marshaled = append(marshaled, 3)
+	marshaled = append(marshaled, byte(UninterestedID))
 	return marshaled
 }
 func (m Have) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 5)
-	marshaled = append(marshaled, 4)
+	marshaled = append(marshaled, byte(HaveID))
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Idx)
 	return marshaled
 }
@@ -88,7 +85,7 @@ func (m Have) Marshal() []byte {
 func (m Bitfield) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, uint32(1+len(m.Pieces)))
-	marshaled = append(marshaled, 5)
+	marshaled = append(marshaled, byte(BitfieldID))
 	marshaled = append(marshaled, m.Pieces...)
 	return marshaled
 }
@@ -96,7 +93,7 @@ func (m Bitfield) Marshal() []byte {
 func (m Request) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 13)
-	marshaled = append(marshaled, 6)
+	marshaled = append(marshaled, byte(RequestID))
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Idx)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Begin)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Length)
@@ -105,7 +102,7 @@ func (m Request) Marshal() []byte {
 func (m Piece) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, uint32(9+len(m.Data)))
-	marshaled = append(marshaled, 7)
+	marshaled = append(marshaled, byte(PieceID))
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Idx)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Begin)
 	marshaled = append(marshaled, m.Data...)
@@ -115,10 +112,20 @@ func (m Piece) Marshal() []byte {
 func (m Cancel) Marshal() []byte {
 	marshaled := []byte{}
 	marshaled = binary.BigEndian.AppendUint32(marshaled, 13)
-	marshaled = append(marshaled, 8)
+	marshaled = append(marshaled, byte(CancelID))
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Idx)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Begin)
 	marshaled = binary.BigEndian.AppendUint32(marshaled, m.Length)
+	return marshaled
+}
+
+func (m Extended) Marshal() []byte {
+	marshaled := []byte{}
+	extendedMarshaled := m.Marshal()
+	marshaled = binary.BigEndian.AppendUint32(marshaled, uint32(1+len(extendedMarshaled)))
+	marshaled = append(marshaled, byte(ExtendedID))
+	marshaled = append(marshaled, byte(m.ID()))
+	marshaled = append(marshaled, extendedMarshaled...)
 	return marshaled
 }
 
@@ -136,7 +143,7 @@ func Decode(data []byte) (Message, error) {
 	length := binary.BigEndian.Uint32(data[0:4])
 	id := data[4:5]
 
-	switch id[0] {
+	switch MessageID(id[0]) {
 	case ChokeID:
 		if length != 1 {
 			return nil, fmt.Errorf("invalid choke message")
@@ -194,6 +201,17 @@ func Decode(data []byte) (Message, error) {
 		begin := binary.BigEndian.Uint32(payload[4:8])
 		length := binary.BigEndian.Uint32(payload[8:12])
 		return Cancel{idx, begin, length}, nil
+	case ExtendedID:
+		if length < 2 {
+			return nil, fmt.Errorf("invalid extended message")
+		}
+		messID := data[5]
+		data := data[6:]
+		decoded, err := DecodeExtended(ExtendedMessageID(messID), data)
+		if err != nil {
+			return nil, err
+		}
+		return Extended{ExtendedMessage: decoded}, nil
 	default:
 		return nil, fmt.Errorf("invalid or non supported message id")
 	}

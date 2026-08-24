@@ -3,6 +3,7 @@ package torrent
 import (
 	"Naverno/internal/handshaker"
 	"Naverno/internal/peer"
+	"Naverno/internal/peerextension"
 	"Naverno/internal/trackermanager"
 	"log/slog"
 	"net"
@@ -14,7 +15,7 @@ import (
 type Session struct {
 	pid        [20]byte
 	port       uint16
-	extensions [8]byte
+	extensions peerextension.Extensions
 
 	listener       net.Listener
 	trackerManager *trackermanager.TrackerManager
@@ -56,7 +57,7 @@ func StartSession(logger *slog.Logger) *Session {
 		torrents:        make(map[[20]byte]*Torrent),
 		port:            uint16(port),
 		pid:             peer.GenerateRandomID(),
-		extensions:      [8]byte{},
+		extensions:      peerextension.With(peerextension.ExtensionProtocol),
 		trackerManager:  trackermanager.New(),
 		incoming:        []*handshaker.IncomingHandshaker{},
 		newTorrent:      make(chan *Torrent),
