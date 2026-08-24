@@ -3,6 +3,8 @@ package torrent
 import (
 	"Naverno/internal/handshaker"
 	"Naverno/internal/peer"
+	"Naverno/internal/peerextension"
+	"Naverno/internal/peerprotocol"
 	"net"
 	"time"
 )
@@ -26,6 +28,12 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 	pe := peer.New(t.logger, time.Now(), res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe.ID] = pe
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
+
+	IDs := make(map[string]uint8)
+	IDs[peerprotocol.UTMetadataID.String()] = uint8(peerprotocol.UTMetadataID)
+	if pe.Extensions.Check(peerextension.ExtensionProtocol) {
+		pe.ExtendedHandshake(IDs)
+	}
 	pe.Bitfield(t.bitset.Bytes())
 }
 
@@ -42,5 +50,11 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	pe := peer.New(t.logger, time.Now(), res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe.ID] = pe
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
+
+	IDs := make(map[string]uint8)
+	IDs[peerprotocol.UTMetadataID.String()] = uint8(peerprotocol.UTMetadataID)
+	if pe.Extensions.Check(peerextension.ExtensionProtocol) {
+		pe.ExtendedHandshake(IDs)
+	}
 	pe.Bitfield(t.bitset.Bytes())
 }

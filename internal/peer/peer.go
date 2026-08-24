@@ -23,6 +23,7 @@ type Peer struct {
 	AmChoked      bool
 	AmInteresting bool
 	Pieces        *bitfield.Bitfield
+	ExtendedHS    peerprotocol.ExtendedHandshake
 
 	connectedAt     time.Time
 	downloaded      uint64
@@ -45,7 +46,7 @@ type PeerMessage struct {
 	Message peerprotocol.Message
 }
 
-func New(logger *slog.Logger, connectedAt time.Time, conn net.Conn, ID [20]byte, extensions [8]byte) *Peer {
+func New(logger *slog.Logger, connectedAt time.Time, conn net.Conn, ID [20]byte, extensions peerextension.Extensions) *Peer {
 	if conn == nil {
 		panic("passed nil connection to Peer constructor")
 	}
@@ -245,4 +246,11 @@ func (p *Peer) Piece(idx, begin uint32, data []byte) {
 
 func (p *Peer) Cancel(idx, begin, length uint32) {
 	p.out.Write(peerprotocol.Cancel{Idx: idx, Begin: begin, Length: length})
+}
+
+func (p *Peer) ExtendedHandshake(ids map[string]uint8) {
+	if p.Extensions.Check(peerextension.ExtensionProtocol) {
+		hs := peerprotocol.ExtendedHandshake{IDs: ids}
+		p.out.Write(peerprotocol.Extended{ExtendedMessage: hs})
+	}
 }

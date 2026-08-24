@@ -1,6 +1,6 @@
 package peerprotocol
 
-type MessageID uint8
+type MessageID byte
 
 const (
 	ChokeID        MessageID = 0
@@ -30,9 +30,7 @@ var messageStr = map[MessageID]string{
 	KeepAliveID:    "keepalive",
 }
 
-func (id MessageID) String() string {
-	return messageStr[id]
-}
+func (id MessageID) String() string { return messageStr[id] }
 
 func (KeepAlive) ID() MessageID    { return KeepAliveID }
 func (Choke) ID() MessageID        { return ChokeID }

@@ -37,7 +37,6 @@ type Cancel struct {
 }
 
 type Extended struct {
-	// MessageID uint8
 	ExtendedMessage
 }
 
@@ -121,11 +120,14 @@ func (m Cancel) Marshal() []byte {
 
 func (m Extended) Marshal() []byte {
 	marshaled := []byte{}
-	extendedMarshaled := m.Marshal()
-	marshaled = binary.BigEndian.AppendUint32(marshaled, uint32(1+len(extendedMarshaled)))
+	extendedMarshaled := m.ExtendedMessage.Marshal()
+	marshaled = binary.BigEndian.AppendUint32(marshaled, uint32(2+len(extendedMarshaled)))
 	marshaled = append(marshaled, byte(ExtendedID))
-	marshaled = append(marshaled, byte(m.ID()))
+	marshaled = append(marshaled, byte(m.ExtendedMessage.ID()))
 	marshaled = append(marshaled, extendedMarshaled...)
+	// fmt.Printf("marshaled -> %v\n", marshaled)
+	// fmt.Printf("marshaled -> %v\n", string(marshaled))
+
 	return marshaled
 }
 

@@ -12,7 +12,7 @@ type ExtendedMessage interface {
 	ID() ExtendedMessageID
 }
 
-type Handshake struct{ IDs map[string]uint8 }
+type ExtendedHandshake struct{ IDs map[string]uint8 }
 type UTMetadataRequest struct{ Piece uint32 }
 type UTMetadataReject struct{ Piece uint32 }
 type UTMetadataResponse struct {
@@ -20,10 +20,11 @@ type UTMetadataResponse struct {
 	Data  []byte
 }
 
-func (m Handshake) Marshal() []byte {
+func (m ExtendedHandshake) Marshal() []byte {
 	var hs struct {
 		Ids map[string]int `bencode:"m"`
 	}
+	hs.Ids = make(map[string]int)
 	for str, ids := range m.IDs {
 		hs.Ids[str] = int(ids)
 	}
@@ -69,7 +70,7 @@ func (m UTMetadataReject) Marshal() []byte {
 
 func DecodeExtended(id ExtendedMessageID, data []byte) (ExtendedMessage, error) {
 	switch id {
-	case HandshakeID:
+	case ExtendedHandshakeID:
 		var msg struct {
 			Ids map[string]int `bencode:"m"`
 		}
@@ -78,7 +79,7 @@ func DecodeExtended(id ExtendedMessageID, data []byte) (ExtendedMessage, error) 
 		if err != nil {
 			return nil, fmt.Errorf("invalid metadata message -> %v", err)
 		}
-		hs := Handshake{
+		hs := ExtendedHandshake{
 			IDs: make(map[string]uint8),
 		}
 		for str, id := range msg.Ids {

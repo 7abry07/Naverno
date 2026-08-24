@@ -129,8 +129,15 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Extended:
 		{
 			switch extended := mess.ExtendedMessage.(type) {
-			case peerprotocol.Handshake:
-				t.logger.Info("torrent -> EXTENDED", "Peer", string(pe.ID[:]), "ids", extended.IDs)
+			case peerprotocol.ExtendedHandshake:
+				t.logger.Info("torrent -> EXTENDED handshake", "Peer", string(pe.ID[:]), "ids", extended.IDs)
+				pe.ExtendedHS = extended
+			case peerprotocol.UTMetadataRequest:
+				t.logger.Info("torrent -> EXTENDED metadata request", "Peer", string(pe.ID[:]), "piece", extended.Piece)
+			case peerprotocol.UTMetadataResponse:
+				t.logger.Info("torrent -> EXTENDED metadata response", "Peer", string(pe.ID[:]), "piece", extended.Piece)
+			case peerprotocol.UTMetadataReject:
+				t.logger.Info("torrent -> EXTENDED metadata reject", "Peer", string(pe.ID[:]), "piece", extended.Piece)
 			}
 		}
 	}

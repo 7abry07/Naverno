@@ -1,6 +1,7 @@
 package handshaker
 
 import (
+	"Naverno/internal/peerextension"
 	"Naverno/internal/util"
 	"fmt"
 	"net"
@@ -11,7 +12,7 @@ type IncomingHandshaker struct {
 	Conn       net.Conn
 	PeerID     [20]byte
 	InfoHash   [20]byte
-	Extensions [8]byte
+	Extensions peerextension.Extensions
 	Error      error
 
 	closeC chan struct{}
@@ -26,7 +27,7 @@ func NewIncomingHandshaker(conn net.Conn) *IncomingHandshaker {
 	}
 }
 
-func (i *IncomingHandshaker) Run(result chan<- *IncomingHandshaker, validInfoHash func([20]byte) bool, pid [20]byte, extensions [8]byte, timeout time.Duration) {
+func (i *IncomingHandshaker) Run(result chan<- *IncomingHandshaker, validInfoHash func([20]byte) bool, pid [20]byte, extensions peerextension.Extensions, timeout time.Duration) {
 	defer i.Conn.SetDeadline(time.Time{})
 	defer close(i.doneC)
 	defer func() {
