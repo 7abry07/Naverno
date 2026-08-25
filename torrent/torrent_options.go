@@ -15,7 +15,7 @@ const (
 )
 
 type TorrentOptions struct {
-	metadata               *metadata.Metadata
+	metadata               *metadata.Metainfo
 	SavePath               string
 	PieceSelectionStrategy PieceSelectionStrategy
 }

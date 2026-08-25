@@ -41,9 +41,9 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Have:
 		{
 			if pe.Pieces == nil {
-				pe.Pieces = bitfield.New(uint32(t.meta.PieceCount))
+				pe.Pieces = bitfield.New(uint32(t.info.PieceCount))
 			}
-			if mess.Idx > uint32(t.meta.PieceCount-1) {
+			if mess.Idx > uint32(t.info.PieceCount-1) {
 				t.logger.Info("torrent -> invalid HAVE", "PeerID", string(pe.ID[:]), "Error", "Piece index out of bounds")
 				t.closePeer(pe.Peer)
 				return
@@ -62,7 +62,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				t.closePeer(pe.Peer)
 				return
 			}
-			data, err := bitfield.From(mess.Pieces, uint32(t.meta.PieceCount))
+			data, err := bitfield.From(mess.Pieces, uint32(t.info.PieceCount))
 			if err != nil {
 				t.logger.Info("torrent -> invalid BITFIELD", "PeerID", string(pe.ID[:]), "Error", err)
 				t.closePeer(pe.Peer)
@@ -150,9 +150,9 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				}
 			case peerprotocol.UTMetadataRequest:
 				t.logger.Info("torrent -> EXTENDED metadata request", "Peer", string(pe.ID[:]), "piece", extended.Piece)
-				if t.meta != nil {
-					pieceLen := min(len(t.meta.Raw[(16*1024)*extended.Piece:]), 16*1024)
-					pe.SendMetadata(extended.Piece, t.meta.Raw[(16*1024)*extended.Piece:pieceLen])
+				if t.info != nil {
+					pieceLen := min(len(t.info.Raw[(16*1024)*extended.Piece:]), 16*1024)
+					pe.SendMetadata(extended.Piece, t.info.Raw[(16*1024)*extended.Piece:pieceLen])
 				} else {
 					pe.RejectMetadataRequest(extended.Piece)
 				}

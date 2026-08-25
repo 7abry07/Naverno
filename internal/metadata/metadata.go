@@ -9,8 +9,8 @@ import (
 	"github.com/zeebo/bencode"
 )
 
-type Metadata struct {
-	Info
+type Metainfo struct {
+	*Info
 
 	AnnounceList [][]url.URL
 
@@ -19,8 +19,8 @@ type Metadata struct {
 	CreatedBy    string
 }
 
-func New(in io.Reader) (*Metadata, error) {
-	meta := Metadata{}
+func New(in io.Reader) (*Metainfo, error) {
+	meta := Metainfo{}
 
 	var root struct {
 		Info         bencode.RawMessage `bencode:"info"`
@@ -79,7 +79,7 @@ func New(in io.Reader) (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	meta.Info = *info
+	meta.Info = info
 	meta.CreatedBy = root.CreatedBy
 	meta.Comment = root.Comment
 	meta.CreationDate = time.Unix(root.CreationDate, 0)

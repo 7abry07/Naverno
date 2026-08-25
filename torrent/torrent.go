@@ -5,6 +5,7 @@ import (
 	"Naverno/internal/bitfield"
 	"Naverno/internal/choker"
 	"Naverno/internal/handshaker"
+	"Naverno/internal/infodownloader"
 	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
@@ -18,12 +19,20 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"net/url"
 	"path/filepath"
 	"sync"
 	"time"
 )
 
 type Torrent struct {
+	name        string
+	infohash    [20]byte
+	rawTrackers [][]url.URL
+	createdBy   string
+	createdAt   time.Time
+	comment     string
+
 	id         []byte
 	downloaded int64
 	uploaded   int64
@@ -44,11 +53,12 @@ type Torrent struct {
 
 	session            *Session
 	storage            storage.Storage
+	infoDownloader     infodownloader.InfoDownloader
 	picker             *picker.Picker
 	choker             *choker.Choker
 	bitset             *bitfield.Bitfield
 	logger             *slog.Logger
-	meta               *metadata.Metadata
+	info               *metadata.Info
 	announcer          *announcer.Announcer
 	pieces             []*piece.Piece
 	peers              map[[20]byte]*peer.Peer
@@ -77,7 +87,7 @@ type Torrent struct {
 	doneC  chan struct{}
 }
 
-func fromMetadata(sess *Session, meta *metadata.Metadata, savePath string, strategy PieceSelectionStrategy) (*Torrent, error) {
+func fromMetadata(sess *Session, meta *metadata.Metainfo, savePath string, strategy PieceSelectionStrategy) (*Torrent, error) {
 	if len(meta.Files) > 1 {
 		savePath = filepath.Join(savePath, meta.Name)
 	}
@@ -85,8 +95,14 @@ func fromMetadata(sess *Session, meta *metadata.Metadata, savePath string, strat
 		strategy = RAREST_FIRST_PIECE_SELECTION
 	}
 	t := Torrent{
+		name:               meta.Name,
+		infohash:           meta.Infohash,
+		createdBy:          meta.CreatedBy,
+		createdAt:          meta.CreationDate,
+		comment:            meta.Comment,
+		rawTrackers:        meta.AnnounceList,
 		session:            sess,
-		meta:               meta,
+		info:               meta.Info,
 		logger:             sess.logger.With("TorrentID", fmt.Sprintf("%X", meta.Infohash[:4])),
 		savePath:           savePath,
 		peers:              make(map[[20]byte]*peer.Peer),
@@ -100,7 +116,7 @@ func fromMetadata(sess *Session, meta *metadata.Metadata, savePath string, strat
 		pickerStrategy:     strategy,
 		picker:             picker.New(uint32(meta.PieceCount)),
 		choker:             choker.New(time.Second*10, time.Second*30),
-		pieces:             piece.NewPieces(meta),
+		pieces:             piece.NewPieces(meta.Info),
 		bitset:             bitfield.New(uint32(meta.PieceCount)),
 		storage:            posixstorage.New(sess.logger, meta.Files, savePath),
 		writeResults:       make(chan storage.WriteResult),

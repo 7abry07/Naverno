@@ -26,7 +26,7 @@ func (s *Session) handleNewTorrent(t *Torrent) {
 	s.torrentsMut.Lock()
 	defer s.torrentsMut.Unlock()
 
-	s.torrents[t.meta.Infohash] = t
+	s.torrents[t.infohash] = t
 	go t.run()
 }
 
@@ -34,7 +34,7 @@ func (s *Session) handleRemoveTorrent(t *Torrent) {
 	t.Stop()
 	s.torrentsMut.Lock()
 	defer s.torrentsMut.Unlock()
-	delete(s.torrents, t.meta.Infohash)
+	delete(s.torrents, t.infohash)
 }
 
 func (s *Session) stopTorrents() {

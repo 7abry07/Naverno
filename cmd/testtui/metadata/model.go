@@ -37,15 +37,15 @@ func (m Model) View() string {
 	b.WriteString("Metadata\n\n")
 
 	if m.torrent != nil {
-		meta, _ := m.torrent.Metadata()
+		meta := m.torrent.Metadata()
 		fmt.Fprintf(b, "Name           %v\n", meta.Name)
-		fmt.Fprintf(b, "Length         %v\n", utils.FormatLength(uint64(meta.Length)))
-		fmt.Fprintf(b, "Private        %v\n", meta.Private)
-		fmt.Fprintf(b, "Pieces         %v\n", meta.PieceCount)
-		fmt.Fprintf(b, "Piece Length   %v\n", utils.FormatLength(uint64(meta.PieceLength)))
+		fmt.Fprintf(b, "Length         %v\n", utils.FormatLength(uint64(meta.Info.Length)))
+		fmt.Fprintf(b, "Private        %v\n", meta.Info.Private)
+		fmt.Fprintf(b, "Pieces         %v\n", meta.Info.PieceCount)
+		fmt.Fprintf(b, "Piece Length   %v\n", utils.FormatLength(uint64(meta.Info.PieceLength)))
 		fmt.Fprintf(b, "Info Hash      %x\n", meta.Infohash)
 		fmt.Fprintf(b, "Created By     %v\n", meta.CreatedBy)
-		fmt.Fprintf(b, "Creation Date  %v\n", meta.CreationDate)
+		fmt.Fprintf(b, "Creation Date  %v\n", meta.CreatedAt)
 		fmt.Fprintf(b, "Comment        %v\n", meta.Comment)
 	}
 

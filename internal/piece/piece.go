@@ -17,7 +17,7 @@ type Piece struct {
 	Hash   [20]byte
 }
 
-func NewPieces(meta *metadata.Metadata) []*Piece {
+func NewPieces(meta *metadata.Info) []*Piece {
 	pieces := make([]*Piece, meta.PieceCount)
 
 	off := uint64(0)

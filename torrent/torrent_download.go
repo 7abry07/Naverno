@@ -22,7 +22,7 @@ func (t *Torrent) handleHashResult(res storage.HashResult) {
 	}
 
 	t.downloaded += int64(res.Piece.Size)
-	t.left = t.meta.Length - t.downloaded
+	t.left = t.info.Length - t.downloaded
 	t.bitset.Set(uint(res.Piece.Idx))
 	t.picker.OnPieceCompleted(res.Piece.Idx)
 	for _, pe := range t.peers {
@@ -94,7 +94,7 @@ func (t *Torrent) download(pe *peer.Peer) {
 		downloader.RequestBlocks(10)
 		return
 	}
-	t.downloaders[pe] = piecedownloader.NewPieceDownloader(t.logger, t.pieces[picked])
+	t.downloaders[pe] = piecedownloader.New(t.logger, t.pieces[picked])
 	downloader = t.downloaders[pe]
 	downloader.Set(pe)
 	downloader.RequestBlocks(10)

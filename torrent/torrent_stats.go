@@ -5,16 +5,27 @@ import (
 	"Naverno/internal/tracker"
 	"context"
 	"net"
+	"net/url"
 	"time"
 )
 
-type Metadata struct{ metadata.Metadata }
+type Metadata struct {
+	Name        string
+	CreatedBy   string
+	CreatedAt   time.Time
+	Comment     string
+	Infohash    [20]byte
+	RawTrackers [][]url.URL
+	Info        *metadata.Info
+}
 
-func (t *Torrent) Metadata() (Metadata, bool) {
-	if t.meta != nil {
-		return Metadata{*t.meta}, true
-	}
-	return Metadata{}, false
+func (t *Torrent) Metadata() Metadata {
+	meta := Metadata{}
+	meta.Name = t.name
+	meta.Infohash = t.infohash
+	meta.RawTrackers = t.rawTrackers
+	meta.Info = t.info
+	return meta
 }
 
 type PeerInfo struct {

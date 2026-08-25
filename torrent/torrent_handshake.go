@@ -13,7 +13,7 @@ import (
 func (t *Torrent) handleNewConn(conn net.Conn) {
 	hs := handshaker.NewOutgoingHandshaker(conn)
 	t.outgoing[hs] = struct{}{}
-	go hs.Run(t.outgoingResults, t.session.pid, t.meta.Infohash, t.session.extensions, time.Second*2)
+	go hs.Run(t.outgoingResults, t.session.pid, t.infohash, t.session.extensions, time.Second*2)
 	t.logger.Debug("torrent -> started handshaker for connection", "Address", conn.RemoteAddr().String())
 }
 
@@ -31,8 +31,8 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 
 	metadataSize := 0
-	if t.meta != nil {
-		metadataSize = len(t.meta.Raw)
+	if t.info != nil {
+		metadataSize = len(t.info.Raw)
 	} else {
 		metadataSize = t.metadata_size
 	}
@@ -60,8 +60,8 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 
 	metadataSize := 0
-	if t.meta != nil {
-		metadataSize = len(t.meta.Raw)
+	if t.info != nil {
+		metadataSize = len(t.info.Raw)
 	} else {
 		metadataSize = t.metadata_size
 	}

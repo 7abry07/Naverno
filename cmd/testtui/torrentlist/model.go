@@ -82,7 +82,7 @@ func (l Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case StatsMsg:
 		cmds := []tea.Cmd{}
 		for i, e := range l.list {
-			m, _ := e.Handle.Metadata()
+			m := e.Handle.Metadata()
 			s, ok := msg.stats[e]
 			if !ok {
 				continue
@@ -91,16 +91,16 @@ func (l Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				cmds = append(cmds, e.Progress.SetPercent(0))
 				e.Errored(s.Error)
 			} else {
-				perc := float64(s.Downloaded) / float64(m.Length)
-				if perc > 0.99 && m.Length > int64(s.Downloaded) {
+				perc := float64(s.Downloaded) / float64(m.Info.Length)
+				if perc > 0.99 && m.Info.Length > int64(s.Downloaded) {
 					perc = 0.99
 				}
 				cmds = append(cmds, e.Progress.SetPercent(perc))
 			}
-			e.Length = uint64(m.Length)
+			e.Length = uint64(m.Info.Length)
 			e.Stats = *s
 
-			if m.Length == int64(s.Downloaded) {
+			if m.Info.Length == int64(s.Downloaded) {
 				e.Completed()
 			}
 			i++
@@ -185,8 +185,8 @@ func (l *Model) ScrollDown(int) {
 }
 
 func (l *Model) AddTorrent(t *torrent.Torrent) {
-	m, _ := t.Metadata()
-	e := NewTorrentEntry(t, m.Name, uint64(m.Length))
+	m := t.Metadata()
+	e := NewTorrentEntry(t, m.Name, uint64(m.Info.Length))
 	e.Downloading()
 	l.list = append(l.list, e)
 }

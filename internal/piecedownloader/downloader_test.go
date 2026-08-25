@@ -34,7 +34,7 @@ func (pe *MockPeer) Request(idx, begin, length uint32) {
 func TestDownloader(t *testing.T) {
 	p := piece.NewPiece(5, piece.BlockSize*5, 0, [20]byte{})
 
-	d := piecedownloader.NewPieceDownloader(slog.New(slog.NewTextHandler(io.Discard, nil)), p)
+	d := piecedownloader.New(slog.New(slog.NewTextHandler(io.Discard, nil)), p)
 	pe := NewMockPeer()
 
 	d.Set(pe)

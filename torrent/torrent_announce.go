@@ -4,7 +4,7 @@ import "Naverno/internal/announcer"
 
 func (t *Torrent) handleAnnounce() {
 	t.torrentAnnounce <- announcer.Torrent{
-		InfoHash:   t.meta.Infohash,
+		InfoHash:   t.infohash,
 		PeerID:     t.session.pid,
 		Downloaded: t.downloaded,
 		Uploaded:   t.uploaded,
@@ -15,7 +15,7 @@ func (t *Torrent) handleAnnounce() {
 func (t *Torrent) announceCompleted() {
 	t.announcer.Completed(
 		announcer.Torrent{
-			InfoHash:   t.meta.Infohash,
+			InfoHash:   t.infohash,
 			PeerID:     t.session.pid,
 			Downloaded: t.downloaded,
 			Uploaded:   t.uploaded,

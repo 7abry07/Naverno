@@ -40,7 +40,7 @@ func (t *Torrent) closeHandshakes() {
 func (t *Torrent) closeAnnouncer() {
 	t.announcer.Close(
 		announcer.Torrent{
-			InfoHash:   t.meta.Infohash,
+			InfoHash:   t.infohash,
 			PeerID:     t.session.pid,
 			Downloaded: t.downloaded,
 			Uploaded:   t.uploaded,
