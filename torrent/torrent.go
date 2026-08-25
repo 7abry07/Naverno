@@ -30,6 +30,10 @@ type Torrent struct {
 	left       int64
 	savePath   string
 
+	// TEMP
+	metadata_size int
+	//
+
 	downloadedSince uint64
 	uploadedSince   uint64
 	uploadRate      uint64

@@ -12,7 +12,11 @@ type ExtendedMessage interface {
 	LocalID() ExtendedMessageID
 }
 
-type ExtendedHandshake struct{ IDs map[string]uint8 }
+type ExtendedHandshake struct {
+	IDs          map[string]uint8
+	MetadataSize int
+}
+
 type UTMetadataRequest struct{ Piece uint32 }
 type UTMetadataReject struct{ Piece uint32 }
 type UTMetadataResponse struct {
@@ -22,9 +26,11 @@ type UTMetadataResponse struct {
 
 func (m ExtendedHandshake) Marshal() []byte {
 	var hs struct {
-		Ids map[string]int `bencode:"m"`
+		Ids          map[string]int `bencode:"m"`
+		MetadataSize int            `bencode:"metadata_size"`
 	}
 	hs.Ids = make(map[string]int)
+	hs.MetadataSize = m.MetadataSize
 	for str, ids := range m.IDs {
 		hs.Ids[str] = int(ids)
 	}
@@ -72,7 +78,8 @@ func DecodeExtended(id ExtendedMessageID, data []byte) (ExtendedMessage, error) 
 	switch id {
 	case ExtendedHandshakeID:
 		var msg struct {
-			Ids map[string]int `bencode:"m"`
+			Ids          map[string]int `bencode:"m"`
+			MetadataSize int            `bencode:"metadata_size"`
 		}
 		decoder := bencode.NewDecoder(bytes.NewBuffer(data))
 		err := decoder.Decode(&msg)
@@ -85,6 +92,7 @@ func DecodeExtended(id ExtendedMessageID, data []byte) (ExtendedMessage, error) 
 		for str, id := range msg.Ids {
 			hs.IDs[str] = uint8(id)
 		}
+		hs.MetadataSize = msg.MetadataSize
 		return hs, nil
 	case UTMetadataID:
 		var msg struct {

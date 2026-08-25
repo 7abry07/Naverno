@@ -18,7 +18,7 @@ type Peer struct {
 
 	ID            [20]byte
 	extensions    peerextension.Extensions
-	ExtendedHS    peerprotocol.ExtendedHandshake
+	ExtendedHS    *peerprotocol.ExtendedHandshake
 	IsChoked      bool
 	IsInteresting bool
 	AmChoked      bool
@@ -248,8 +248,8 @@ func (p *Peer) Cancel(idx, begin, length uint32) {
 	p.out.Write(peerprotocol.Cancel{Idx: idx, Begin: begin, Length: length})
 }
 
-func (p *Peer) ExtendedHandshake(ids map[string]uint8) {
-	hs := peerprotocol.ExtendedHandshake{IDs: ids}
+func (p *Peer) ExtendedHandshake(ids map[string]uint8, metadataSize int) {
+	hs := peerprotocol.ExtendedHandshake{IDs: ids, MetadataSize: metadataSize}
 	p.out.Write(peerprotocol.Extended{ExtendedMessage: hs})
 }
 
