@@ -8,6 +8,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/bits-and-blooms/bitset v1.24.6
 	github.com/charmbracelet/x/term v0.2.2
+	github.com/emirpasic/gods v1.18.1
 	github.com/lmittmann/tint v1.1.3
 	github.com/zeebo/bencode v1.0.0
 )

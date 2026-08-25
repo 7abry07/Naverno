@@ -15,7 +15,7 @@ var (
 )
 
 const (
-	blockSize = 16 * 1024
+	BlockSize = 16 * 1024
 )
 
 type PieceDownloader struct {
@@ -28,7 +28,7 @@ type PieceDownloader struct {
 	done      map[uint32]struct{}
 }
 
-func NewPieceDownloader(logger *slog.Logger, p *piece.Piece) *PieceDownloader {
+func New(logger *slog.Logger, p *piece.Piece) *PieceDownloader {
 	if logger == nil {
 		panic("passed nil logger to piece downloader")
 	}
@@ -42,15 +42,15 @@ func NewPieceDownloader(logger *slog.Logger, p *piece.Piece) *PieceDownloader {
 		done:      make(map[uint32]struct{}),
 	}
 
-	blockCount := uint32(util.Align(uint64(p.Size), blockSize)) / blockSize
+	blockCount := uint32(util.Align(uint64(p.Size), BlockSize)) / BlockSize
 
 	for i := range blockCount {
-		length := uint64(blockSize)
+		length := uint64(BlockSize)
 		if i == blockCount-1 {
-			length -= util.Align(uint64(p.Size), blockSize) - uint64(p.Size)
+			length -= util.Align(uint64(p.Size), BlockSize) - uint64(p.Size)
 		}
-		d.blocks[i*blockSize] = uint32(length)
-		d.remaining = append(d.remaining, i*blockSize)
+		d.blocks[i*BlockSize] = uint32(length)
+		d.remaining = append(d.remaining, i*BlockSize)
 	}
 
 	return d

@@ -29,11 +29,19 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 	pe := peer.New(t.logger, time.Now(), res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe.ID] = pe
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
-	if t.metadata_size != 0 && pe.SupportsExtensionProtocol() {
+
+	metadataSize := 0
+	if t.meta != nil {
+		metadataSize = len(t.meta.Raw)
+	} else {
+		metadataSize = t.metadata_size
+	}
+	if metadataSize != 0 && pe.SupportsExtensionProtocol() {
 		pe.ExtendedHandshake(map[string]uint8{
 			peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
 		}, t.metadata_size)
 	}
+
 	pe.Bitfield(t.bitset.Bytes())
 }
 
@@ -50,10 +58,18 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	pe := peer.New(t.logger, time.Now(), res.Conn, res.PeerID, res.Extensions)
 	t.peers[pe.ID] = pe
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
-	if t.metadata_size != 0 && pe.SupportsExtensionProtocol() {
+
+	metadataSize := 0
+	if t.meta != nil {
+		metadataSize = len(t.meta.Raw)
+	} else {
+		metadataSize = t.metadata_size
+	}
+	if metadataSize != 0 && pe.SupportsExtensionProtocol() {
 		pe.ExtendedHandshake(map[string]uint8{
 			peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
 		}, t.metadata_size)
 	}
+
 	pe.Bitfield(t.bitset.Bytes())
 }

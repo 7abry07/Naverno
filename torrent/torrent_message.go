@@ -150,6 +150,12 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				}
 			case peerprotocol.UTMetadataRequest:
 				t.logger.Info("torrent -> EXTENDED metadata request", "Peer", string(pe.ID[:]), "piece", extended.Piece)
+				if t.meta != nil {
+					pieceLen := min(len(t.meta.Raw[(16*1024)*extended.Piece:]), 16*1024)
+					pe.SendMetadata(extended.Piece, t.meta.Raw[(16*1024)*extended.Piece:pieceLen])
+				} else {
+					pe.RejectMetadataRequest(extended.Piece)
+				}
 			case peerprotocol.UTMetadataResponse:
 				t.logger.Info("torrent -> EXTENDED metadata response", "Peer", string(pe.ID[:]), "piece", extended.Piece)
 			case peerprotocol.UTMetadataReject:
