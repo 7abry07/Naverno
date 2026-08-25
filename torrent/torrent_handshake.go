@@ -33,13 +33,13 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 	metadataSize := 0
 	if t.info != nil {
 		metadataSize = len(t.info.Raw)
-	} else {
-		metadataSize = t.metadata_size
+	} else if t.infoDownloader != nil {
+		metadataSize = t.infoDownloader.Size
 	}
 	if metadataSize != 0 && pe.SupportsExtensionProtocol() {
 		pe.ExtendedHandshake(map[string]uint8{
 			peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
-		}, t.metadata_size)
+		}, metadataSize)
 	}
 
 	pe.Bitfield(t.bitset.Bytes())
@@ -62,13 +62,13 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	metadataSize := 0
 	if t.info != nil {
 		metadataSize = len(t.info.Raw)
-	} else {
-		metadataSize = t.metadata_size
+	} else if t.infoDownloader != nil {
+		metadataSize = t.infoDownloader.Size
 	}
 	if metadataSize != 0 && pe.SupportsExtensionProtocol() {
 		pe.ExtendedHandshake(map[string]uint8{
 			peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
-		}, t.metadata_size)
+		}, metadataSize)
 	}
 
 	pe.Bitfield(t.bitset.Bytes())

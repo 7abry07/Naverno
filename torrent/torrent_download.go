@@ -1,7 +1,9 @@
 package torrent
 
 import (
+	"Naverno/internal/infodownloader"
 	"Naverno/internal/peer"
+	"Naverno/internal/peerprotocol"
 	"Naverno/internal/picker"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
@@ -99,4 +101,23 @@ func (t *Torrent) download(pe *peer.Peer) {
 	downloader.Set(pe)
 	downloader.RequestBlocks(10)
 	t.logger.Debug("torrent -> started downloader for piece", "Piece", picked, "PeerID", string(pe.ID[:]))
+}
+
+func (t *Torrent) downloadMetadata(pe *peer.Peer) {
+	if t.infoDownloader == nil {
+		t.infoDownloader = infodownloader.New(pe.ExtendedHS.MetadataSize)
+		t.infoDownloader.AddPeer(pe)
+
+		for _, p := range t.peers {
+			if p.ExtendedHS != nil || !p.SupportsExtensionProtocol() {
+				continue
+			}
+			p.ExtendedHandshake(map[string]uint8{
+				peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
+			}, t.infoDownloader.Size)
+		}
+	} else {
+		t.infoDownloader.AddPeer(pe)
+	}
+	t.infoDownloader.Request(10)
 }

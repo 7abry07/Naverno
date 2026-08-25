@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"Naverno/internal/bitfield"
+	"Naverno/internal/infodownloader"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
 	"Naverno/internal/piecedownloader"
@@ -137,19 +138,11 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 			case peerprotocol.ExtendedHandshake:
 				pe.ExtendedHS = &extended
 				t.logger.Info("torrent -> EXTENDED handshake", "Peer", string(pe.ID[:]))
-				if t.metadata_size == 0 && (extended.MetadataSize != 0 && pe.SupportsUTMetadata()) {
-					t.metadata_size = extended.MetadataSize
-					for _, p := range t.peers {
-						if p.ExtendedHS != nil || !p.SupportsExtensionProtocol() {
-							continue
-						}
-						p.ExtendedHandshake(map[string]uint8{
-							peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
-						}, t.metadata_size)
-					}
+				if t.info == nil && pe.SupportsUTMetadata() {
+					t.downloadMetadata(pe.Peer)
 				}
 			case peerprotocol.UTMetadataRequest:
-				t.logger.Info("torrent -> EXTENDED metadata request", "Peer", string(pe.ID[:]), "piece", extended.Piece)
+				t.logger.Info("torrent -> EXTENDED metadata request", "Peer", string(pe.ID[:]), "Piece", extended.Piece)
 				if t.info != nil {
 					pieceLen := min(len(t.info.Raw[(16*1024)*extended.Piece:]), 16*1024)
 					pe.SendMetadata(extended.Piece, t.info.Raw[(16*1024)*extended.Piece:pieceLen])
@@ -157,9 +150,41 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 					pe.RejectMetadataRequest(extended.Piece)
 				}
 			case peerprotocol.UTMetadataResponse:
-				t.logger.Info("torrent -> EXTENDED metadata response", "Peer", string(pe.ID[:]), "piece", extended.Piece)
+				t.logger.Info("torrent -> EXTENDED metadata response", "Peer", string(pe.ID[:]), "Piece", extended.Piece)
+
+				err := t.infoDownloader.OnPiece(extended.Piece, extended.Data)
+				switch err {
+				case infodownloader.ErrInvalid:
+					t.logger.Info("downloader -> invalid metadata piece", "PeerID", string(pe.ID[:]), "Piece", extended.Piece, "Length", len(extended.Data))
+					t.closePeer(pe.Peer)
+					return
+				case infodownloader.ErrDuplicate:
+					t.logger.Info("downloader -> duplicate metadata piece", "PeerID", string(pe.ID[:]), "Piece", extended.Piece)
+					return
+				case infodownloader.ErrNotRequested:
+					t.logger.Info("downloader -> not requested metadata piece", "PeerID", string(pe.ID[:]), "Piece", extended.Piece)
+				case nil:
+				default:
+					t.closePeer(pe.Peer)
+					return
+				}
+				t.downloadMetadata(pe.Peer)
 			case peerprotocol.UTMetadataReject:
 				t.logger.Info("torrent -> EXTENDED metadata reject", "Peer", string(pe.ID[:]), "piece", extended.Piece)
+				err := t.infoDownloader.OnReject(extended.Piece)
+				switch err {
+				case infodownloader.ErrInvalid:
+					t.logger.Info("downloader -> invalid metadata piece", "PeerID", string(pe.ID[:]), "Piece", extended.Piece)
+					t.closePeer(pe.Peer)
+					return
+				case infodownloader.ErrNotRequested:
+					t.logger.Info("downloader -> not requested metadata piece", "PeerID", string(pe.ID[:]), "Piece", extended.Piece)
+				case nil:
+				default:
+					t.closePeer(pe.Peer)
+					return
+				}
+				t.downloadMetadata(pe.Peer)
 			}
 		}
 	}
