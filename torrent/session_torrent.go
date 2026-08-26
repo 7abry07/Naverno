@@ -5,17 +5,25 @@ import (
 )
 
 func (s *Session) AddTorrent(options TorrentOptions) (*Torrent, error) {
-	if options.metadata == nil {
-		return nil, fmt.Errorf("missing required metadata")
-	}
+	if options.metadata == nil && options.magnet == nil {
+		return nil, fmt.Errorf("missing metadata or no means to retrieve it")
+	} else if options.metadata != nil {
+		t, err := fromMetadata(s, options.metadata, options.SavePath, options.PieceSelectionStrategy)
+		if err != nil {
+			return nil, err
+		}
 
-	t, err := fromMetadata(s, options.metadata, options.SavePath, options.PieceSelectionStrategy)
-	if err != nil {
-		return nil, err
-	}
+		s.newTorrent <- t
+		return t, nil
+	} else {
+		t, err := fromURI(s, options.magnet, options.SavePath, options.PieceSelectionStrategy)
+		if err != nil {
+			return nil, err
+		}
 
-	s.newTorrent <- t
-	return t, nil
+		s.newTorrent <- t
+		return t, nil
+	}
 }
 
 func (s *Session) RemoveTorrent(t *Torrent) {

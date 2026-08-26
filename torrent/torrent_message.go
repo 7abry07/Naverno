@@ -14,6 +14,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Choke:
 		{
 			pe.AmChoked = true
+			if t.info == nil {
+				return
+			}
+
 			if d, ok := t.downloaders[pe.Peer]; ok {
 				delete(t.downloaders, pe.Peer)
 				t.stalledDownloaders[d.Piece] = d
@@ -25,11 +29,18 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 	case peerprotocol.Unchoke:
 		{
 			pe.AmChoked = false
+			if t.info == nil {
+				return
+			}
 			t.download(pe.Peer)
 		}
 	case peerprotocol.Interested:
 		{
 			pe.AmInteresting = true
+			if t.info == nil {
+				return
+			}
+
 			replace := t.choker.OnInterested(pe)
 			if replace != nil {
 				replace.(*peer.Peer).Choke()
@@ -41,6 +52,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Have:
 		{
+			if t.info == nil {
+				return
+			}
+
 			if pe.Pieces == nil {
 				pe.Pieces = bitfield.New(uint32(t.info.PieceCount))
 			}
@@ -59,6 +74,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 		}
 	case peerprotocol.Bitfield:
 		{
+			if t.info == nil {
+				return
+			}
+
 			if pe.Pieces != nil {
 				t.closePeer(pe.Peer)
 				return
@@ -150,8 +169,10 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 					pe.RejectMetadataRequest(extended.Piece)
 				}
 			case peerprotocol.UTMetadataResponse:
-				t.logger.Info("torrent -> EXTENDED metadata response", "Peer", string(pe.ID[:]), "Piece", extended.Piece)
-
+				t.logger.Info("torrent -> EXTENDED metadata response", "Peer", string(pe.ID[:]), "Piece", extended.Piece, "Length", len(extended.Data))
+				if t.infoDownloader == nil {
+					return
+				}
 				err := t.infoDownloader.OnPiece(extended.Piece, extended.Data)
 				switch err {
 				case infodownloader.ErrInvalid:
@@ -168,9 +189,18 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 					t.closePeer(pe.Peer)
 					return
 				}
+				data, completed := t.infoDownloader.Completed()
+				if completed {
+					if t.metadataCompleted(data) {
+						return
+					}
+				}
 				t.downloadMetadata(pe.Peer)
 			case peerprotocol.UTMetadataReject:
 				t.logger.Info("torrent -> EXTENDED metadata reject", "Peer", string(pe.ID[:]), "piece", extended.Piece)
+				if t.infoDownloader == nil {
+					return
+				}
 				err := t.infoDownloader.OnReject(extended.Piece)
 				switch err {
 				case infodownloader.ErrInvalid:

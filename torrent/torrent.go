@@ -1,11 +1,15 @@
 package torrent
 
 import (
+	"bytes"
+	"crypto/sha1"
+
 	"Naverno/internal/announcer"
 	"Naverno/internal/bitfield"
 	"Naverno/internal/choker"
 	"Naverno/internal/handshaker"
 	"Naverno/internal/infodownloader"
+	"Naverno/internal/magnet"
 	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
@@ -114,7 +118,6 @@ func fromMetadata(sess *Session, meta *metadata.Metainfo, savePath string, strat
 		choker:             choker.New(time.Second*10, time.Second*30),
 		pieces:             piece.NewPieces(meta.Info),
 		bitset:             bitfield.New(uint32(meta.PieceCount)),
-		storage:            posixstorage.New(sess.logger, meta.Files, savePath),
 		writeResults:       make(chan storage.WriteResult),
 		hashResults:        make(chan storage.HashResult),
 		readResults:        make(chan storage.ReadResult),
@@ -134,6 +137,7 @@ func fromMetadata(sess *Session, meta *metadata.Metainfo, savePath string, strat
 		doneC:              make(chan struct{}),
 		id:                 meta.Infohash[:4],
 	}
+	t.storage = posixstorage.New(t.logger, meta.Files, savePath)
 
 	trackers := [][]tracker.Tracker{}
 	for _, urls := range meta.AnnounceList {
@@ -154,11 +158,75 @@ func fromMetadata(sess *Session, meta *metadata.Metainfo, savePath string, strat
 	return &t, nil
 }
 
+func fromURI(sess *Session, URI *magnet.Magnet, savePath string, strategy PieceSelectionStrategy) (*Torrent, error) {
+	if strategy == DEFAULT_PIECE_SELECTION {
+		strategy = RAREST_FIRST_PIECE_SELECTION
+	}
+	t := Torrent{
+		name:               URI.Name,
+		infohash:           URI.Infohash,
+		session:            sess,
+		info:               nil,
+		logger:             sess.logger.With("TorrentID", fmt.Sprintf("%X", URI.Infohash[:4])),
+		savePath:           savePath,
+		peers:              make(map[[20]byte]*peer.Peer),
+		outgoing:           make(map[*handshaker.OutgoingHandshaker]struct{}),
+		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
+		stalledDownloaders: make(map[*piece.Piece]*piecedownloader.PieceDownloader),
+		pendingRequests:    make(map[peerprotocol.Request][20]byte),
+		downloaded:         0,
+		uploaded:           0,
+		left:               0,
+		pickerStrategy:     strategy,
+		picker:             nil,
+		choker:             nil,
+		pieces:             nil,
+		bitset:             nil,
+		storage:            nil,
+		writeResults:       make(chan storage.WriteResult),
+		hashResults:        make(chan storage.HashResult),
+		readResults:        make(chan storage.ReadResult),
+		newConns:           make(chan net.Conn),
+		peerMessages:       make(chan peer.PeerMessage),
+		disconnectedPeers:  make(chan *peer.Peer),
+		torrentAnnounce:    make(chan announcer.Torrent),
+		peersC:             make(chan []netip.AddrPort),
+		chokerEvents:       make(chan any),
+		statsReq:           make(chan TorrentStats),
+		peersReq:           make(chan []PeerInfo),
+		trackersReq:        make(chan []TrackerInfo),
+		piecesReq:          make(chan []PieceInfo),
+		outgoingResults:    make(chan *handshaker.OutgoingHandshaker),
+		incomingResults:    make(chan *handshaker.IncomingHandshaker),
+		closeC:             make(chan struct{}),
+		doneC:              make(chan struct{}),
+		id:                 URI.Infohash[:4],
+	}
+	t.rawTrackers = append(t.rawTrackers, URI.Trackers)
+
+	trackers := [][]tracker.Tracker{}
+	tier := []tracker.Tracker{}
+	for _, url := range URI.Trackers {
+		tr, err := sess.trackerManager.Get(url.String())
+		if err != nil {
+			t.logger.Warn("torrent -> couldn't get tracker", "Tracker URL", url.String(), "Error", err.Error())
+			continue
+		}
+		tier = append(tier, tr)
+	}
+	trackers = append(trackers, tier)
+	t.announcer = announcer.New(t.logger, trackers, sess.port)
+
+	return &t, nil
+}
+
 func (t *Torrent) run() {
 	defer close(t.doneC)
 
 	go t.announcer.Run(t.torrentAnnounce, t.peersC)
-	go t.choker.Run(t.chokerEvents)
+	if t.choker != nil {
+		go t.choker.Run(t.chokerEvents)
+	}
 
 	rateTick := time.NewTicker(time.Second)
 
@@ -214,4 +282,37 @@ func (t *Torrent) run() {
 			t.handlePeerMessage(p)
 		}
 	}
+}
+
+func (t *Torrent) metadataCompleted(data []byte) bool {
+	hasher := sha1.New()
+	hasher.Write(data)
+	hash := [20]byte(hasher.Sum(nil))
+
+	if !bytes.Equal(hash[:], t.infohash[:]) {
+		t.logger.Warn("torrent -> info hash check failed")
+		t.infoDownloader.Reset()
+		return false
+	}
+
+	t.infoDownloader = nil
+
+	info, err := metadata.NewInfo(data)
+	if err != nil {
+		t.logger.Error("torrent -> unexpected error in torrent info creation", "Error", err)
+		t.infoDownloader.Reset()
+		return false
+	}
+
+	t.logger.Info("torrent -> metadata completed")
+	t.info = info
+
+	t.picker = picker.New(uint32(t.info.PieceCount))
+	t.choker = choker.New(time.Second*10, time.Second*30)
+	go t.choker.Run(t.chokerEvents)
+	t.pieces = piece.NewPieces(info)
+	t.bitset = bitfield.New(uint32(info.PieceCount))
+	t.storage = posixstorage.New(t.logger, info.Files, t.savePath)
+	t.left = info.Length
+	return true
 }

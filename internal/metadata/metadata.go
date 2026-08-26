@@ -74,7 +74,7 @@ func New(in io.Reader) (*Metainfo, error) {
 		return nil, fmt.Errorf("missing announce key")
 	}
 
-	info, err := newInfo(root.Info)
+	info, err := NewInfo(root.Info)
 
 	if err != nil {
 		return nil, err

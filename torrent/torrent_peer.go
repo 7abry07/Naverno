@@ -11,6 +11,11 @@ import (
 )
 
 func (t *Torrent) handleDisconnected(p *peer.Peer) {
+	t.closePeer(p)
+	t.logger.Info("torrent -> peer disconnected", "Address", p.Addr().String(), "Peer", string(p.ID[:]))
+	if t.info == nil {
+		return
+	}
 	t.picker.OnPeerDisconnected(p.Pieces)
 	downloader, ok := t.downloaders[p]
 	if ok {
@@ -22,8 +27,6 @@ func (t *Torrent) handleDisconnected(p *peer.Peer) {
 		}
 		t.logger.Info("torrent -> downloader stalled", "Piece", downloader.Piece.Idx)
 	}
-	t.closePeer(p)
-	t.logger.Info("torrent -> peer disconnected", "Address", p.Addr().String(), "Peer", string(p.ID[:]))
 }
 
 func (t *Torrent) handleChokerEvent(ev any) {

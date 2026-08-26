@@ -32,19 +32,28 @@ func New(size int) *InfoDownloader {
 		done:    make(map[uint32]struct{}),
 	}
 	downloader.Size = size
-	downloader.pieces = int(util.Align(uint64(size), uint64(PieceSize)) / PieceSize)
-	downloader.lastPieceSize = uint32(util.Align(uint64(size), uint64(PieceSize)) - uint64(size))
-	if downloader.lastPieceSize == 0 {
-		downloader.lastPieceSize = PieceSize
-	}
-	for range downloader.pieces {
+	if size <= PieceSize {
+		downloader.pieces = 1
+		downloader.lastPieceSize = uint32(size)
+		downloader.remaining = append(downloader.remaining, 0)
 		downloader.buffer = append(downloader.buffer, []byte{})
+	} else {
+		downloader.pieces = int(util.Align(uint64(size), uint64(PieceSize)) / PieceSize)
+		downloader.lastPieceSize = uint32(util.Align(uint64(size), uint64(PieceSize)) - uint64(size))
+		for p := range downloader.pieces {
+			downloader.remaining = append(downloader.remaining, uint32(p))
+		}
+		if downloader.lastPieceSize == 0 {
+			downloader.lastPieceSize = PieceSize
+		}
+		for range downloader.pieces {
+			downloader.buffer = append(downloader.buffer, []byte{})
+		}
 	}
 	return downloader
 }
 
 func (d *InfoDownloader) Request(maxQueue int) {
-
 	remaining := d.remaining
 	for _, piece := range remaining {
 		if len(d.pending) >= maxQueue {
@@ -125,4 +134,14 @@ func (d *InfoDownloader) RemovePeer(peer Peer) {
 		}
 	}
 	d.peers = temp
+}
+
+func (d *InfoDownloader) Reset() {
+	d.remaining = []uint32{}
+	d.pending = make(map[uint32]Peer)
+	d.done = make(map[uint32]struct{})
+	for p := range d.pieces {
+		d.buffer[p] = []byte{}
+		d.remaining = append(d.remaining, uint32(p))
+	}
 }

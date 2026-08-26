@@ -5,7 +5,6 @@ import (
 	"Naverno/internal/peer"
 	"Naverno/internal/peerprotocol"
 
-	// "Naverno/internal/peerprotocol"
 	"net"
 	"time"
 )
@@ -30,19 +29,27 @@ func (t *Torrent) handleIncomingResult(res *handshaker.IncomingHandshaker) {
 	t.peers[pe.ID] = pe
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 
-	metadataSize := 0
-	if t.info != nil {
-		metadataSize = len(t.info.Raw)
-	} else if t.infoDownloader != nil {
-		metadataSize = t.infoDownloader.Size
-	}
-	if metadataSize != 0 && pe.SupportsExtensionProtocol() {
-		pe.ExtendedHandshake(map[string]uint8{
-			peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
-		}, metadataSize)
+	if pe.SupportsExtensionProtocol() {
+		if t.info == nil && t.infoDownloader == nil {
+			pe.ExtendedHandshake(map[string]uint8{
+				peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
+			}, 0)
+		} else {
+			metadataSize := 0
+			if t.info != nil {
+				metadataSize = len(t.info.Raw)
+			} else if t.infoDownloader != nil {
+				metadataSize = t.infoDownloader.Size
+			}
+			pe.ExtendedHandshake(map[string]uint8{
+				peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
+			}, metadataSize)
+		}
 	}
 
-	pe.Bitfield(t.bitset.Bytes())
+	if t.bitset != nil {
+		pe.Bitfield(t.bitset.Bytes())
+	}
 }
 
 func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
@@ -59,17 +66,25 @@ func (t *Torrent) handleOutgoingResult(res *handshaker.OutgoingHandshaker) {
 	t.peers[pe.ID] = pe
 	go pe.Run(t.peerMessages, t.disconnectedPeers)
 
-	metadataSize := 0
-	if t.info != nil {
-		metadataSize = len(t.info.Raw)
-	} else if t.infoDownloader != nil {
-		metadataSize = t.infoDownloader.Size
-	}
-	if metadataSize != 0 && pe.SupportsExtensionProtocol() {
-		pe.ExtendedHandshake(map[string]uint8{
-			peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
-		}, metadataSize)
+	if pe.SupportsExtensionProtocol() {
+		if t.info == nil && t.infoDownloader == nil {
+			pe.ExtendedHandshake(map[string]uint8{
+				peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
+			}, 0)
+		} else {
+			metadataSize := 0
+			if t.info != nil {
+				metadataSize = len(t.info.Raw)
+			} else if t.infoDownloader != nil {
+				metadataSize = t.infoDownloader.Size
+			}
+			pe.ExtendedHandshake(map[string]uint8{
+				peerprotocol.UTMetadataID.String(): uint8(peerprotocol.UTMetadataID),
+			}, metadataSize)
+		}
 	}
 
-	pe.Bitfield(t.bitset.Bytes())
+	if t.bitset != nil {
+		pe.Bitfield(t.bitset.Bytes())
+	}
 }

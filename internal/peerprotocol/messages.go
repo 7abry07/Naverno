@@ -145,6 +145,7 @@ func Decode(data []byte) (Message, error) {
 
 	length := binary.BigEndian.Uint32(data[0:4])
 	id := data[4:5]
+	data = data[5:]
 
 	switch MessageID(id[0]) {
 	case ChokeID:
@@ -171,46 +172,41 @@ func Decode(data []byte) (Message, error) {
 		if length != 5 {
 			return nil, fmt.Errorf("invalid have message")
 		}
-		payload := data[5:]
-		idx := binary.BigEndian.Uint32(payload)
+		idx := binary.BigEndian.Uint32(data)
 		return Have{idx}, nil
 	case BitfieldID:
-		return Bitfield{data[5:]}, nil
+		return Bitfield{data}, nil
 	case RequestID:
 		if length != 13 {
 			return nil, fmt.Errorf("invalid request message")
 		}
-		payload := data[5:]
-		idx := binary.BigEndian.Uint32(payload[:4])
-		begin := binary.BigEndian.Uint32(payload[4:8])
-		length := binary.BigEndian.Uint32(payload[8:12])
+		idx := binary.BigEndian.Uint32(data[:4])
+		begin := binary.BigEndian.Uint32(data[4:8])
+		length := binary.BigEndian.Uint32(data[8:12])
 		return Request{idx, begin, length}, nil
 	case PieceID:
 		if length < 9 {
 			return nil, fmt.Errorf("invalid piece message")
 		}
-		payload := data[5:]
-		idx := binary.BigEndian.Uint32(payload[:4])
-		begin := binary.BigEndian.Uint32(payload[4:8])
-		block := payload[8:]
+		idx := binary.BigEndian.Uint32(data[:4])
+		begin := binary.BigEndian.Uint32(data[4:8])
+		block := data[8:]
 		return Piece{idx, begin, block}, nil
 
 	case CancelID:
 		if length != 13 {
 			return nil, fmt.Errorf("invalid cancel message")
 		}
-		payload := data[5:]
-		idx := binary.BigEndian.Uint32(payload[:4])
-		begin := binary.BigEndian.Uint32(payload[4:8])
-		length := binary.BigEndian.Uint32(payload[8:12])
+		idx := binary.BigEndian.Uint32(data[:4])
+		begin := binary.BigEndian.Uint32(data[4:8])
+		length := binary.BigEndian.Uint32(data[8:12])
 		return Cancel{idx, begin, length}, nil
 	case ExtendedID:
 		if length < 2 {
 			return nil, fmt.Errorf("invalid extended message")
 		}
-		messID := data[5]
-		data := data[6:]
-		decoded, err := DecodeExtended(ExtendedMessageID(messID), data)
+		messID := data[0]
+		decoded, err := DecodeExtended(ExtendedMessageID(messID), data[1:])
 		if err != nil {
 			return nil, err
 		}

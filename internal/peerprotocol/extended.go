@@ -25,15 +25,22 @@ type UTMetadataResponse struct {
 }
 
 func (m ExtendedHandshake) Marshal() []byte {
-	var hs struct {
-		Ids          map[string]int `bencode:"m"`
-		MetadataSize int            `bencode:"metadata_size"`
+	// var hs struct {
+	// 	Ids          map[string]int `bencode:"m"`
+	// 	MetadataSize int            `bencode:"metadata_size"`
+	// }
+
+	hs := map[string]any{}
+	hs["m"] = m.IDs
+	if m.MetadataSize > 0 {
+		hs["metadata_size"] = m.MetadataSize
 	}
-	hs.Ids = make(map[string]int)
-	hs.MetadataSize = m.MetadataSize
-	for str, ids := range m.IDs {
-		hs.Ids[str] = int(ids)
-	}
+
+	// hs.Ids = make(map[string]int)
+	// hs.MetadataSize = m.MetadataSize
+	// for str, ids := range m.IDs {
+	// 	hs.Ids[str] = int(ids)
+	// }
 	marshaled, _ := bencode.EncodeBytes(hs)
 	return marshaled
 }
@@ -81,6 +88,7 @@ func DecodeExtended(id ExtendedMessageID, data []byte) (ExtendedMessage, error) 
 			Ids          map[string]int `bencode:"m"`
 			MetadataSize int            `bencode:"metadata_size"`
 		}
+
 		decoder := bencode.NewDecoder(bytes.NewBuffer(data))
 		err := decoder.Decode(&msg)
 		if err != nil {
@@ -113,9 +121,12 @@ func DecodeExtended(id ExtendedMessageID, data []byte) (ExtendedMessage, error) 
 			if msg.Size == 0 {
 				return nil, fmt.Errorf("invalid metadata message")
 			}
+			data = data[decoder.BytesParsed():]
+			size := min(len(data), msg.Size)
+
 			res := UTMetadataResponse{
 				Piece: uint32(msg.Piece),
-				Data:  data[decoder.BytesParsed():msg.Size],
+				Data:  data[:size],
 			}
 			return res, nil
 		case int(UTMetadataRejectID):

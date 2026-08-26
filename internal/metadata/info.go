@@ -32,7 +32,7 @@ type Info struct {
 	Raw         []byte
 }
 
-func newInfo(in []byte) (*Info, error) {
+func NewInfo(in []byte) (*Info, error) {
 	info := Info{}
 	info.Raw = in
 
