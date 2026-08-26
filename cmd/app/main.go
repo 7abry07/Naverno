@@ -20,10 +20,12 @@ func main() {
 	}
 	options.PieceSelectionStrategy = torrent.DEFAULT_PIECE_SELECTION
 	options.SavePath = "/home/fabry/Downloads"
-	_, err = sess.AddTorrent(options)
+	t, err := sess.AddTorrent(options)
 	if err != nil {
 		panic(err)
 	}
+
+	t.AnnounceToAllTrackers()
 
 	http.ListenAndServe(":6060", nil)
 }

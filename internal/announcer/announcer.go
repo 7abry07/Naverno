@@ -22,7 +22,8 @@ type Announcer struct {
 	numwant         uint32
 	port            uint16
 
-	completed chan Torrent
+	completed     chan Torrent
+	toAllTrackers chan Torrent
 
 	closeC chan struct{}
 	doneC  chan struct{}
@@ -42,6 +43,7 @@ func New(logger *slog.Logger, trackers [][]tracker.Tracker, port uint16) *Announ
 		numwant:       200,
 		port:          port,
 		completed:     make(chan Torrent),
+		toAllTrackers: make(chan Torrent),
 
 		closeC: make(chan struct{}),
 		doneC:  make(chan struct{}),
@@ -69,6 +71,16 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 		select {
 		case <-a.closeC:
 			return
+		case torrent := <-a.toAllTrackers:
+			for _, tier := range a.trackers {
+				res, ok := a.announceTier(ctx, tier, torrent, true)
+				if ok {
+					select {
+					case peers <- res:
+					case <-a.closeC:
+					}
+				}
+			}
 		case torrent := <-a.completed:
 			{
 				for _, tier := range a.trackers {
@@ -88,7 +100,7 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 				torrent := <-torrentC
 
 				for i, tier := range a.trackers {
-					res, ok := a.announceTier(ctx, tier, torrent)
+					res, ok := a.announceTier(ctx, tier, torrent, false)
 					if ok {
 						a.trackers[i] = tier
 						select {
@@ -101,6 +113,10 @@ func (a *Announcer) Run(torrentC chan Torrent, peers chan []netip.AddrPort) {
 			}
 		}
 	}
+}
+
+func (a *Announcer) AnnounceToAllTrackers(t Torrent) {
+	a.toAllTrackers <- t
 }
 
 func (a *Announcer) GetTrackerStats() map[string]any {
@@ -134,7 +150,9 @@ func (a *Announcer) Close(t Torrent) {
 	<-a.doneC
 }
 
-func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, torrent Torrent) ([]netip.AddrPort, bool) {
+func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, torrent Torrent, allTrackers bool) ([]netip.AddrPort, bool) {
+	peers := []netip.AddrPort{}
+	success := 0
 	for _, tr := range tier {
 		_, first := a.firstAnnounce[tr]
 		ev := tracker.TRACKER_NONE
@@ -149,18 +167,27 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 			a.trackerStats[tr.URL()] = err
 			continue
 		}
-		a.announceTimer = time.NewTimer(res.Interval)
-		a.logger.Info("announcer -> announced succesfully", "Tracker URL", tr.URL(), "Peers", len(res.Peers), "Reannounce In", res.Interval.Seconds())
-		a.trackerStatsMut.Lock()
-		a.trackerStats[tr.URL()] = res
-		a.trackerStatsMut.Unlock()
 
-		tier = util.Remove(tier, tr, func(e1, e2 tracker.Tracker) bool { return e1 == e2 })
-		tier = slices.Insert(tier, 0, tr)
+		peers = append(peers, res.Peers...)
+		success++
 
-		return res.Peers, true
+		if !allTrackers {
+			a.announceTimer = time.NewTimer(res.Interval)
+			a.logger.Info("announcer -> announced succesfully", "Tracker URL", tr.URL(), "Peers", len(res.Peers), "Reannounce In", res.Interval.Seconds())
+			a.trackerStatsMut.Lock()
+			a.trackerStats[tr.URL()] = res
+			a.trackerStatsMut.Unlock()
+
+			tier = util.Remove(tier, tr, func(e1, e2 tracker.Tracker) bool { return e1 == e2 })
+			tier = slices.Insert(tier, 0, tr)
+
+			break
+		}
 	}
-	return []netip.AddrPort{}, false
+	if success == 0 {
+		return peers, false
+	}
+	return peers, true
 }
 
 func (a *Announcer) announceTierCompleted(ctx context.Context, tier []tracker.Tracker, torrent Torrent) ([]netip.AddrPort, bool) {

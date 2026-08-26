@@ -22,3 +22,15 @@ func (t *Torrent) announceCompleted() {
 			Left:       t.left,
 		})
 }
+
+func (t *Torrent) AnnounceToAllTrackers() {
+	if t.announcer != nil {
+		t.announcer.AnnounceToAllTrackers(announcer.Torrent{
+			InfoHash:   t.infohash,
+			PeerID:     t.session.pid,
+			Downloaded: t.downloaded,
+			Uploaded:   t.uploaded,
+			Left:       t.left,
+		})
+	}
+}
