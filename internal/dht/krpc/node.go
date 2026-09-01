@@ -18,9 +18,8 @@ var (
 
 type Handler func(w *ResponseWriter, q Query)
 type ResponseWriter struct {
-	values  map[string]any
-	errCode ErrorCode
-	errMess string
+	values map[string]any
+	err    Error
 }
 
 func (w *ResponseWriter) WriteValue(key string, val any) {
@@ -30,10 +29,10 @@ func (w *ResponseWriter) WriteValue(key string, val any) {
 	w.values[key] = val
 }
 
-func (w *ResponseWriter) WriteError(code ErrorCode, mess string) {
-	w.errCode = code
-	w.errMess = mess
-}
+func (w *ResponseWriter) WriteProtocolError(mess string)      { w.err = ProtocolError{mess} }
+func (w *ResponseWriter) WriteGenericError(mess string)       { w.err = GenericError{mess} }
+func (w *ResponseWriter) WriteServerError(mess string)        { w.err = ServerError{mess} }
+func (w *ResponseWriter) WriteUnknownMethodError(mess string) { w.err = UnknownMethodError{mess} }
 
 type incomingQuery struct {
 	*net.UDPAddr
@@ -143,10 +142,7 @@ func (n *Node) Run() {
 		case q := <-n.queriesIn:
 			val, ok := n.handlers.Load(q.Name)
 			if !ok {
-				e := Error{
-					Code:    ServerErrorCode,
-					Message: "can't handle query",
-				}
+				e := ServerError{"can't handle query"}
 				n.conn.WriteToUDP(e.Marshal(q.tid), q.UDPAddr)
 				continue
 			}
@@ -154,12 +150,8 @@ func (n *Node) Run() {
 			w := &ResponseWriter{}
 			handler(w, q.Query)
 
-			if w.errCode < 0 {
-				e := Error{
-					Code:    w.errCode,
-					Message: w.errMess,
-				}
-				n.conn.WriteToUDP(e.Marshal(q.tid), q.UDPAddr)
+			if w.err != nil {
+				n.conn.WriteToUDP(w.err.Marshal(q.tid), q.UDPAddr)
 				continue
 			}
 

@@ -19,7 +19,7 @@ func TestNodeQueryRecv(t *testing.T) {
 	node.RegisterHandle("hello", func(w *krpc.ResponseWriter, q krpc.Query) {
 		value, ok := q.Parameters["value"]
 		if !ok {
-			w.WriteError(krpc.ProtocolErrorCode, "missing \"value\" key")
+			w.WriteProtocolError("missing \"value\" key")
 		}
 		w.WriteValue("value", value)
 	})
@@ -52,6 +52,7 @@ func TestNodeQueryRecv(t *testing.T) {
 	}
 	buf = buf[:read]
 
+	//g
 	res, messtid, err := krpc.Decode(buf)
 	if err != nil {
 		t.Fatalf("unexpected error -> %v", err)
@@ -63,7 +64,7 @@ func TestNodeQueryRecv(t *testing.T) {
 
 	switch res := res.(type) {
 	case krpc.Error:
-		t.Errorf("expecting response, got error -> code: %v | message : %v", res.Code, res.Message)
+		t.Errorf("expecting response, got error -> code: %v | message : %v", res.Code(), res.Error())
 	case krpc.Response:
 		valif, ok := res.Values["value"]
 		if !ok {
@@ -112,10 +113,7 @@ func TestNodeQuerySend(t *testing.T) {
 			res = e
 		case nil:
 		default:
-			res = krpc.Error{
-				Code:    krpc.GenericErrorCode,
-				Message: e.Error(),
-			}
+			res = krpc.GenericError{err.Error()}
 		}
 
 		q := mess.(krpc.Query)
@@ -146,7 +144,7 @@ func TestNodeQuerySend(t *testing.T) {
 
 	switch res := res.(type) {
 	case krpc.Error:
-		t.Errorf("error in response -> %v: %v", res.Code, res.Message)
+		t.Errorf("error in response -> %v: %v", res.Code(), res.Error())
 	case krpc.Response:
 
 	}
