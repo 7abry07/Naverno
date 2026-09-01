@@ -160,19 +160,20 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 				if t.info == nil && pe.SupportsUTMetadata() {
 					t.downloadMetadata(pe.Peer)
 				}
+
 			case peerprotocol.UTMetadataRequest:
-				t.logger.Info("torrent -> EXTENDED metadata request", "Peer", string(pe.ID[:]), "Piece", extended.Piece)
 				if t.info != nil {
-					pieceLen := min(len(t.info.Raw[(16*1024)*extended.Piece:]), 16*1024)
-					pe.SendMetadata(extended.Piece, t.info.Raw[(16*1024)*extended.Piece:pieceLen])
+					pieceLen := min(len(t.info.Raw[(infodownloader.PieceSize)*extended.Piece:]), infodownloader.PieceSize)
+					pe.SendMetadata(extended.Piece, t.info.Raw[(infodownloader.PieceSize)*extended.Piece:pieceLen])
 				} else {
 					pe.RejectMetadataRequest(extended.Piece)
 				}
+
 			case peerprotocol.UTMetadataResponse:
-				t.logger.Info("torrent -> EXTENDED metadata response", "Peer", string(pe.ID[:]), "Piece", extended.Piece, "Length", len(extended.Data))
 				if t.infoDownloader == nil {
 					return
 				}
+
 				err := t.infoDownloader.OnPiece(extended.Piece, extended.Data)
 				switch err {
 				case infodownloader.ErrInvalid:
@@ -196,6 +197,7 @@ func (t *Torrent) handlePeerMessage(pe peer.PeerMessage) {
 					}
 				}
 				t.downloadMetadata(pe.Peer)
+
 			case peerprotocol.UTMetadataReject:
 				t.logger.Info("torrent -> EXTENDED metadata reject", "Peer", string(pe.ID[:]), "piece", extended.Piece)
 				if t.infoDownloader == nil {

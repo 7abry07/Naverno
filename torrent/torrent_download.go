@@ -1,13 +1,20 @@
 package torrent
 
 import (
+	"Naverno/internal/bitfield"
+	"Naverno/internal/choker"
 	"Naverno/internal/infodownloader"
+	"Naverno/internal/metadata"
 	"Naverno/internal/peer"
 	"Naverno/internal/picker"
 	"Naverno/internal/piece"
 	"Naverno/internal/piecedownloader"
 	"Naverno/internal/storage"
+	"Naverno/internal/storage/posixstorage"
+	"bytes"
+	"crypto/sha1"
 	"fmt"
+	"time"
 )
 
 func (t *Torrent) handleHashResult(res storage.HashResult) {
@@ -111,4 +118,37 @@ func (t *Torrent) downloadMetadata(pe *peer.Peer) {
 	}
 	t.infoDownloader.AddPeer(pe)
 	t.infoDownloader.Request(10)
+}
+
+func (t *Torrent) metadataCompleted(data []byte) bool {
+	hasher := sha1.New()
+	hasher.Write(data)
+	hash := [20]byte(hasher.Sum(nil))
+
+	if !bytes.Equal(hash[:], t.infohash[:]) {
+		t.logger.Warn("torrent -> info hash check failed")
+		t.infoDownloader.Reset()
+		return false
+	}
+
+	info, err := metadata.NewInfo(data)
+	if err != nil {
+		t.logger.Error("torrent -> unexpected error in torrent info creation", "Error", err)
+		t.infoDownloader.Reset()
+		return false
+	}
+
+	t.infoDownloader = nil
+
+	t.logger.Info("torrent -> metadata completed")
+	t.info = info
+
+	t.picker = picker.New(uint32(t.info.PieceCount))
+	t.choker = choker.New(time.Second*10, time.Second*30)
+	go t.choker.Run(t.chokerEvents)
+	t.pieces = piece.NewPieces(info)
+	t.bitset = bitfield.New(uint32(info.PieceCount))
+	t.storage = posixstorage.New(t.logger, info.Files, t.savePath)
+	t.left = info.Length
+	return true
 }

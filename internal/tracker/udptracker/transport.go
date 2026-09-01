@@ -153,49 +153,6 @@ func (t *UDPTransport) Run() {
 			t.pending[transactionID] = r
 			t.pendingMut.Unlock()
 			close(done)
-
-			// case r := <-t.res:
-			// buf := bytes.NewBuffer(r)
-			// a, tid, err := getResponseInfo(buf)
-			// if err != nil {
-			// 	fmt.Printf("error -> %v", err)
-			// 	continue
-			// }
-			// pending, ok := t.pending[tid]
-			// if !ok {
-			// 	continue
-			// }
-			// delete(t.pending, tid)
-			//
-			// switch a {
-			// case action_connect:
-			// 	connect := connectResponse{}
-			// 	err := connect.decode(buf)
-			// 	if err != nil {
-			// 		pending.response <- err
-			// 		continue
-			// 	}
-			// 	pending.response <- connect
-			// case action_announce:
-			// 	ann := announceResponse{}
-			// 	err := ann.decode(buf)
-			// 	if err != nil {
-			// 		pending.response <- err
-			// 		continue
-			// 	}
-			// 	pending.response <- ann
-			// case action_error:
-			// 	errResp := errorResponse{}
-			// 	err := errResp.decode(buf)
-			// 	if err != nil {
-			// 		pending.response <- err
-			// 		continue
-			// 	}
-			// 	pending.response <- errResp
-			// default:
-			// 	pending.response <- fmt.Errorf("unrecognized action")
-			// 	continue
-			// }
 		}
 	}
 }
@@ -241,11 +198,14 @@ func (t *UDPTransport) readLoopConn(conn *Connection) {
 		if err != nil {
 			continue
 		}
+		t.pendingMut.Lock()
 		pending, ok := t.pending[tid]
 		if !ok {
+			t.pendingMut.Unlock()
 			continue
 		}
 		delete(t.pending, tid)
+		t.pendingMut.Unlock()
 
 		connReqs := []uint32{}
 		for _, r := range conn.requests {

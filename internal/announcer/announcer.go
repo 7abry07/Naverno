@@ -19,6 +19,7 @@ type Announcer struct {
 	trackers        [][]tracker.Tracker
 	logger          *slog.Logger
 	announceTimer   *time.Timer
+	justAnnounced   tracker.Tracker
 	numwant         uint32
 	port            uint16
 
@@ -161,6 +162,10 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 		}
 		delete(a.firstAnnounce, tr)
 
+		if tr == a.justAnnounced {
+			continue
+		}
+
 		res, err := a.announce(ctx, tr, torrent, ev)
 		if err != nil {
 			a.logger.Warn("announcer -> error in tracker response", "Tracker URL", tr.URL(), "Error", err)
@@ -173,6 +178,7 @@ func (a *Announcer) announceTier(ctx context.Context, tier []tracker.Tracker, to
 
 		if !allTrackers {
 			a.announceTimer = time.NewTimer(res.Interval)
+			a.justAnnounced = tr
 			a.logger.Info("announcer -> announced succesfully", "Tracker URL", tr.URL(), "Peers", len(res.Peers), "Reannounce In", res.Interval.Seconds())
 			a.trackerStatsMut.Lock()
 			a.trackerStats[tr.URL()] = res

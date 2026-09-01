@@ -1,9 +1,6 @@
 package torrent
 
 import (
-	"bytes"
-	"crypto/sha1"
-
 	"Naverno/internal/announcer"
 	"Naverno/internal/bitfield"
 	"Naverno/internal/choker"
@@ -25,6 +22,8 @@ import (
 	"net/netip"
 	"net/url"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -33,8 +32,9 @@ type Torrent struct {
 	name        string
 	infohash    [20]byte
 	rawTrackers [][]url.URL
-	createdBy   string
+	staticPeers []string
 	createdAt   time.Time
+	createdBy   string
 	comment     string
 
 	id         []byte
@@ -169,6 +169,7 @@ func fromURI(sess *Session, URI *magnet.Magnet, savePath string, strategy PieceS
 		info:               nil,
 		logger:             sess.logger.With("TorrentID", fmt.Sprintf("%X", URI.Infohash[:4])),
 		savePath:           savePath,
+		staticPeers:        URI.Peers,
 		peers:              make(map[[20]byte]*peer.Peer),
 		outgoing:           make(map[*handshaker.OutgoingHandshaker]struct{}),
 		downloaders:        make(map[*peer.Peer]*piecedownloader.PieceDownloader),
@@ -230,6 +231,33 @@ func (t *Torrent) run() {
 
 	rateTick := time.NewTicker(time.Second)
 
+	go func() {
+		addrports := []netip.AddrPort{}
+		for _, p := range t.staticPeers {
+			parts := strings.Split(p, ":")
+			if len(parts) != 2 {
+				continue
+			}
+			addr, err := netip.ParseAddr(parts[0])
+			if err != nil {
+				addrs, err := net.LookupHost(parts[0])
+				if err != nil || len(addrs) == 0 {
+					continue
+				}
+				addr, err = netip.ParseAddr(addrs[0])
+			}
+			port, err := strconv.ParseUint(parts[1], 10, 16)
+			if err != nil {
+				continue
+			}
+			addrport := netip.AddrPortFrom(addr, uint16(port))
+			addrports = append(addrports, addrport)
+		}
+		if len(addrports) > 0 {
+			t.peersC <- addrports
+		}
+	}()
+
 	for {
 		select {
 		case <-t.closeC:
@@ -282,37 +310,4 @@ func (t *Torrent) run() {
 			t.handlePeerMessage(p)
 		}
 	}
-}
-
-func (t *Torrent) metadataCompleted(data []byte) bool {
-	hasher := sha1.New()
-	hasher.Write(data)
-	hash := [20]byte(hasher.Sum(nil))
-
-	if !bytes.Equal(hash[:], t.infohash[:]) {
-		t.logger.Warn("torrent -> info hash check failed")
-		t.infoDownloader.Reset()
-		return false
-	}
-
-	t.infoDownloader = nil
-
-	info, err := metadata.NewInfo(data)
-	if err != nil {
-		t.logger.Error("torrent -> unexpected error in torrent info creation", "Error", err)
-		t.infoDownloader.Reset()
-		return false
-	}
-
-	t.logger.Info("torrent -> metadata completed")
-	t.info = info
-
-	t.picker = picker.New(uint32(t.info.PieceCount))
-	t.choker = choker.New(time.Second*10, time.Second*30)
-	go t.choker.Run(t.chokerEvents)
-	t.pieces = piece.NewPieces(info)
-	t.bitset = bitfield.New(uint32(info.PieceCount))
-	t.storage = posixstorage.New(t.logger, info.Files, t.savePath)
-	t.left = info.Length
-	return true
 }
